@@ -1,4 +1,6 @@
 import * as Phaser from "phaser";
+import { ENEMY_SHEET, idleFrame, walkAnimKey, type Direction } from "../data/artManifest.ts";
+import { ENEMY_BODY } from "../data/hitboxes.ts";
 import { Depth } from "../game/config.ts";
 import {
   initialAttackCycle,
@@ -11,7 +13,9 @@ import {
 import type { Rect } from "../logic/collision.ts";
 import { bossAttackFor, type EnemyAttack, type EnemyStats } from "../logic/enemyStats.ts";
 import { applyDamage, createHealth, healthFraction, isDead, type DamageResult, type HealthState } from "../logic/health.ts";
+import { facingFromVector } from "../logic/facing.ts";
 import { directionTo, type Vec2 } from "../logic/vector.ts";
+import { artMode, playFx, sheetKey } from "../rendering/Art.ts";
 import { LightTex } from "../rendering/LightTextures.ts";
 import { ENEMY_TEXTURE } from "../rendering/PlaceholderArt.ts";
 
@@ -24,7 +28,8 @@ export interface EnemyContext {
   fire(origin: Vec2, dir: Vec2, attack: EnemyAttack, muzzle: number): void;
 }
 
-const BODY_SIZE: Readonly<Record<EnemyStats["kind"], number>> = { chaser: 12, tank: 16, ranged: 12, boss: 28 };
+/** Hitbox sizes live in data/hitboxes.ts so art changes can never alter them. */
+const BODY_SIZE = ENEMY_BODY;
 
 /**
  * Data-driven enemy: chasers and tanks walk at the player for contact damage,
@@ -42,6 +47,9 @@ export class Enemy {
   private readonly barWidth: number;
   private readonly shadow: Phaser.GameObjects.Image;
   private readonly shadowOffsetY: number;
+  /** Sprite-art mode: directional walk animations (boss: floating idle loop). */
+  private readonly animated: boolean;
+  private facing: Direction = "down";
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -53,7 +61,10 @@ export class Enemy {
     now: number,
   ) {
     this.healthState = createHealth(stats.maxHealth);
-    this.sprite = scene.physics.add.sprite(x, y, ENEMY_TEXTURE[stats.kind]).setDepth(Depth.actors);
+    this.animated = artMode(scene) === "ninja";
+    this.sprite = scene.physics.add.sprite(x, y, this.textureFor(stats.kind), this.animated && stats.kind !== "boss" ? idleFrame("down") : undefined);
+    this.sprite.setDepth(Depth.actors);
+    if (this.animated && stats.kind === "boss") this.sprite.play("na-boss-idle");
     group.add(this.sprite);
     // Body slightly smaller than the art; it scales with the sprite (elites).
     const size = BODY_SIZE[stats.kind];
@@ -140,7 +151,8 @@ export class Enemy {
     const winding = this.attackCycle?.phase === "windup" && s.kind === "ranged";
     const speed = winding ? 0 : s.speed;
     this.body.setVelocity(dir.x * speed, dir.y * speed);
-    if (dir.x !== 0) this.sprite.setFlipX(dir.x < 0);
+    if (this.animated) this.animate(dir, speed > 0);
+    else if (dir.x !== 0) this.sprite.setFlipX(dir.x < 0);
   }
 
   private attack(ctx: EnemyContext): void {
@@ -187,7 +199,29 @@ export class Enemy {
     }
   }
 
+  private textureFor(kind: EnemyStats["kind"]): string {
+    if (!this.animated) return ENEMY_TEXTURE[kind];
+    return kind === "boss" ? sheetKey("bossIdle") : sheetKey(ENEMY_SHEET[kind]);
+  }
+
+  /** Walks facing its movement direction; holds the facing frame when standing still. */
+  private animate(dir: Vec2, moving: boolean): void {
+    if (this.stats.kind === "boss") return; // the boss floats on its idle loop
+    this.facing = facingFromVector(dir, this.facing);
+    const sheet = ENEMY_SHEET[this.stats.kind];
+    if (moving) this.sprite.play(walkAnimKey(sheet, this.facing), true);
+    else {
+      this.sprite.anims.stop();
+      this.sprite.setFrame(idleFrame(this.facing));
+    }
+  }
+
   private die(): void {
+    // Smoke puff for regular enemies, an explosion for elites and the boss.
+    const big = this.stats.elite || this.stats.kind === "boss";
+    playFx(this.scene, big ? "na-explosion" : "na-smoke", big ? "explosion" : "smoke", this.sprite.x, this.sprite.y, Depth.effects, {
+      scale: this.stats.kind === "boss" ? 1.6 : big ? 1.1 : 0.75,
+    });
     this.body.setVelocity(0, 0);
     this.body.enable = false;
     this.bar.destroy();

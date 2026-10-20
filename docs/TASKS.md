@@ -72,6 +72,24 @@ Complete in order and keep the game launchable at each milestone.
 -   [x] Document controls/run instructions and known issues.
     **Acceptance:** stable playable five-level prototype.
 
+## Milestone 7 --- Real sprites (post-v1, approved by the user)
+
+Art: Ninja Adventure asset pack by Pixel-boy and AAA (CC0). Gameplay,
+collision boxes, room layouts and combat behaviour stay unchanged.
+
+-   [x] Asset manifest (file, frames, source, licence) and `CREDITS.md`.
+-   [x] Boot scene that loads the art, with placeholder art as fallback.
+-   [x] Animated player, enemies and boss (4-direction walk), shuriken
+    and enemy projectiles, hit/death/dash/torch effects.
+-   [x] Walls, floors, props and doors per level theme (walls: pack brick +
+    generated edges; see DECISIONS.md).
+-   [x] One polished test room (`?artroom`), built. Awaiting the user's
+    review before rollout.
+-   [ ] Roll out to all rooms and levels; verify readability, lighting
+    and performance; hitboxes unchanged (tested).
+    **Acceptance:** the whole game uses the new art with identical
+    gameplay; tests and build pass.
+
 ## Post-v1 only
 
 Real sprite replacement, new weapons, extra enemy patterns, online

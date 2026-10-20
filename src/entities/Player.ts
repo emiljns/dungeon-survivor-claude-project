@@ -1,10 +1,14 @@
 import * as Phaser from "phaser";
+import { idleFrame, walkAnimKey, type Direction } from "../data/artManifest.ts";
+import { PLAYER_BODY } from "../data/hitboxes.ts";
 import { Depth, Tuning } from "../game/config.ts";
 import type { Rect } from "../logic/collision.ts";
 import { dashReadiness, dashVelocity, IDLE_DASH, isDashing, tryStartDash, type DashState } from "../logic/dash.ts";
 import { applyDamage, createHealth, isDead, type DamageResult, type HealthState } from "../logic/health.ts";
 import type { PlayerStats } from "../logic/upgrades.ts";
 import { directionTo, movementVelocity, type DirectionalInput, type Vec2 } from "../logic/vector.ts";
+import { facingFromVector } from "../logic/facing.ts";
+import { artMode, playFx, sheetKey } from "../rendering/Art.ts";
 import { LightTex } from "../rendering/LightTextures.ts";
 import { Tex } from "../rendering/PlaceholderArt.ts";
 
@@ -18,18 +22,26 @@ export class Player {
   private nextGhostAt = 0;
   private aimDir: Vec2 = { x: 1, y: 0 };
   private moveSpeed: number;
+  /** Sprite-art mode: a 4-direction animated ninja instead of the square + gun. */
+  private readonly animated: boolean;
+  private facing: Direction = "down";
 
   constructor(private readonly scene: Phaser.Scene, x: number, y: number, startHealth: number, stats: PlayerStats) {
     const full = createHealth(stats.maxHealth);
     this.healthState = { ...full, current: Math.min(full.max, Math.max(1, startHealth)) };
     this.moveSpeed = stats.moveSpeed;
-    this.sprite = scene.physics.add.sprite(x, y, Tex.player).setDepth(Depth.actors);
+    this.animated = artMode(scene) === "ninja";
+    this.sprite = (
+      this.animated ? scene.physics.add.sprite(x, y, sheetKey("player"), idleFrame("down")) : scene.physics.add.sprite(x, y, Tex.player)
+    ).setDepth(Depth.actors);
     // Slightly smaller than the art so the player does not snag on corners.
-    this.body.setSize(10, 10);
+    // The body size comes from hitboxes.ts, so the art never changes it.
+    this.body.setSize(PLAYER_BODY, PLAYER_BODY);
     this.body.pushable = false;
     // An open door is a gap in the outer wall; never let the player leave the room.
     this.sprite.setCollideWorldBounds(true);
-    this.gun = scene.add.image(x, y, Tex.gun).setOrigin(0.1, 0.5).setDepth(Depth.actors + 1);
+    // The ninja throws shuriken by hand; the gun barrel is placeholder-art only.
+    this.gun = scene.add.image(x, y, Tex.gun).setOrigin(0.1, 0.5).setDepth(Depth.actors + 1).setVisible(!this.animated);
     this.shadow = scene.add.image(x, y + 7, LightTex.shadow).setDepth(Depth.shadows).setScale(0.6);
   }
 
@@ -87,6 +99,7 @@ export class Player {
       if (started) {
         this.dash = started;
         this.knockbackUntil = 0; // a dash cancels knockback
+        playFx(this.scene, "na-dash-dust", "dashDust", this.sprite.x, this.sprite.y + 6, Depth.shadows + 1);
       }
     }
 
@@ -105,6 +118,7 @@ export class Player {
     const angle = Math.atan2(this.aimDir.y, this.aimDir.x);
     this.gun.setPosition(this.sprite.x, this.sprite.y + 1).setRotation(angle);
     this.gun.setFlipY(this.aimDir.x < 0);
+    if (this.animated) this.animate(move.x !== 0 || move.y !== 0 || isDashing(this.dash, now));
     // Blink while invulnerable after a hit.
     const blinking = now < this.healthState.invulnerableUntil && Math.floor(now / 80) % 2 === 0;
     this.sprite.setAlpha(blinking ? 0.35 : 1);
@@ -146,9 +160,21 @@ export class Player {
     this.gun.setVisible(false);
   }
 
+  /** Faces the mouse; walks while moving, stands on the idle frame otherwise. */
+  private animate(moving: boolean): void {
+    this.facing = facingFromVector(this.aimDir, this.facing);
+    if (moving) {
+      this.sprite.play(walkAnimKey("player", this.facing), true);
+    } else {
+      this.sprite.anims.stop();
+      this.sprite.setFrame(idleFrame(this.facing));
+    }
+  }
+
   private spawnGhost(): void {
+    // Copies the current texture and frame, so it works for both art modes.
     const ghost = this.scene.add
-      .image(this.sprite.x, this.sprite.y, Tex.player)
+      .image(this.sprite.x, this.sprite.y, this.sprite.texture.key, this.sprite.frame.name)
       .setDepth(Depth.actors - 1)
       .setTint(0x8fb8ff)
       .setAlpha(0.45);

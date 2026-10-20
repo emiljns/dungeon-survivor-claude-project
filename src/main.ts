@@ -1,4 +1,5 @@
 import * as Phaser from "phaser";
+import { BootScene } from "./game/BootScene.ts";
 import { GAME_HEIGHT, GAME_WIDTH, PALETTE } from "./game/config.ts";
 import { GameScene } from "./game/GameScene.ts";
 import { MenuScene } from "./game/MenuScene.ts";
@@ -22,8 +23,9 @@ const game = new Phaser.Game({
     // Append ?debug to the URL to draw physics bodies.
     arcade: { debug: new URLSearchParams(window.location.search).has("debug") },
   },
-  // Later scenes render on top: Pause and Results overlay the game.
-  scene: [MenuScene, GameScene, PauseScene, ResultsScene],
+  // Boot runs first (loads sprite art when requested). Later scenes render on
+  // top: Pause and Results overlay the game.
+  scene: [BootScene, MenuScene, GameScene, PauseScene, ResultsScene],
 });
 
 // Dev builds expose the game for manual diagnostics (e.g. GameScene.debugSnapshot()).

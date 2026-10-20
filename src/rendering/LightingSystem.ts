@@ -1,8 +1,10 @@
 import * as Phaser from "phaser";
+import { ART_DARKNESS_SCALE } from "../data/artManifest.ts";
 import type { Theme } from "../data/themes.ts";
 import { Depth } from "../game/config.ts";
 import { clampDarkness, flicker, type TorchLight } from "../logic/lighting.ts";
 import type { Vec2 } from "../logic/vector.ts";
+import { artMode, sheetKey } from "./Art.ts";
 import { LIGHT_TEXTURE_SIZE, LightTex } from "./LightTextures.ts";
 
 const TORCH_POOL_RADIUS = 92;
@@ -30,7 +32,7 @@ export class LightingSystem {
   private readonly overlay: Phaser.GameObjects.RenderTexture;
   private readonly stamps: Phaser.GameObjects.Image[] = [];
   private readonly glows: Phaser.GameObjects.Image[] = [];
-  private readonly flames: Phaser.GameObjects.Image[] = [];
+  private readonly flames: (Phaser.GameObjects.Image | Phaser.GameObjects.Sprite)[] = [];
   private readonly vignette: Phaser.GameObjects.Image;
   private readonly darkness: number;
   private on = true;
@@ -43,7 +45,8 @@ export class LightingSystem {
     private readonly torches: readonly TorchLight[],
     enabled: boolean,
   ) {
-    this.darkness = clampDarkness(theme.light.darkness);
+    const scale = artMode(scene) === "ninja" ? ART_DARKNESS_SCALE : 1;
+    this.darkness = clampDarkness(theme.light.darkness * scale);
     this.overlay = scene.add.renderTexture(0, 0, worldW, worldH).setOrigin(0).setDepth(Depth.lighting);
     for (const t of torches) {
       this.glows.push(
@@ -55,7 +58,12 @@ export class LightingSystem {
           .setScale((TORCH_GLOW_RADIUS * 2) / LIGHT_TEXTURE_SIZE)
           .setAlpha(0.35),
       );
-      this.flames.push(scene.add.image(t.flame.x, t.flame.y, LightTex.flame).setDepth(Depth.glow + 1).setTint(theme.light.torch));
+      // Sprite-art mode: the pack's animated fire (untinted: fire is fire; the glow carries the theme colour).
+      const flame =
+        artMode(scene) === "ninja"
+          ? scene.add.sprite(t.flame.x, t.flame.y - 2, sheetKey("torchFire")).play({ key: "na-torch-fire", startFrame: Math.floor(t.seed) % 12 })
+          : scene.add.image(t.flame.x, t.flame.y, LightTex.flame).setTint(theme.light.torch);
+      this.flames.push(flame.setDepth(Depth.glow + 1));
     }
     this.vignette = scene.add.image(0, 0, LightTex.vignette).setOrigin(0).setScrollFactor(0).setDepth(Depth.vignette);
     this.setEnabled(enabled);
@@ -108,7 +116,9 @@ export class LightingSystem {
     this.torches.forEach((t, i) => {
       const f = flicker(now, t.seed, 0.12);
       this.glows[i]?.setAlpha(0.3 * f);
-      this.flames[i]?.setScale(1, f);
+      const flame = this.flames[i];
+      // Animated sprites flicker on their own; only the generated flame is squashed.
+      if (flame instanceof Phaser.GameObjects.Image && !(flame instanceof Phaser.GameObjects.Sprite)) flame.setScale(1, f);
     });
   }
 

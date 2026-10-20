@@ -413,6 +413,79 @@
     -   A fixed-wait pause check failed while the loop was throttled.
         Re-tested with state polling, it passed 3 of 3.
 
+### Milestone 7 — real sprites, part 1: pipeline and test room (2026-10-20)
+
+-   **Scope change approved by the user:** real sprites (post-v1). The
+    art direction chosen was **Ninja Adventure** by Pixel-boy and AAA,
+    for cohesion (one artist) and colour. 0x72 DungeonTileset II and
+    Kenney Tiny Dungeon were also considered. All three are CC0,
+    verified on their pages; the Ninja pack's bundled `LICENSE.txt` is
+    the full CC0 1.0 text. Credit is given in `CREDITS.md` although it
+    is not required.
+-   **Download handling:** the 89 MB zip was fetched with the user's
+    explicit permission from the artist's itch.io page and extracted
+    outside the repo. It contains only PNG, GIF, WAV, OGG, TTF, TXT and
+    MD files. **Only the 18 sheets used (93 KB) are copied** into
+    `public/assets/ninja/`, unmodified, under short names.
+    `src/data/artManifest.ts` records each one's original path.
+-   **Sprite mapping (approved by the user):**
+    -   Player: NinjaBlue.
+    -   Chaser: flaming Skull. Tank: Grey Trex (replacing an initial
+        red Beast pick, too close in colour to the chaser). Ranged:
+        floating Eye.
+    -   Boss: GiantSpirit ("The Hollow Warden").
+    -   Shots: shuriken (player), fireball (ranged), energy ball (boss).
+    -   Effects: hit spark, smoke, explosion, dash dust, animated torch
+        fire, upgrade sparkle.
+    -   Props: barrel and framed crate. Door: keyhole block.
+-   **Seamless floor tiles were picked by measurement, not by eye.** The
+    floor blocks are 47-tile "blob" autotile sets in which every tile is
+    unique. A first wrap-seam metric picked corridor tiles that produce
+    stripes, which was caught in tiled previews. The final choice
+    requires no darker border on any side plus wrap continuity, and was
+    confirmed visually.
+-   **Walls use pack brick, tinted per level, under the generated
+    edges, faces and shadows.** The pack's interior wall sets have
+    inward-facing pieces only, with no outward corners, so they would
+    break on every free-standing pillar. The generated edge pass already
+    handles every shape. A full wall autotile can be revisited later.
+-   **Gameplay is unchanged by construction.** Hitbox sizes moved to
+    `src/data/hitboxes.ts`, locked by tests, and sprites of any size are
+    centred on those bodies. Verified live in the test room: player 10,
+    chaser 12, tank 16, ranged 12, elite 16.2. Bullet speed, damage,
+    radius and lifetime are identical in both art modes; only
+    texture/animation fields differ.
+-   **Loading:** a new `BootScene` loads the sheets only when sprite art
+    is requested, then builds global animations.
+    -   **Bug found while testing the fallback:** with a sheet hidden,
+        the Vite dev server answered with its HTML page and 200 OK. The
+        image failed to decode with no load-error event, so the game
+        thought loading succeeded, then crashed building animations and
+        hung on Boot.
+    -   **Fix:** after loading, `missingArt` verifies each texture
+        exists with exactly the expected frame count. Animations are
+        built only if all pass; otherwise the game warns, names the
+        file, and uses the placeholder art. Re-tested: warning, then the
+        menu, with placeholder art.
+-   **Opt-in until the user approves:** `?art=ninja` or the test room
+    `?artroom` (optionally `&theme=sewers|temple|foundry|void` and
+    `&boss`). The default game is verified unchanged: placeholder art,
+    and the sheets are not even loaded.
+-   **The test room** is the Storeroom layout with props and torches,
+    one chaser, tank and ranged enemy, an elite, and optionally the
+    boss, under any level theme. It is a normal room with the same
+    rules; leaving through the door reloads it.
+-   **Lighting:** sprite-art mode uses 75% of each theme's darkness
+    (`ART_DARKNESS_SCALE`). The pack is colourful and its floors are
+    already dark, so full darkness muted it. Torch flames use the pack's
+    animated fire, untinted, while the glow keeps the theme colour.
+-   **Verified in the browser (dev):**
+    -   Ruins and Void test rooms.
+    -   Shuriken flight and hits (tank HP 20 → 12).
+    -   An animated fireball rotated to its flight angle.
+    -   The boss idle loop with cyan energy-ball bursts and the boss bar.
+    -   Readability of every enemy type.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose

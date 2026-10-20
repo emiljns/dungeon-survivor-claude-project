@@ -3,6 +3,7 @@ import { Depth } from "../game/config.ts";
 import type { Rect } from "../logic/collision.ts";
 import { stepProjectile, type ProjectileState } from "../logic/projectile.ts";
 import type { Vec2 } from "../logic/vector.ts";
+import { artMode, playFx } from "../rendering/Art.ts";
 import { Tex } from "../rendering/PlaceholderArt.ts";
 
 export interface BulletSpec {
@@ -13,13 +14,17 @@ export interface BulletSpec {
   readonly texture: string;
   readonly trailColor: number;
   readonly impactColor: number;
+  /** Sprite-art mode: looping animation to play on the bullet sprite. */
+  readonly anim?: string;
+  /** Rotate the sprite to its flight direction, plus this offset (radians). */
+  readonly faceDirection?: { readonly offset: number };
 }
 
 interface LiveBullet {
   state: ProjectileState;
   prev: Vec2;
   readonly spec: BulletSpec;
-  readonly sprite: Phaser.GameObjects.Image;
+  readonly sprite: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite;
 }
 
 /**
@@ -61,7 +66,11 @@ export class ProjectileSystem {
       return;
     }
     const state = { ...toMuzzle.state, lifeMs: spec.lifeMs };
-    const sprite = this.scene.add.image(state.x, state.y, spec.texture).setDepth(Depth.projectiles);
+    const sprite = spec.anim
+      ? this.scene.add.sprite(state.x, state.y, spec.texture).play(spec.anim)
+      : this.scene.add.image(state.x, state.y, spec.texture);
+    sprite.setDepth(Depth.projectiles);
+    if (spec.faceDirection) sprite.setRotation(Math.atan2(dir.y, dir.x) + spec.faceDirection.offset);
     this.bullets.push({ state, prev: { x: state.x, y: state.y }, spec, sprite });
   }
 
@@ -107,6 +116,10 @@ export class ProjectileSystem {
   }
 
   private impact(at: Vec2, tint: number): void {
+    if (artMode(this.scene) === "ninja") {
+      playFx(this.scene, "na-hit-spark", "hitSpark", at.x, at.y, Depth.effects, { tint });
+      return;
+    }
     for (let i = 0; i < 4; i++) {
       const a = Math.random() * Math.PI * 2;
       const spark = this.scene.add.image(at.x, at.y, Tex.spark).setTint(tint).setDepth(Depth.effects);

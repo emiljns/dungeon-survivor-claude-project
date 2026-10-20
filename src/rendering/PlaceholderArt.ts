@@ -3,6 +3,8 @@ import type { Theme } from "../data/themes.ts";
 import { TILE } from "../game/config.ts";
 import type { EnemyKind } from "../logic/enemyStats.ts";
 import type { Prop } from "../logic/layout.ts";
+import { THEME_ART, TILE_FRAMES } from "../data/artManifest.ts";
+import { sheetKey, type ArtMode } from "./Art.ts";
 import { LightTex } from "./LightTextures.ts";
 
 // All placeholder art is generated once per game from primitives. Swapping in
@@ -161,8 +163,15 @@ export function bakeTileLayer(
   depth: number,
   theme: Theme,
   props: readonly Prop[] = [],
+  art: ArtMode = "placeholder",
 ): Phaser.GameObjects.RenderTexture {
   const keys = ensureThemeTextures(scene, theme);
+  // Sprite-art mode: pack floor tile + tinted pack brick on wall tops. The
+  // generated edges, front faces and shadows are still drawn on top, because
+  // they handle every wall shape (the pack has no outward wall corners).
+  const themeArt = art === "ninja" ? THEME_ART[theme.id] : undefined;
+  const floorTile = themeArt ? TILE_FRAMES[themeArt.floor] : undefined;
+  const wallTile = themeArt ? TILE_FRAMES[themeArt.wall] : undefined;
   const rows = wall.length;
   const cols = wall[0]?.length ?? 0;
   const rt = scene.add.renderTexture(0, 0, cols * TILE, rows * TILE).setOrigin(0).setDepth(depth);
@@ -174,7 +183,8 @@ export function bakeTileLayer(
       const x = c * TILE;
       const y = r * TILE;
       if (!isWall(c, r)) {
-        rt.draw(keys.floor, x, y);
+        if (floorTile && themeArt) rt.drawFrame(sheetKey(floorTile.sheet), floorTile.frame, x, y, 1, themeArt.floorTint);
+        else rt.draw(keys.floor, x, y);
         // Ambient occlusion: a soft dark strip where the floor meets a wall above.
         if (isWall(c, r - 1)) {
           edges.fillStyle(0x000000, 0.28).fillRect(x, y, TILE, 2);
@@ -182,7 +192,8 @@ export function bakeTileLayer(
         }
         continue;
       }
-      rt.draw(keys.wall, x, y);
+      if (wallTile && themeArt) rt.drawFrame(sheetKey(wallTile.sheet), wallTile.frame, x, y, 1, themeArt.wallTint);
+      else rt.draw(keys.wall, x, y);
       // Front face (wall above floor) for a little top-down depth.
       if (!isWall(c, r + 1)) {
         edges.fillStyle(theme.wall.face).fillRect(x, y + TILE - 5, TILE, 4);

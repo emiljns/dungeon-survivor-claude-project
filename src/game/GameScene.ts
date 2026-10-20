@@ -12,6 +12,7 @@ import {
   advanceRun,
   isFinalLevel,
   isFinalRoomOfLevel,
+  newRun,
   sanitizeRunState,
   type RunState,
 } from "../logic/progression.ts";
@@ -30,6 +31,9 @@ import type { Vec2 } from "../logic/vector.ts";
 import { FireCooldown } from "../logic/weapon.ts";
 import { torchLights } from "../logic/lighting.ts";
 import { LightingSystem } from "../rendering/LightingSystem.ts";
+import { TILE_FRAMES } from "../data/artManifest.ts";
+import { parseShowcase, showcaseLevel, type ShowcaseOptions } from "../data/showcase.ts";
+import { artMode, playFx, sheetKey, type ArtMode } from "../rendering/Art.ts";
 import { ensureLightTextures } from "../rendering/LightTextures.ts";
 import { bakeTileLayer, ensurePlaceholderTextures, Tex } from "../rendering/PlaceholderArt.ts";
 import { browserStorage, loadBest, mergeBest, saveBest } from "../systems/HighScoreStore.ts";
@@ -60,25 +64,34 @@ const BASE_STATS: BaseStats = {
   maxHealth: Tuning.player.maxHealth,
 };
 
-const playerBulletSpec = (stats: PlayerStats): BulletSpec => ({
+// Speed, lifetime, radius and damage are gameplay and identical in both art
+// modes; only the look (texture, animation, trail colour) differs.
+const playerBulletSpec = (stats: PlayerStats, art: ArtMode): BulletSpec => ({
   speed: stats.bulletSpeed,
   lifeMs: Tuning.gun.bulletLifeMs,
   radius: Tuning.gun.bulletRadius,
   damage: stats.damage,
-  texture: Tex.bullet,
-  trailColor: 0xffd166,
+  trailColor: art === "ninja" ? 0xc9d4ff : 0xffd166,
   impactColor: 0xc9d4ff,
+  ...(art === "ninja" ? { texture: sheetKey("shuriken"), anim: "na-shuriken-spin" } : { texture: Tex.bullet }),
 });
 
-const enemyBulletSpec = (attack: EnemyAttack): BulletSpec => ({
-  speed: attack.bulletSpeed,
-  lifeMs: 3500,
-  radius: 3,
-  damage: attack.damage,
-  texture: Tex.enemyBullet,
-  trailColor: 0xff4fd8,
-  impactColor: 0xff9ae8,
-});
+const enemyBulletSpec = (attack: EnemyAttack, art: ArtMode): BulletSpec => {
+  const boss = attack.pattern === "radial";
+  return {
+    speed: attack.bulletSpeed,
+    lifeMs: 3500,
+    radius: 3,
+    damage: attack.damage,
+    trailColor: art === "ninja" ? (boss ? 0x7fe8ff : 0xff8a3d) : 0xff4fd8,
+    impactColor: art === "ninja" ? (boss ? 0xbff4ff : 0xffc08a) : 0xff9ae8,
+    ...(art === "ninja"
+      ? boss
+        ? { texture: sheetKey("energyBall"), anim: "na-energy-ball-fly", faceDirection: { offset: -Math.PI / 2 } }
+        : { texture: sheetKey("fireball"), anim: "na-fireball-fly", faceDirection: { offset: 0 } }
+      : { texture: Tex.enemyBullet }),
+  };
+};
 
 /**
  * One room of the run. Every room transition and every restart is a
@@ -125,6 +138,9 @@ export class GameScene extends Phaser.Scene {
   private simTime = 0;
   private panel: UpgradePanel | null = null;
   private lighting: LightingSystem | null = null;
+  private art: ArtMode = "placeholder";
+  private showcase: ShowcaseOptions | null = null;
+  private doorSprites: Phaser.GameObjects.Image[] = [];
 
   constructor() {
     super("game");
@@ -132,6 +148,7 @@ export class GameScene extends Phaser.Scene {
 
   init(data: unknown): void {
     this.run = sanitizeRunState(data, ROOMS_PER_LEVEL, Tuning.player.maxHealth);
+    this.showcase = parseShowcase(data);
     this.upgrades = this.run.upgrades;
     this.stats = computeStats(BASE_STATS, this.upgrades);
     this.score = this.run.score;
@@ -143,13 +160,16 @@ export class GameScene extends Phaser.Scene {
     this.solidRects = [];
     this.panel = null;
     this.lighting = null;
+    this.doorSprites = [];
     this.phase = "playing";
     this.leaving = false;
   }
 
   create(): void {
     ensurePlaceholderTextures(this);
-    const level = LEVELS[this.run.levelIndex];
+    this.art = artMode(this);
+    // The art test room (?artroom) is a one-room level; everything else is the normal run.
+    const level = this.showcase ? showcaseLevel(this.showcase) : LEVELS[this.run.levelIndex];
     const levelRoom = level?.rooms[this.run.roomIndex];
     if (!level || !levelRoom) throw new Error(`No room at level ${this.run.levelIndex}, room ${this.run.roomIndex}`);
     this.level = level;
@@ -163,14 +183,21 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, worldW, worldH).setBackgroundColor(level.theme.background);
 
     ensureLightTextures(this);
-    bakeTileLayer(this, this.layout.wall, Depth.tiles, level.theme, this.layout.props);
+    bakeTileLayer(this, this.layout.wall, Depth.tiles, level.theme, this.layout.props, this.art);
 
     // Walls and props never change during a room: one static group.
     const solids = this.physics.add.staticGroup();
     for (const r of this.layout.wallRects) solids.add(this.add.zone(r.x + r.width / 2, r.y + r.height / 2, r.width, r.height));
     for (const p of this.layout.props) {
-      const tex = p.kind === "crate" ? Tex.crate : Tex.barrel;
-      solids.add(this.add.image(p.rect.x + TILE / 2, p.rect.y + TILE / 2, tex).setDepth(Depth.props));
+      const cx = p.rect.x + TILE / 2;
+      const cy = p.rect.y + TILE / 2;
+      const tile = TILE_FRAMES[p.kind === "crate" ? "crate" : "barrel"];
+      const img =
+        this.art === "ninja"
+          ? this.add.image(cx, cy, sheetKey(tile.sheet), tile.frame)
+          : this.add.image(cx, cy, p.kind === "crate" ? Tex.crate : Tex.barrel);
+      // Static bodies take the image's size: both art sets are 16x16, matching the tile.
+      solids.add(img.setDepth(Depth.props));
     }
     // Doors are separate so they can be removed when the room is cleared.
     this.doors = this.physics.add.staticGroup();
@@ -268,7 +295,7 @@ export class GameScene extends Phaser.Scene {
 
     if (pointer.leftButtonDown() && this.gun.tryFire(now)) {
       const n = this.stats.projectiles;
-      const spec = playerBulletSpec(this.stats);
+      const spec = playerBulletSpec(this.stats, this.art);
       for (const dir of spreadDirections(this.player.aim, n, this.stats.spreadRad * (n - 1))) {
         this.playerShots.fire(this.player.position, dir, 9, spec);
       }
@@ -279,7 +306,7 @@ export class GameScene extends Phaser.Scene {
       now,
       player: this.player.position,
       hasLineOfSight: (from, to) => hasLineOfSight(from, to, this.solidRects),
-      fire: (origin, dir, attack, muzzle) => this.enemyShots.fire(origin, dir, muzzle, enemyBulletSpec(attack)),
+      fire: (origin, dir, attack, muzzle) => this.enemyShots.fire(origin, dir, muzzle, enemyBulletSpec(attack, this.art)),
     };
     for (const e of this.enemies) e.update(ctx);
 
@@ -343,7 +370,9 @@ export class GameScene extends Phaser.Scene {
 
   private showEntryBanner(): void {
     const level = this.level;
-    if (this.run.roomIndex === 0) {
+    if (this.showcase) {
+      this.hud.banner("ART TEST ROOM", level.name.toUpperCase(), level.theme.title, true);
+    } else if (this.run.roomIndex === 0) {
       this.hud.banner(`LEVEL ${level.number}`, level.name.toUpperCase(), level.theme.title, true);
     } else if (this.isFinalRoom) {
       const boss = this.levelRoom.enemies.some((e) => e.kind === "boss");
@@ -457,6 +486,7 @@ export class GameScene extends Phaser.Scene {
 
   private chooseUpgrade(id: UpgradeId): void {
     this.panel = null;
+    playFx(this, "na-magic-spark", "magicSpark", this.player.position.x, this.player.position.y - 4, Depth.effects);
     this.upgrades = applyUpgrade(this.upgrades, id);
     this.stats = computeStats(BASE_STATS, this.upgrades);
     this.player.applyStats(this.stats);
@@ -480,9 +510,19 @@ export class GameScene extends Phaser.Scene {
     ];
 
     this.doorGfx.clear();
+    for (const s of this.doorSprites) s.destroy();
+    this.doorSprites = [];
     for (const d of this.layout.doorRects) {
       if (open) {
         this.doorGfx.lineStyle(2, 0x7dff9b, 0.9).strokeRect(d.x + 1, d.y + 1, d.width - 2, d.height - 2);
+      } else if (this.art === "ninja") {
+        // One keyhole door block per tile, above the darkness like all door state.
+        const door = TILE_FRAMES.lockedDoor;
+        for (let y = d.y; y < d.y + d.height; y += TILE) {
+          for (let x = d.x; x < d.x + d.width; x += TILE) {
+            this.doorSprites.push(this.add.image(x + TILE / 2, y + TILE / 2, sheetKey(door.sheet), door.frame).setDepth(Depth.effects));
+          }
+        }
       } else {
         this.doorGfx.fillStyle(0x3a1d26).fillRect(d.x, d.y, d.width, d.height);
         this.doorGfx.fillStyle(0xff5d73);
@@ -503,6 +543,12 @@ export class GameScene extends Phaser.Scene {
 
   private exitRoom(): void {
     if (this.phase !== "playing" || this.leaving) return;
+    if (this.showcase) {
+      // The test room loops: leaving reloads it with the same theme.
+      this.leaving = true;
+      this.scene.restart({ ...newRun(Tuning.player.maxHealth), showcase: this.showcase });
+      return;
+    }
     const next = advanceRun(this.currentRun(), ROOMS_PER_LEVEL, this.player.health.current, this.stats.maxHealth);
     if (next.kind === "victory") {
       this.victory();
