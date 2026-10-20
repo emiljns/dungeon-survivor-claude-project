@@ -2,6 +2,21 @@ import { describe, expect, it } from "vitest";
 import { LEVELS } from "../src/data/levels.ts";
 import { parseShowcase, showcaseLevel } from "../src/data/showcase.ts";
 import { parseLayout } from "../src/logic/layout.ts";
+import { requestedArtMode } from "../src/logic/artMode.ts";
+
+describe("art mode from the URL", () => {
+  it("sprite art is the default (rolled out in Milestone 7)", () => {
+    expect(requestedArtMode("")).toBe("ninja");
+    expect(requestedArtMode("?debug")).toBe("ninja");
+    expect(requestedArtMode("?artroom&theme=void")).toBe("ninja");
+  });
+
+  it("?art=placeholder opts back into the generated art", () => {
+    expect(requestedArtMode("?art=placeholder")).toBe("placeholder");
+    expect(requestedArtMode("?nolight&art=placeholder")).toBe("placeholder");
+    expect(requestedArtMode("?art=bogus")).toBe("ninja");
+  });
+});
 
 describe("art test room", () => {
   it("is only enabled by explicit showcase data", () => {

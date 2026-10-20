@@ -1,19 +1,16 @@
 import * as Phaser from "phaser";
 import { ANIMS, ART_BASE_PATH, SHEET_SIZES, SHEETS, type SheetId } from "../data/artManifest.ts";
+import type { ArtMode } from "../logic/artMode.ts";
 
-// Which art the game draws with. "ninja" uses the loaded sprite sheets;
-// "placeholder" is the original generated art, and is also the fallback if
-// any sheet fails to load, so missing files can never break the game.
+// Which art the game draws with. "ninja" (the default) uses the loaded sprite
+// sheets; "placeholder" is the original generated art: opt-in via
+// ?art=placeholder, and the automatic fallback if any sheet fails to load, so
+// missing files can never break the game.
 
-export type ArtMode = "placeholder" | "ninja";
+export type { ArtMode } from "../logic/artMode.ts";
+export { requestedArtMode } from "../logic/artMode.ts";
 
 const REGISTRY_KEY = "artMode";
-
-/** The art mode requested by the URL: `?art=ninja` or the test room `?artroom`. */
-export function requestedArtMode(search: string): ArtMode {
-  const q = new URLSearchParams(search);
-  return q.get("art") === "ninja" || q.has("artroom") ? "ninja" : "placeholder";
-}
 
 export function artMode(scene: Phaser.Scene): ArtMode {
   return scene.registry.get(REGISTRY_KEY) === "ninja" ? "ninja" : "placeholder";

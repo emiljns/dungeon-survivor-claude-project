@@ -486,6 +486,34 @@
     -   The boss idle loop with cyan energy-ball bursts and the boss bar.
     -   Readability of every enemy type.
 
+### Milestone 7 — real sprites, part 2: rollout (2026-10-20)
+
+-   **The user approved the test room**, so sprite art is now the
+    default (`src/logic/artMode.ts`, tested). `?art=placeholder` opts
+    back into the generated shapes. The automatic fallback on missing
+    sheets is unchanged.
+-   **All five themes reviewed in the test room:** Ruins (dark cobble,
+    mauve brick), Sewers (sage ornamental tiles, green glow), Temple
+    (golden cobble), Foundry (warm cobble, orange brick, red glow) and
+    Void (purple cobble, boss). Every enemy type stays readable in each.
+-   **Performance with animated sprites:** the stress room (52–71 live
+    enemies, all animating, triple-shot fire, enemy bullets) averaged
+    0.88–1.00 ms CPU per frame, worst 2.8–4.0 ms. That is the same range
+    as the placeholder shapes in milestone 5.
+-   **Gameplay identical, verified by a full run with the new art:**
+    menu → Levels 1–5 → victory, 23 rooms, 9 upgrade panels, 78 enemies
+    defeated, final score 50,332. These are exactly the milestone 6
+    figures. Listener counts were constant (`0/0/53/19`) in every room.
+-   **Production build verified:** all 18 sheets fetched with no
+    failures; it played from the menu through the first door with real
+    input; no console errors and no dev hook.
+-   **Driver note:** the boot scene now loads art before the menu
+    appears, so the test driver waits for the menu before pressing
+    Enter. An early press is ignored, as in real play; it is not a bug.
+-   **Menu footer:** "v1.1 · art: Ninja Adventure by Pixel-boy & AAA
+    (CC0)". The README now covers art, credits, the URL flags and the
+    remaining known issues (audio, wall autotile).
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose

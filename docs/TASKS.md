@@ -83,9 +83,8 @@ collision boxes, room layouts and combat behaviour stay unchanged.
     and enemy projectiles, hit/death/dash/torch effects.
 -   [x] Walls, floors, props and doors per level theme (walls: pack brick +
     generated edges; see DECISIONS.md).
--   [x] One polished test room (`?artroom`), built. Awaiting the user's
-    review before rollout.
--   [ ] Roll out to all rooms and levels; verify readability, lighting
+-   [x] One polished test room (`?artroom`), approved by the user.
+-   [x] Roll out to all rooms and levels; verify readability, lighting
     and performance; hitboxes unchanged (tested).
     **Acceptance:** the whole game uses the new art with identical
     gameplay; tests and build pass.

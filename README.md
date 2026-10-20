@@ -6,10 +6,11 @@ pick upgrades, and defeat the final boss. It is inspired by the broad
 room-based action genre; no characters, rooms, assets or names are taken
 from other games.
 
-**Status: v1.0 prototype.** It is playable from the menu to victory or
-game over, with placeholder art (shapes and generated textures only) and
-no audio. TypeScript (strict), Phaser 3, Vite, Vitest. It is
-offline-only: there is no backend, accounts or online leaderboard.
+**Status: v1.1.** It is playable from the menu to victory or game over,
+with pixel-art sprites from the CC0 **Ninja Adventure** pack by
+Pixel-boy and AAA (see `CREDITS.md`), and no audio yet. TypeScript
+(strict), Phaser 3, Vite, Vitest. It is offline-only: there is no
+backend, accounts or online leaderboard.
 
 ![AI-generated concept (mood reference only)](assets/dungeon-survivor-concept.png)
 
@@ -30,8 +31,29 @@ npm run dev          # play at http://127.0.0.1:5173
 | `npm run build` | Typecheck, then production build into `dist/` |
 | `npm run preview` | Serve the production build locally |
 
-URL flags for debugging: `?debug` draws physics bodies, and `?nolight`
-turns the lighting off.
+URL flags:
+
+| Flag | Effect |
+|---|---|
+| `?debug` | Draw physics bodies |
+| `?nolight` | Turn the lighting off |
+| `?art=placeholder` | Use the original generated shapes instead of sprites |
+| `?artroom` | Open the art test room (one room with every enemy type, props and torches) |
+| `?artroom&theme=sewers` | Test room in another level's look (`ruins`, `sewers`, `temple`, `foundry`, `void`) |
+| `?artroom&boss` | Test room with the boss added |
+
+## Art
+
+Sprites, tiles and effects come from the **Ninja Adventure** asset pack
+by Pixel-boy and AAA (CC0, credited in `CREDITS.md`). Only the 18 sheets
+in use (93 KB) are included, in `public/assets/ninja/`.
+`src/data/artManifest.ts` lists each sheet's frames, animations and
+original pack path, plus the per-level floor and wall choices.
+
+-   **Hitboxes are separate from the art** (`src/data/hitboxes.ts`,
+    locked by tests), so changing sprites never changes gameplay.
+-   **Missing sheets fall back to the generated placeholder art** with a
+    console warning, instead of breaking the game.
 
 ## Controls
 
@@ -115,8 +137,12 @@ spawn, `E` enemy spawn.
     without pathfinding, so they can snag on pillars and crates.
 -   **Balance:** set by measurement plus one full hand-played run to
     victory, not by broad playtesting. It may need tuning.
--   **Art and audio:** placeholder art only; no sound or music
-    (post-v1).
+-   **Audio:** no sound or music yet (the Ninja Adventure pack includes
+    some, for later).
+-   **Walls:** they use the pack's brick texture with generated edges.
+    The pack's wall sets only have inward-facing pieces, which would
+    break on free-standing pillars, so a full wall autotile is a
+    possible future improvement.
 -   **Foreground occlusion** (optional in the spec) is not implemented.
 -   **Lighting performance:** measured as CPU time per frame
     (negligible even with ~70 enemies). GPU cost was not measured

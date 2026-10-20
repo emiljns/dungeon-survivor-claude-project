@@ -45,7 +45,7 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     this.tweens.add({ targets: prompt, alpha: 0.35, duration: 600, yoyo: true, repeat: -1 });
-    this.add.text(cx, GAME_HEIGHT - 20, "v1.0 prototype · placeholder art", { ...small, fontSize: "9px" }).setOrigin(0.5);
+    this.add.text(cx, GAME_HEIGHT - 20, "v1.1 · art: Ninja Adventure by Pixel-boy & AAA (CC0)", { ...small, fontSize: "9px" }).setOrigin(0.5);
 
     let started = false;
     const start = (): void => {
