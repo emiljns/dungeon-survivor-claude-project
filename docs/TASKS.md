@@ -12,14 +12,14 @@ Complete in order and keep the game launchable at each milestone.
 
 ## Milestone 1 --- Combat prototype
 
--   [ ] Placeholder arena floor/walls.
--   [ ] WASD movement with normalized diagonals.
--   [ ] Mouse aim and hold-to-shoot.
--   [ ] Projectile physics and wall collision.
--   [ ] One chaser enemy.
--   [ ] Player/enemy health and visible damage feedback.
--   [ ] Game-over state and UI when player health reaches zero.
--   [ ] Restart a clean run without stale entities or duplicate listeners.
+-   [x] Placeholder arena floor/walls.
+-   [x] WASD movement with normalized diagonals.
+-   [x] Mouse aim and hold-to-shoot.
+-   [x] Projectile physics and wall collision.
+-   [x] One chaser enemy.
+-   [x] Player/enemy health and visible damage feedback.
+-   [x] Game-over state and UI when player health reaches zero.
+-   [x] Restart a clean run without stale entities or duplicate listeners.
     **Acceptance:** move, aim, shoot, hit walls/enemy, take damage,
     reach game over, and restart successfully. Game over and restart are
     mandatory.

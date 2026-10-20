@@ -58,6 +58,56 @@
 -   Phaser goes into its own build chunk (~1.48 MB, ~340 kB gzip), and
     the chunk warning limit is raised to match.
 
+### Milestone 1 (2026-10-20)
+
+-   **Projectiles do not use Arcade bodies.** Bullets move with a pure
+    swept segment test (`src/logic/projectile.ts`, Liang–Barsky against
+    wall/target rects inflated by the bullet radius). An Arcade overlap
+    only samples end positions, so a fast bullet or a long frame can
+    skip a thin wall. The swept test is exact at any speed or frame time
+    and is unit tested: 2 px walls at 1,000–200,000 px/s, 250 ms frame
+    spikes, 48 approach angles, and bullets spawned inside walls. In the
+    browser, 11 bullets fired at a 1-tile interior wall never passed
+    x = 302, the wall face minus the bullet radius. The earliest hit
+    along the path wins, so a wall shields an enemy standing behind it.
+    The spawn offset to the muzzle is swept too.
+-   **Player, enemy and walls use Arcade Physics.** The player and
+    enemies are dynamic bodies, and walls are a static group of merged
+    rectangles (11 bodies instead of ~150 tiles). The colliders are
+    player/wall, enemy/wall, and player/enemy (with a damage callback).
+    The player body is not pushable, so the chaser separates around the
+    player instead of shoving them. Collision bodies are slightly
+    smaller than the art.
+-   **Contact damage cooldown = player invulnerability window** (900 ms,
+    shown by blinking). The rule lives in pure `applyDamage`, which also
+    guarantees the death result fires exactly once.
+-   **Exactly one chaser at a time.** It respawns 1.5 s after being
+    killed, at the enemy spawn farthest from the player, so the arena
+    stays a threat and the run can always be lost. It chases in a
+    straight line with no pathfinding. It can snag on pillars, which is
+    acceptable for M1.
+-   **Rooms are ASCII layouts** (`src/data/arenas.ts`, parsed by
+    `src/logic/layout.ts`). This is the hand-authored, reusable format
+    later milestones will use for per-level room sets. It is not
+    procedural.
+-   **Restart is clean by construction.** Per-run state is reset in
+    `init`/`create` because Phaser reuses the Scene instance. All
+    listeners sit on scene-owned plugins that Phaser clears on shutdown,
+    with nothing on `window`, `game.events` or `this.events`. This was
+    checked in the browser with a dev-only `GameScene.debugSnapshot()`.
+    Over 6 restarts and 3 menu round-trips, the counts of colliders,
+    bodies, display objects, and input, keyboard, scene and game
+    listeners stayed identical, with 0 stale bullets.
+-   **Dev-only `window.__game`** (under `import.meta.env.DEV`) exposes the
+    game for diagnostics. It does not appear in the production bundle
+    (verified by grep). `?debug` in the URL draws physics bodies.
+-   **Render depths** are reserved in `config.ts` (`Depth`) for the
+    shadow, foreground-occlusion and lighting layers planned in
+    Milestone 5. Floor and walls are baked once into a single
+    RenderTexture. No lighting is implemented yet.
+-   **Deferred to later milestones, as planned:** dash, pause, score,
+    upgrades, level progression, high-score storage and lighting.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose

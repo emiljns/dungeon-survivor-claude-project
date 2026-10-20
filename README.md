@@ -23,3 +23,19 @@ online leaderboard.
     `npm run typecheck`, `npm test`, and `npm run build`.
 
 This is a specification and starter scaffold, not a finished game.
+
+## Current state: Milestone 1 combat prototype
+
+``` text
+npm install
+npm run dev        # open http://127.0.0.1:5173
+npm run typecheck
+npm test
+npm run build      # production build in dist/ (npm run preview to serve it)
+```
+
+Click or press Enter on the menu. WASD moves, the mouse aims, and
+holding the left mouse button shoots. Kill the red chaser (it respawns)
+and avoid its contact damage. At 0 HP the Game Over screen offers
+R / click to restart and M for the menu. Add `?debug` to the URL to see
+physics bodies.
