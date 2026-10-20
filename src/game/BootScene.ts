@@ -36,7 +36,9 @@ export class BootScene extends Phaser.Scene {
     setArtMode(this, mode);
 
     const q = new URLSearchParams(window.location.search);
-    if (q.has("artroom")) {
+    if (q.has("testmap")) {
+      this.scene.start("game", { ...newRun(Tuning.player.maxHealth), testmap: true });
+    } else if (q.has("artroom")) {
       this.scene.start("game", { ...newRun(Tuning.player.maxHealth), showcase: { theme: q.get("theme") ?? "ruins", boss: q.has("boss") } });
     } else {
       this.scene.start("menu");

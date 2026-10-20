@@ -2,6 +2,7 @@
 // and a final room with an elite (level 5: the boss). Layouts are reused across
 // levels with different enemy sets, themes and difficulty.
 
+import type { EncounterDef } from "../logic/encounter.ts";
 import type { Difficulty, EnemyKind } from "../logic/enemyStats.ts";
 import { ARENA, CROSSROADS, ENTRY_HALL, FURNACE, GALLERY, PILLAR_HALL, STOREROOM, type RoomLayout } from "./rooms.ts";
 import { THEMES, type Theme } from "./themes.ts";
@@ -17,6 +18,12 @@ export interface LevelRoom {
   readonly enemies: readonly EnemySpec[];
   /** Clearing this room offers the three-choice upgrade panel. */
   readonly reward: boolean;
+  /**
+   * v2 maps: encounter areas that spawn their own waves when entered. When
+   * present, `enemies` lists every enemy of every wave (for counting), and
+   * nothing spawns at room start.
+   */
+  readonly encounters?: readonly EncounterDef[];
 }
 
 export interface LevelDefinition {

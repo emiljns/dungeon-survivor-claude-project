@@ -21,6 +21,10 @@ export const Depth = {
   props: 5,
   shadows: 10,
   actors: 20,
+  /** Wall tops drawn over actors (walk-behind), below the darkness. */
+  foreground: 50,
+  /** Faint outlines of actors hidden behind wall tops. */
+  silhouettes: 52,
   lighting: 60,
   glow: 62,
   vignette: 65,

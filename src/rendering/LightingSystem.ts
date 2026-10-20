@@ -1,7 +1,7 @@
 import * as Phaser from "phaser";
 import { ART_DARKNESS_SCALE } from "../data/artManifest.ts";
 import type { Theme } from "../data/themes.ts";
-import { Depth } from "../game/config.ts";
+import { Depth, GAME_HEIGHT, GAME_WIDTH } from "../game/config.ts";
 import { clampDarkness, flicker, type TorchLight } from "../logic/lighting.ts";
 import type { Vec2 } from "../logic/vector.ts";
 import { artMode, sheetKey } from "./Art.ts";
@@ -11,6 +11,12 @@ const TORCH_POOL_RADIUS = 92;
 const TORCH_GLOW_RADIUS = 46;
 /** Small light around each enemy so threats stay visible in dark corners. */
 const ENEMY_LIGHT = { radius: 30, intensity: 0.55 } as const;
+/**
+ * The overlay covers the screen plus this margin on every side. The camera
+ * scrolls after update(), so the overlay (placed from last frame's scroll)
+ * must cover a frame of camera movement.
+ */
+const OVERLAY_MARGIN = 32;
 
 interface LightStamp {
   x: number;
@@ -21,11 +27,12 @@ interface LightStamp {
 
 /**
  * Cheap layered 2D lighting:
- *  1. A world-sized RenderTexture filled with the theme's darkness each frame.
+ *  1. A screen-sized RenderTexture (following the camera) filled with the
+ *     theme's darkness each frame.
  *  2. Light pools erased out of it with one cached radial-gradient texture,
  *     drawn through a small pool of reusable stamp images in one batch.
  *  3. Additive glow + pixel flames on torches, and a static vignette.
- * Per frame that is one fill and one batched erase of ~5–15 stamps; no
+ * Per frame that is one fill and one batched erase of the on-screen stamps; no
  * textures or gradients are created after setup.
  */
 export class LightingSystem {
@@ -40,14 +47,13 @@ export class LightingSystem {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly theme: Theme,
-    worldW: number,
-    worldH: number,
     private readonly torches: readonly TorchLight[],
     enabled: boolean,
   ) {
     const scale = artMode(scene) === "ninja" ? ART_DARKNESS_SCALE : 1;
     this.darkness = clampDarkness(theme.light.darkness * scale);
-    this.overlay = scene.add.renderTexture(0, 0, worldW, worldH).setOrigin(0).setDepth(Depth.lighting);
+    const m = OVERLAY_MARGIN;
+    this.overlay = scene.add.renderTexture(-m, -m, GAME_WIDTH + 2 * m, GAME_HEIGHT + 2 * m).setOrigin(0).setDepth(Depth.lighting);
     for (const t of torches) {
       this.glows.push(
         scene.add
@@ -82,9 +88,15 @@ export class LightingSystem {
     // Flames stay visible either way; they are part of the wall art.
   }
 
-  update(now: number, player: Vec2, enemies: readonly Vec2[]): void {
+  /** `view`: the camera's scroll position (top-left of the screen in world px). */
+  update(now: number, player: Vec2, enemies: readonly Vec2[], view: Vec2): void {
     this.animateTorches(now);
     if (!this.on) return;
+    const ox = Math.round(view.x) - OVERLAY_MARGIN;
+    const oy = Math.round(view.y) - OVERLAY_MARGIN;
+    this.overlay.setPosition(ox, oy);
+    const w = this.overlay.width;
+    const h = this.overlay.height;
 
     const lights: LightStamp[] = [
       { x: player.x, y: player.y, radius: this.theme.light.playerRadius * flicker(now, 0, 0.015), intensity: 1 },
@@ -95,7 +107,7 @@ export class LightingSystem {
         intensity: 0.9,
       })),
       ...enemies.map((e) => ({ x: e.x, y: e.y, radius: ENEMY_LIGHT.radius, intensity: ENEMY_LIGHT.intensity })),
-    ];
+    ].filter((l) => l.x + l.radius > ox && l.x - l.radius < ox + w && l.y + l.radius > oy && l.y - l.radius < oy + h);
 
     while (this.stamps.length < lights.length) {
       // Not added to the display list: only ever drawn into the overlay.
@@ -104,7 +116,7 @@ export class LightingSystem {
     const used = lights.map((l, i) => {
       const stamp = this.stamps[i];
       if (!stamp) throw new Error("light stamp pool underflow");
-      return stamp.setPosition(l.x, l.y).setScale((l.radius * 2) / LIGHT_TEXTURE_SIZE).setAlpha(l.intensity);
+      return stamp.setPosition(l.x - ox, l.y - oy).setScale((l.radius * 2) / LIGHT_TEXTURE_SIZE).setAlpha(l.intensity);
     });
 
     this.overlay.clear();

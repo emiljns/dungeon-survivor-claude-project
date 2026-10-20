@@ -12,7 +12,7 @@ export class MenuScene extends Phaser.Scene {
     const cx = GAME_WIDTH / 2;
     const small = { fontFamily: FONT_FAMILY, fontSize: "11px", color: PALETTE.textDim };
     this.add
-      .text(cx, 64, "DUNGEON SURVIVOR", { fontFamily: FONT_FAMILY, fontSize: "32px", color: PALETTE.text, fontStyle: "bold" })
+      .text(cx, 64, "NINJA SURVIVOR", { fontFamily: FONT_FAMILY, fontSize: "32px", color: PALETTE.text, fontStyle: "bold" })
       .setOrigin(0.5);
     this.add.text(cx, 96, "Five levels. One dungeon.", { ...small, fontSize: "12px" }).setOrigin(0.5);
 

@@ -93,18 +93,19 @@ collision boxes, room layouts and combat behaviour stay unchanged.
 
 ## Milestone 8 --- Engine
 
--   [ ] Rename to Ninja Survivor (title, page title, package, docs).
--   [ ] Map format for large maps: terrain symbols (water as a low
+-   [x] Rename to Ninja Survivor (title, page title, package, docs).
+-   [x] Map format for large maps: terrain symbols (water as a low
     obstacle, gates), encounter areas (waves, ambush triggers).
--   [ ] Following camera with a slight aim lean; screen-sized lighting.
--   [ ] Tall walls drawn in a base layer and a foreground layer
+-   [x] Following camera with a slight aim lean; screen-sized lighting.
+-   [x] Tall walls drawn in a base layer and a foreground layer
     (walk-behind) with unchanged collision; silhouettes for hidden actors.
--   [ ] Low obstacles: block movement and pathfinding, not bullets.
--   [ ] Encounter areas: gates close on entry and reopen when cleared;
+-   [x] Low obstacles: block movement and pathfinding, not bullets.
+-   [x] Encounter areas: gates close on entry and reopen when cleared;
     waves and ambushes with telegraphs and a minimum spawn distance.
--   [ ] Flow-field pathfinding for enemies; enemies only attack near the
+-   [x] Flow-field pathfinding for enemies; enemies only attack near the
     screen.
--   [ ] Test map (`?testmap`) reviewed by the user.
+-   [ ] Test map (`?testmap`) reviewed by the user. *(Built and
+    self-tested; waiting for the user's review.)*
     **Acceptance:** the test map plays with every engine feature; the
     existing game still runs unchanged; tests and build pass.
 

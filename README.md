@@ -1,4 +1,4 @@
-# Dungeon Survivor
+# Ninja Survivor (formerly Dungeon Survivor)
 
 A compact, original top-down dungeon shooter with a 16-bit-inspired
 pixel look. Fight through five themed levels of hand-authored rooms,
@@ -6,7 +6,8 @@ pick upgrades, and defeat the final boss. It is inspired by the broad
 room-based action genre; no characters, rooms, assets or names are taken
 from other games.
 
-**Status: v1.1.** It is playable from the menu to victory or game over,
+**Status: v1.1, with v2 (Ninja Survivor) in progress** (see
+`docs/GAME_DESIGN.md` and `docs/TASKS.md`). It is playable from the menu to victory or game over,
 with pixel-art sprites from the CC0 **Ninja Adventure** pack by
 Pixel-boy and AAA (see `CREDITS.md`), and no audio yet. TypeScript
 (strict), Phaser 3, Vite, Vitest. It is offline-only: there is no
@@ -41,6 +42,7 @@ URL flags:
 | `?artroom` | Open the art test room (one room with every enemy type, props and torches) |
 | `?artroom&theme=sewers` | Test room in another level's look (`ruins`, `sewers`, `temple`, `foundry`, `void`) |
 | `?artroom&boss` | Test room with the boss added |
+| `?testmap` | v2 engine test map: scrolling camera, tall walls, water, gated encounter areas with waves and an ambush |
 
 ## Art
 

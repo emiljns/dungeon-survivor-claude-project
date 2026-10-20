@@ -1,7 +1,7 @@
 import * as Phaser from "phaser";
 import { ENEMY_SHEET, idleFrame, walkAnimKey, type Direction } from "../data/artManifest.ts";
 import { ENEMY_BODY } from "../data/hitboxes.ts";
-import { Depth } from "../game/config.ts";
+import { Depth, TILE } from "../game/config.ts";
 import {
   initialAttackCycle,
   radialDirections,
@@ -26,6 +26,13 @@ export interface EnemyContext {
   hasLineOfSight(from: Vec2, to: Vec2): boolean;
   /** `muzzle`: distance from the centre where the bullet appears (swept, so walls still block it). */
   fire(origin: Vec2, dir: Vec2, attack: EnemyAttack, muzzle: number): void;
+  /**
+   * Next step toward the player along the flow field (null: none known).
+   * `big`: the body is about a tile wide, so prefer routes with clearance.
+   */
+  flowDir(from: Vec2, big: boolean): Vec2 | null;
+  /** Enemies only attack when near the screen, never from somewhere unseen. */
+  onScreen(at: Vec2): boolean;
 }
 
 /** Hitbox sizes live in data/hitboxes.ts so art changes can never alter them. */
@@ -144,9 +151,15 @@ export class Enemy {
 
   private move(ctx: EnemyContext): void {
     const s = this.stats;
-    const dir = s.preferredRange
-      ? rangedSteer(this.position, ctx.player, s.preferredRange, this.strafeSign)
-      : directionTo(this.position, ctx.player);
+    // With a clear line to the player, steer directly; otherwise follow the
+    // flow field around walls and water (falls back to straight-line).
+    const big = BODY_SIZE[s.kind] * s.scale > TILE - 4;
+    const path = ctx.hasLineOfSight(this.position, ctx.player) ? null : ctx.flowDir(this.position, big);
+    const dir =
+      path ??
+      (s.preferredRange
+        ? rangedSteer(this.position, ctx.player, s.preferredRange, this.strafeSign)
+        : directionTo(this.position, ctx.player));
     // Ranged enemies stand still while telegraphing so the shot is readable.
     const winding = this.attackCycle?.phase === "windup" && s.kind === "ranged";
     const speed = winding ? 0 : s.speed;
@@ -159,7 +172,7 @@ export class Enemy {
     const base = this.stats.attack;
     if (!base || !this.attackCycle) return;
     const attack = this.stats.kind === "boss" ? bossAttackFor(base, healthFraction(this.healthState)) : base;
-    const canSee = ctx.hasLineOfSight(this.position, ctx.player);
+    const canSee = ctx.onScreen(this.position) && ctx.hasLineOfSight(this.position, ctx.player);
     const step = stepAttack(this.attackCycle, ctx.now, attack, canSee);
     this.attackCycle = step.state;
 

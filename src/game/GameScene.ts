@@ -1,13 +1,25 @@
 import * as Phaser from "phaser";
 import { BOSS_NAME, ENEMY_STATS } from "../data/enemies.ts";
-import { LEVELS, ROOMS_PER_LEVEL, type LevelDefinition, type LevelRoom } from "../data/levels.ts";
+import { LEVELS, ROOMS_PER_LEVEL, type EnemySpec, type LevelDefinition, type LevelRoom } from "../data/levels.ts";
 import { Enemy, type EnemyContext } from "../entities/Enemy.ts";
 import { Player } from "../entities/Player.ts";
 import { hasLineOfSight, spreadDirections } from "../logic/ai.ts";
 import { expandRect, pointInRect, type Rect } from "../logic/collision.ts";
 import { makeElite, scaleForDifficulty, type EnemyAttack } from "../logic/enemyStats.ts";
 import { healthFraction } from "../logic/health.ts";
-import { parseLayout, type ParsedLayout } from "../logic/layout.ts";
+import {
+  IDLE,
+  inRect,
+  pickSpawnPoints,
+  shouldTrigger,
+  startEncounter,
+  stepEncounter,
+  type EncounterDef,
+  type EncounterState,
+} from "../logic/encounter.ts";
+import { computeFlowField, flowDirection, withClearance, type FlowField } from "../logic/flowField.ts";
+import { parseLayout, type ParsedLayout, type TilePos } from "../logic/layout.ts";
+import { behindWallTop, cameraLean, inView } from "../logic/view.ts";
 import {
   advanceRun,
   isFinalLevel,
@@ -28,6 +40,7 @@ import {
   type UpgradeLevels,
 } from "../logic/upgrades.ts";
 import type { Vec2 } from "../logic/vector.ts";
+import { parseTestMap, testMapLevel } from "../data/maps.ts";
 import { FireCooldown } from "../logic/weapon.ts";
 import { torchLights } from "../logic/lighting.ts";
 import { LightingSystem } from "../rendering/LightingSystem.ts";
@@ -35,7 +48,7 @@ import { TILE_FRAMES } from "../data/artManifest.ts";
 import { parseShowcase, showcaseLevel, type ShowcaseOptions } from "../data/showcase.ts";
 import { artMode, playFx, sheetKey, type ArtMode } from "../rendering/Art.ts";
 import { ensureLightTextures } from "../rendering/LightTextures.ts";
-import { bakeTileLayer, ensurePlaceholderTextures, Tex } from "../rendering/PlaceholderArt.ts";
+import { bakeTallWalls, bakeTileLayer, ensurePlaceholderTextures, Tex } from "../rendering/PlaceholderArt.ts";
 import { browserStorage, loadBest, mergeBest, saveBest } from "../systems/HighScoreStore.ts";
 import { ProjectileSystem, type BulletSpec } from "../systems/ProjectileSystem.ts";
 import { Hud } from "../ui/Hud.ts";
@@ -44,6 +57,21 @@ import { Depth, FONT_FAMILY, PALETTE, TILE, Tuning } from "./config.ts";
 import type { RunResult } from "./ResultsScene.ts";
 
 type Phase = "playing" | "reward" | "exiting" | "gameOver" | "victory";
+
+/** One encounter area of a v2 map at runtime. */
+interface EncounterRuntime {
+  readonly def: EncounterDef;
+  state: EncounterState;
+  /** Enemies telegraphed but not spawned yet (they count as alive). */
+  pending: number;
+  readonly members: Enemy[];
+  readonly gates: readonly Rect[];
+}
+
+/** The flow field is rebuilt at most this often (and only when needed). */
+const FLOW_REFRESH_MS = 150;
+/** Attack gate: enemies this far outside the screen still count as on-screen. */
+const ON_SCREEN_MARGIN = 8;
 
 interface Keys {
   readonly up: Phaser.Input.Keyboard.Key;
@@ -141,6 +169,21 @@ export class GameScene extends Phaser.Scene {
   private art: ArtMode = "placeholder";
   private showcase: ShowcaseOptions | null = null;
   private doorSprites: Phaser.GameObjects.Image[] = [];
+  private testmap = false;
+  // v2 maps (rooms with encounters): tall walls, gates and pathfinding.
+  private encounters: EncounterRuntime[] = [];
+  private gateBodies!: Phaser.Physics.Arcade.StaticGroup;
+  private gateGfx!: Phaser.GameObjects.Graphics;
+  /** Walls, water and props: never walkable. Gates/doors are checked on top. */
+  private staticBlocked: boolean[][] = [];
+  private flow: FlowField | null = null;
+  /** Same, keeping a tile of clearance from walls, for big bodies. */
+  private flowBig: FlowField | null = null;
+  private flowTarget: TilePos | null = null;
+  private flowBuiltAt = -Infinity;
+  private flowDirty = true;
+  private tallWalls = false;
+  private silhouettes: Phaser.GameObjects.Image[] = [];
 
   constructor() {
     super("game");
@@ -161,6 +204,16 @@ export class GameScene extends Phaser.Scene {
     this.panel = null;
     this.lighting = null;
     this.doorSprites = [];
+    this.testmap = parseTestMap(data);
+    this.encounters = [];
+    this.staticBlocked = [];
+    this.flow = null;
+    this.flowBig = null;
+    this.flowTarget = null;
+    this.flowBuiltAt = -Infinity;
+    this.flowDirty = true;
+    this.tallWalls = false;
+    this.silhouettes = [];
     this.phase = "playing";
     this.leaving = false;
   }
@@ -169,7 +222,8 @@ export class GameScene extends Phaser.Scene {
     ensurePlaceholderTextures(this);
     this.art = artMode(this);
     // The art test room (?artroom) is a one-room level; everything else is the normal run.
-    const level = this.showcase ? showcaseLevel(this.showcase) : LEVELS[this.run.levelIndex];
+    // The test map (?testmap) is a one-room level too.
+    const level = this.showcase ? showcaseLevel(this.showcase) : this.testmap ? testMapLevel() : LEVELS[this.run.levelIndex];
     const levelRoom = level?.rooms[this.run.roomIndex];
     if (!level || !levelRoom) throw new Error(`No room at level ${this.run.levelIndex}, room ${this.run.roomIndex}`);
     this.level = level;
@@ -183,7 +237,16 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, worldW, worldH).setBackgroundColor(level.theme.background);
 
     ensureLightTextures(this);
-    bakeTileLayer(this, this.layout.wall, Depth.tiles, level.theme, this.layout.props, this.art);
+    // v2 maps get tall walls (walk-behind tops); the v1 rooms keep their flat look.
+    this.tallWalls = levelRoom.encounters !== undefined;
+    if (this.tallWalls) {
+      bakeTallWalls(this, this.layout.wall, this.layout.low, level.theme, this.layout.props, this.art, {
+        base: Depth.tiles,
+        top: Depth.foreground,
+      });
+    } else {
+      bakeTileLayer(this, this.layout.wall, Depth.tiles, level.theme, this.layout.props, this.art);
+    }
 
     // Walls and props never change during a room: one static group.
     const solids = this.physics.add.staticGroup();
@@ -199,6 +262,12 @@ export class GameScene extends Phaser.Scene {
       // Static bodies take the image's size: both art sets are 16x16, matching the tile.
       solids.add(img.setDepth(Depth.props));
     }
+    // Water and other low obstacles block walking only; bullets fly over them.
+    const low = this.physics.add.staticGroup();
+    for (const r of this.layout.lowRects) low.add(this.add.zone(r.x + r.width / 2, r.y + r.height / 2, r.width, r.height));
+    // Encounter gates: bodies exist only while their encounter is active.
+    this.gateBodies = this.physics.add.staticGroup();
+    this.gateGfx = this.add.graphics().setDepth(Depth.effects);
     // Doors are separate so they can be removed when the room is cleared.
     this.doors = this.physics.add.staticGroup();
     for (const d of this.layout.doorRects) this.doors.add(this.add.zone(d.x + d.width / 2, d.y + d.height / 2, d.width, d.height));
@@ -221,6 +290,10 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.player.sprite, this.doors);
     this.physics.add.collider(this.enemyGroup, solids);
     this.physics.add.collider(this.enemyGroup, this.doors);
+    this.physics.add.collider(this.player.sprite, low);
+    this.physics.add.collider(this.enemyGroup, low);
+    this.physics.add.collider(this.player.sprite, this.gateBodies);
+    this.physics.add.collider(this.enemyGroup, this.gateBodies);
     this.physics.add.collider(this.enemyGroup, this.enemyGroup);
     this.physics.add.collider(this.player.sprite, this.enemyGroup, (_p, e) => this.onEnemyContact(e));
 
@@ -247,16 +320,30 @@ export class GameScene extends Phaser.Scene {
     this.lighting = new LightingSystem(
       this,
       level.theme,
-      worldW,
-      worldH,
       torchLights(this.layout, TILE),
       !new URLSearchParams(window.location.search).has("nolight"),
     );
     // Off-display-list light stamps are not destroyed by Phaser; `once` fires and removes itself each shutdown.
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.lighting?.destroy());
 
+    // The camera follows the player (and leans toward the aim) on maps larger
+    // than the screen; on screen-sized rooms the bounds keep it still.
+    this.cameras.main.startFollow(this.player.sprite, true, 0.15, 0.15);
+    this.cameras.main.setRoundPixels(true);
+
+    this.buildStaticBlocked();
+    this.encounters = (levelRoom.encounters ?? []).map((def) => ({
+      def,
+      state: IDLE,
+      pending: 0,
+      members: [],
+      gates: this.layout.gates
+        .filter((g) => inRect(g, def.area))
+        .map((g) => ({ x: g.col * TILE, y: g.row * TILE, width: TILE, height: TILE })),
+    }));
     this.refreshDoors();
-    this.telegraphEnemySpawns();
+    // v1 rooms spawn everything at once; maps spawn per encounter area.
+    if (!levelRoom.encounters) this.telegraphEnemySpawns();
     this.updateHud();
     this.updateLighting(); // first frame is already lit, no full-bright flash
   }
@@ -266,6 +353,7 @@ export class GameScene extends Phaser.Scene {
       this.simTime,
       this.player.position,
       this.enemies.filter((e) => e.alive).map((e) => e.position),
+      { x: this.cameras.main.scrollX, y: this.cameras.main.scrollY },
     );
   }
 
@@ -293,6 +381,9 @@ export class GameScene extends Phaser.Scene {
       Phaser.Input.Keyboard.JustDown(k.dash),
     );
 
+    const lean = cameraLean(this.player.position, aim);
+    this.cameras.main.setFollowOffset(-lean.x, -lean.y);
+
     if (pointer.leftButtonDown() && this.gun.tryFire(now)) {
       const n = this.stats.projectiles;
       const spec = playerBulletSpec(this.stats, this.art);
@@ -307,7 +398,16 @@ export class GameScene extends Phaser.Scene {
       player: this.player.position,
       hasLineOfSight: (from, to) => hasLineOfSight(from, to, this.solidRects),
       fire: (origin, dir, attack, muzzle) => this.enemyShots.fire(origin, dir, muzzle, enemyBulletSpec(attack, this.art)),
+      flowDir: (from, big) => {
+        // Big bodies use the clearance field; where it has no route (narrow gaps) they try the normal one.
+        const wide = big && this.flowBig ? flowDirection(this.flowBig, from, TILE) : null;
+        return wide ?? (this.flow ? flowDirection(this.flow, from, TILE) : null);
+      },
+      onScreen: (at) => inView(at, this.cameras.main.worldView, ON_SCREEN_MARGIN),
     };
+    this.updateFlowField(now);
+    this.updateEncounters();
+    if (this.phase !== "playing") return;
     for (const e of this.enemies) e.update(ctx);
 
     const targets = this.enemies.filter((e) => e.alive);
@@ -340,8 +440,127 @@ export class GameScene extends Phaser.Scene {
       if (interactPressed) this.exitRoom();
     }
 
+    this.updateSilhouettes();
     this.updateHud();
     this.updateLighting();
+  }
+
+  // ---- v2 maps: pathfinding, encounters, gates, walk-behind ----
+
+  private buildStaticBlocked(): void {
+    const l = this.layout;
+    this.staticBlocked = l.wall.map((row, r) => row.map((w, c) => w || (l.low[r]?.[c] ?? false)));
+    for (const p of l.props) {
+      const row = this.staticBlocked[Math.floor(p.rect.y / TILE)];
+      if (row) row[Math.floor(p.rect.x / TILE)] = true;
+    }
+  }
+
+  /** Closed gates and locked doors: they block movement, bullets and paths. */
+  private dynamicSolids(): Rect[] {
+    const gates = this.encounters.filter((e) => e.state.phase === "active").flatMap((e) => e.gates);
+    return canExit(this.room) ? gates : [...gates, ...this.layout.doorRects];
+  }
+
+  /** Rebuilt when the player changes tile or gates change, at most every FLOW_REFRESH_MS. */
+  private updateFlowField(now: number): void {
+    if (this.enemies.length === 0) return;
+    const p = this.player.position;
+    const tile = { col: Math.floor(p.x / TILE), row: Math.floor(p.y / TILE) };
+    const moved = !this.flowTarget || tile.col !== this.flowTarget.col || tile.row !== this.flowTarget.row;
+    if (!(moved || this.flowDirty) || now - this.flowBuiltAt < FLOW_REFRESH_MS) return;
+    const dyn = this.dynamicSolids();
+    const walk = (c: number, r: number): boolean =>
+      this.staticBlocked[r]?.[c] === false && !dyn.some((d) => pointInRect({ x: c * TILE + TILE / 2, y: r * TILE + TILE / 2 }, d));
+    this.flow = computeFlowField(walk, this.layout.cols, this.layout.rows, tile);
+    this.flowBig = computeFlowField(withClearance(walk, tile), this.layout.cols, this.layout.rows, tile);
+    this.flowTarget = tile;
+    this.flowBuiltAt = now;
+    this.flowDirty = false;
+  }
+
+  private updateEncounters(): void {
+    if (this.encounters.length === 0) return;
+    const p = this.player.position;
+    const tile = { col: Math.floor(p.x / TILE), row: Math.floor(p.y / TILE) };
+    for (const enc of this.encounters) {
+      if (shouldTrigger(enc.def, enc.state, tile)) {
+        const start = startEncounter();
+        enc.state = start.state;
+        this.setGates();
+        this.hud.banner(enc.def.trigger ? "AMBUSH!" : "ENEMIES", "The way out is sealed", PALETTE.danger);
+        this.spawnWave(enc, start.spawnWave);
+        continue;
+      }
+      if (enc.state.phase !== "active") continue;
+      const alive = enc.members.filter((m) => m.alive).length + enc.pending;
+      const step = stepEncounter(enc.def, enc.state, alive);
+      enc.state = step.state;
+      if (step.spawnWave !== null) this.spawnWave(enc, step.spawnWave);
+      if (step.cleared) {
+        this.setGates();
+        // The last area's clear is announced by the room clear instead.
+        if (!canExit(this.room)) this.hud.banner("AREA CLEAR", "The gates open", "#7dff9b");
+        if (enc.def.reward) this.offerUpgrade();
+        if (this.phase !== "playing") return;
+      }
+    }
+  }
+
+  private spawnWave(enc: EncounterRuntime, wave: number): void {
+    const specs = enc.def.waves[wave] ?? [];
+    const points = this.layout.enemySpawns.filter((s) => inRect({ col: Math.floor(s.x / TILE), row: Math.floor(s.y / TILE) }, enc.def.area));
+    const at = pickSpawnPoints(points, specs.length, this.player.position);
+    enc.pending += specs.length;
+    this.telegraphSpawns(
+      specs.map((spec, i) => ({ spec, at: at[i] ?? this.layout.playerSpawn })),
+      (enemy) => {
+        enc.pending--;
+        enc.members.push(enemy);
+      },
+    );
+  }
+
+  /** Gate bodies, gate art and solidRects follow the encounters' phases. */
+  private setGates(): void {
+    this.gateBodies.clear(true, true);
+    this.gateGfx.clear();
+    for (const enc of this.encounters) {
+      if (enc.state.phase !== "active") continue;
+      for (const g of enc.gates) {
+        this.gateBodies.add(this.add.zone(g.x + g.width / 2, g.y + g.height / 2, g.width, g.height));
+        // Glowing bars, drawn above the darkness like all door state.
+        this.gateGfx.fillStyle(0x2a1430, 0.85).fillRect(g.x, g.y, g.width, g.height);
+        this.gateGfx.fillStyle(0xff5d73);
+        for (let i = 2; i < TILE; i += 5) this.gateGfx.fillRect(g.x + i, g.y + 1, 2, g.height - 2);
+      }
+    }
+    this.refreshSolids();
+    this.flowDirty = true;
+  }
+
+  /** Faint outlines of the player and enemies while hidden behind a wall top. */
+  private updateSilhouettes(): void {
+    if (!this.tallWalls) return;
+    const actors: Phaser.GameObjects.Sprite[] = [this.player.sprite, ...this.enemies.filter((e) => e.alive).map((e) => e.sprite)];
+    let used = 0;
+    for (const a of actors) {
+      if (!behindWallTop(this.layout.wall, { x: a.x, y: a.y }, 5, TILE)) continue;
+      let img = this.silhouettes[used];
+      if (!img) {
+        img = this.add.image(0, 0, a.texture.key).setDepth(Depth.silhouettes).setTintFill(0xd8e6ff).setAlpha(0.45);
+        this.silhouettes.push(img);
+      }
+      img
+        .setTexture(a.texture.key, a.frame.name)
+        .setPosition(a.x, a.y)
+        .setOrigin(a.originX, a.originY)
+        .setScale(a.scaleX, a.scaleY)
+        .setFlipX(a.flipX)
+        .setVisible(true);
+      used++;
+    }
+    for (let i = used; i < this.silhouettes.length; i++) this.silhouettes[i]?.setVisible(false);
   }
 
   private get isFinalRoom(): boolean {
@@ -372,6 +591,8 @@ export class GameScene extends Phaser.Scene {
     const level = this.level;
     if (this.showcase) {
       this.hud.banner("ART TEST ROOM", level.name.toUpperCase(), level.theme.title, true);
+    } else if (this.testmap) {
+      this.hud.banner("TEST MAP", "Gates seal each area until it is clear", level.theme.title, true);
     } else if (this.run.roomIndex === 0) {
       this.hud.banner(`LEVEL ${level.number}`, level.name.toUpperCase(), level.theme.title, true);
     } else if (this.isFinalRoom) {
@@ -405,15 +626,22 @@ export class GameScene extends Phaser.Scene {
       const lap = Math.floor(i / spawns.length);
       return { spec, at: { x: p.x + lap * 18, y: p.y } };
     });
+    this.telegraphSpawns(placements);
+  }
+
+  /** Pulsing markers, then the enemies appear (also used by encounter waves). */
+  private telegraphSpawns(placements: readonly { spec: EnemySpec; at: Vec2 }[], onSpawn?: (e: Enemy) => void): void {
     const markers = placements.map(({ at }) => this.add.image(at.x, at.y, Tex.spawnMarker).setDepth(Depth.effects).setAlpha(0.2));
     this.tweens.add({ targets: markers, alpha: 1, duration: 220, yoyo: true, repeat: -1 });
     this.time.delayedCall(Tuning.room.enemySpawnDelayMs, () => {
       markers.forEach((m) => m.destroy());
-      if (this.phase !== "playing") return;
+      // A wave that was telegraphed while the upgrade panel opened still arrives.
+      if (this.phase !== "playing" && this.phase !== "reward") return;
       for (const { spec, at } of placements) {
         const scaled = scaleForDifficulty(ENEMY_STATS[spec.kind], this.level.difficulty);
         const enemy = new Enemy(this, this.enemyGroup, at.x, at.y, spec.elite ? makeElite(scaled) : scaled, this.simTime);
         this.enemies.push(enemy);
+        onSpawn?.(enemy);
         if (spec.kind === "boss") {
           this.boss = enemy;
           this.hud.showBoss(BOSS_NAME);
@@ -503,11 +731,8 @@ export class GameScene extends Phaser.Scene {
   private refreshDoors(): void {
     const open = canExit(this.room);
     if (open) this.doors.clear(true, true);
-    this.solidRects = [
-      ...this.layout.wallRects,
-      ...this.layout.props.map((p) => p.rect),
-      ...(open ? [] : this.layout.doorRects),
-    ];
+    this.refreshSolids();
+    this.flowDirty = true;
 
     this.doorGfx.clear();
     for (const s of this.doorSprites) s.destroy();
@@ -535,6 +760,11 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** What blocks bullets and sight: walls, props, locked doors, closed gates. */
+  private refreshSolids(): void {
+    this.solidRects = [...this.layout.wallRects, ...this.layout.props.map((p) => p.rect), ...this.dynamicSolids()];
+  }
+
   private nearbyOpenDoor(): Rect | null {
     if (!canExit(this.room)) return null;
     const p = this.player.position;
@@ -547,6 +777,11 @@ export class GameScene extends Phaser.Scene {
       // The test room loops: leaving reloads it with the same theme.
       this.leaving = true;
       this.scene.restart({ ...newRun(Tuning.player.maxHealth), showcase: this.showcase });
+      return;
+    }
+    if (this.testmap) {
+      this.leaving = true;
+      this.scene.restart({ ...newRun(Tuning.player.maxHealth), testmap: true });
       return;
     }
     const next = advanceRun(this.currentRun(), ROOMS_PER_LEVEL, this.player.health.current, this.stats.maxHealth);

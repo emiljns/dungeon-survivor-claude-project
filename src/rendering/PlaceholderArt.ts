@@ -216,3 +216,86 @@ export function bakeTileLayer(
   }
   return rt;
 }
+
+/** Multiplies each RGB channel of a tint by `f` (0–1). */
+function darken(color: number, f: number): number {
+  const ch = (shift: number): number => Math.round(((color >> shift) & 0xff) * f) << shift;
+  return ch(16) | ch(8) | ch(0);
+}
+
+/**
+ * v2 maps: tall walls. Collision is unchanged (one tile per wall cell), but
+ * each wall cell is drawn as a front face in its own cell (base layer) and a
+ * top one tile higher (foreground layer, above actors). Actors walking just
+ * north of a wall therefore pass behind it. Two render textures, baked once.
+ */
+export function bakeTallWalls(
+  scene: Phaser.Scene,
+  wall: readonly (readonly boolean[])[],
+  low: readonly (readonly boolean[])[],
+  theme: Theme,
+  props: readonly Prop[],
+  art: ArtMode,
+  depths: { base: number; top: number },
+): { base: Phaser.GameObjects.RenderTexture; top: Phaser.GameObjects.RenderTexture } {
+  const keys = ensureThemeTextures(scene, theme);
+  const themeArt = art === "ninja" ? THEME_ART[theme.id] : undefined;
+  const floorTile = themeArt ? TILE_FRAMES[themeArt.floor] : undefined;
+  const wallTile = themeArt ? TILE_FRAMES[themeArt.wall] : undefined;
+  const rows = wall.length;
+  const cols = wall[0]?.length ?? 0;
+  const base = scene.add.renderTexture(0, 0, cols * TILE, rows * TILE).setOrigin(0).setDepth(depths.base);
+  const top = scene.add.renderTexture(0, 0, cols * TILE, rows * TILE).setOrigin(0).setDepth(depths.top);
+  const isWall = (c: number, r: number): boolean => wall[r]?.[c] ?? true;
+  const baseFx = scene.make.graphics({}, false);
+  const topFx = scene.make.graphics({}, false);
+
+  const brick = (rt: Phaser.GameObjects.RenderTexture, x: number, y: number, f: number): void => {
+    if (wallTile && themeArt) rt.drawFrame(sheetKey(wallTile.sheet), wallTile.frame, x, y, 1, darken(themeArt.wallTint, f));
+    else rt.draw(keys.wall, x, y, 1, darken(0xffffff, f));
+  };
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = c * TILE;
+      const y = r * TILE;
+      if (!isWall(c, r)) {
+        if (floorTile && themeArt) base.drawFrame(sheetKey(floorTile.sheet), floorTile.frame, x, y, 1, themeArt.floorTint);
+        else base.draw(keys.floor, x, y);
+        if (low[r]?.[c]) {
+          // Placeholder water (M9 replaces it with the pack's animated water).
+          baseFx.fillStyle(0x1d4f8a).fillRect(x, y, TILE, TILE);
+          baseFx.fillStyle(0x3f86c9).fillRect(x + ((r * 5) % 9), y + 5, 5, 1).fillRect(x + ((c * 7) % 8) + 3, y + 11, 4, 1);
+          if (!low[r - 1]?.[c] && !isWall(c, r - 1)) baseFx.fillStyle(0x0a2340).fillRect(x, y, TILE, 3);
+        }
+        continue;
+      }
+      // Face: darker brick, lit edge at the foot, a shadow band under the top.
+      brick(base, x, y, 0.62);
+      baseFx.fillStyle(0x000000, 0.35).fillRect(x, y, TILE, 3);
+      if (!isWall(c, r + 1)) {
+        baseFx.fillStyle(theme.wall.faceEdge, 0.8).fillRect(x, y + TILE - 1, TILE, 1);
+        // Contact shadow on the floor in front of the wall.
+        baseFx.fillStyle(0x000000, 0.22).fillRect(x, y + TILE, TILE, 3);
+      }
+      // Top, one tile up. Only the outline toward open floor gets an edge.
+      brick(top, x, y - TILE, 1);
+      topFx.fillStyle(theme.wall.edge);
+      if (!isWall(c, r - 1)) topFx.fillRect(x, y - TILE, TILE, 1);
+      if (!isWall(c - 1, r)) topFx.fillRect(x, y - TILE, 1, TILE);
+      if (!isWall(c + 1, r)) topFx.fillRect(x + TILE - 1, y - TILE, 1, TILE);
+      if (!isWall(c, r + 1)) topFx.fillStyle(0x000000, 0.4).fillRect(x, y - 1, TILE, 1);
+    }
+  }
+  base.draw(baseFx);
+  top.draw(topFx);
+  baseFx.destroy();
+  topFx.destroy();
+
+  if (props.length > 0 && scene.textures.exists(LightTex.shadow)) {
+    const stamp = scene.make.image({ key: LightTex.shadow }, false).setScale(0.62);
+    for (const p of props) base.draw(stamp, p.rect.x + TILE / 2, p.rect.y + TILE - 1);
+    stamp.destroy();
+  }
+  return { base, top };
+}

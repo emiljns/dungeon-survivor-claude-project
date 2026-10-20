@@ -547,6 +547,53 @@
     with a test-area review gate. The game stays launchable throughout,
     and the v1 dungeon levels remain playable until replaced.
 
+## Milestone 8 — engine and test map (2026-10-20)
+
+-   **Map format.** Maps reuse the ASCII layout. New symbols: `~` water
+    (a low obstacle: blocks walking and paths, not bullets or sight) and
+    `G` gate tiles (floor while open). Encounter areas are tile
+    rectangles in `src/data/maps.ts`, each with waves and an optional
+    small ambush trigger. A gate belongs to the area that contains it;
+    tests check that every gate has exactly one owner and that closed
+    gates seal each area.
+-   **Encounters.** An area triggers once the player is two tiles
+    inside it (so a gate never closes on the player). The next wave
+    comes when one enemy is left; spawn points are chosen farthest
+    first, at least 96 px from the player, and are telegraphed as in v1.
+    The room's exit opens when every encounter is cleared. The v1 rooms
+    keep their old behaviour (everything spawns at room start), so the
+    current game is unchanged.
+-   **Pathfinding.** One flow field (BFS from the player's tile) per
+    rebuild, recomputed when the player changes tile or a gate/door
+    changes, at most every 150 ms. Enemies with a clear line to the
+    player steer directly; otherwise they follow the field. This also
+    applies to the v1 rooms (enemies there route around pillars instead
+    of pressing into them; their attacks are unchanged).
+-   **Big bodies.** Found in testing: the tank's 16 px body is exactly
+    one tile and snagged on wall corners while following the tile
+    field (elites at ×1.35 are larger than a tile). Big bodies use a
+    second field that only allows tiles whose 3×3 neighbourhood is
+    walkable, and fall back to the normal field where that has no route.
+    Hitboxes are unchanged.
+-   **Attacks near the screen only.** An enemy starts an attack only
+    when it is within 8 px of the camera view and has line of sight.
+-   **Camera and lighting.** The camera follows the player with a lean
+    of up to 36 px toward the cursor; on screen-sized v1 rooms the
+    bounds keep it still. The darkness overlay is now screen-sized
+    (plus a 32 px margin that covers one frame of camera movement), and
+    lights outside it are skipped.
+-   **Tall walls (maps only).** Collision is unchanged: one tile per
+    wall cell. Each wall cell draws a darker face in its own cell and its
+    top one tile higher in a foreground layer above actors, so actors
+    pass behind walls south of them. Hidden actors get a faint
+    silhouette. The v1 rooms keep the flat wall look.
+-   **Rename.** The game is now titled Ninja Survivor (menu, page title,
+    package name, README). The save key stays `dungeon-survivor:best:v1`
+    until the v2 save format (Milestone 10) migrates it, so existing
+    best scores are kept.
+-   **Placeholder water** is drawn as simple blue tiles; Milestone 9
+    replaces it with pack art.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose
