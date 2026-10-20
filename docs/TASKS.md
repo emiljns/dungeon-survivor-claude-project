@@ -65,11 +65,11 @@ Complete in order and keep the game launchable at each milestone.
 
 ## Milestone 6 --- Release
 
--   [ ] Play through all five levels to victory and test game over.
--   [ ] Verify restart/transition cleanup.
--   [ ] Verify storage failures do not crash.
--   [ ] Run typecheck, tests and production build.
--   [ ] Document controls/run instructions and known issues.
+-   [x] Play through all five levels to victory and test game over.
+-   [x] Verify restart/transition cleanup.
+-   [x] Verify storage failures do not crash.
+-   [x] Run typecheck, tests and production build.
+-   [x] Document controls/run instructions and known issues.
     **Acceptance:** stable playable five-level prototype.
 
 ## Post-v1 only

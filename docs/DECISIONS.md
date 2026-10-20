@@ -358,6 +358,61 @@
     and stamp counts identical. The off-display-list stamps are
     destroyed on scene shutdown via a self-removing `once` hook.
 
+### Milestone 6 — release (2026-10-20)
+
+-   **Difficulty unchanged.** The user played the whole game with
+    upgrades and beat it, and judged the difficulty good. The planned
+    post-upgrade tuning pass therefore changed nothing. The tuning
+    knobs are listed in the README.
+-   **Hygiene:**
+    -   `noUnusedLocals` and `noUnusedParameters` are now enabled in
+        `tsconfig.json`. The one finding was an unused
+        `GameScene.panel` field, which now guards against stacking two
+        upgrade panels and appears in the dev diagnostics.
+    -   `npm audit` reports 0 vulnerabilities.
+    -   The menu footer reads "v1.0 prototype · placeholder art".
+-   **Full run, verified in the browser (dev build):**
+    -   Menu → Enter → all 23 rooms in order through real doors and E
+        presses, with all 9 upgrade panels picked by key, to the victory
+        results. Enemies were frozen for determinism and killed with
+        real bullets.
+    -   78 enemies defeated, matching the level data exactly. The new
+        best score was saved, and listener counts were constant from
+        the first room to the last.
+-   **Game over:**
+    -   A real death by chaser contact, then retry (R): a fresh run in
+        room 1 with full HP, score 0 and no upgrades, with counts
+        identical to before.
+    -   Game over → M → the menu shows the persisted best → Enter
+        starts a clean run.
+    -   Pause/resume passed 3 of 3 cycles (frozen while paused, time
+        advancing after resume).
+    -   After retries, the game scene's keyboard blur handler is
+        verified present: holding D and then blurring stops the player.
+-   **Phaser blur-handler note (extends the milestone 4 workaround):**
+    stopping the Results scene (retry/menu) also removes every scene's
+    keyboard blur handler. The game scene is always restarted after it
+    (queued after the stop), so it re-registers its own. Only the
+    sleeping pause overlay's handler is lost, and that one is never
+    needed. Verified as above.
+-   **Production build, verified:**
+    -   `npm run preview` served `dist/`. The menu loaded with no dev
+        hook. Real input started a run and walked through the first
+        door with W and E.
+    -   With `localStorage.setItem` throwing, a real death showed
+        "0 (not saved)" with no errors, and the stored record was
+        untouched. With `getItem` throwing, the menu still rendered.
+    -   No console errors.
+-   **Testing artefacts (not game bugs), explained so the logs are not
+    misread:**
+    -   A hidden in-app pane pauses rAF. The harness then switched the
+        page's loop to Phaser's `forceSetTimeOut`, at runtime only.
+    -   Phaser counts a new collider only after the next physics step,
+        so a snapshot taken right after a transition can show 0
+        colliders.
+    -   A fixed-wait pause check failed while the loop was throttled.
+        Re-tested with state polling, it passed 3 of 3.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose

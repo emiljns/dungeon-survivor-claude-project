@@ -442,6 +442,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Freezes the room and shows the three-choice panel (after the clear banner). */
   private offerUpgrade(): void {
+    if (this.panel || this.phase === "reward") return; // never stack two panels
     const choices = rollUpgradeChoices(this.upgrades, Math.random);
     if (choices.length === 0) return; // everything is capped
     this.phase = "reward";
@@ -581,6 +582,7 @@ export class GameScene extends Phaser.Scene {
       e.eventNames().reduce((n, name) => n + e.listenerCount(name), 0);
     return {
       phase: this.phase,
+      upgradePanelOpen: this.panel ? 1 : 0,
       level: this.level.number,
       roomIndex: this.run.roomIndex,
       layout: this.levelRoom.layout.id,
