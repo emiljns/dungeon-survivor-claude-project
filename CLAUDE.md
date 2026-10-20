@@ -1,4 +1,4 @@
-# Claude Code instructions --- Dungeon Survivor
+# Claude Code instructions --- Ninja Survivor (formerly Dungeon Survivor)
 
 You are the sole implementation agent. The user wants to test Claude
 Code's capabilities, so work autonomously within this scope, explain
@@ -13,18 +13,25 @@ Read `docs/GAME_DESIGN.md`, `docs/TECHNICAL_ARCHITECTURE.md`,
 
 ## Source of truth and scope
 
-The written v1 specification in `docs/GAME_DESIGN.md` is authoritative.
-The concept image is mood inspiration only; it does not add mechanics,
-UI, assets, or folder structure to the requirements.
+The written **v2** specification in `docs/GAME_DESIGN.md` is
+authoritative. It was approved by the user on 2026-10-20 and replaces v1
+(archived in `docs/archive/GAME_DESIGN_V1.md`). The concept images are
+mood inspiration only; they do not add mechanics, UI, assets, or folder
+structure to the requirements.
 
-Explicitly out of scope for v1:
-- Minimap.
+v2 approved these scope changes, which used to be excluded: coins and
+currency pickups, a village shop and a travelling merchant, saved coins
+and permanent weapon unlocks (meta-progression), and shuriken weapon
+variants. See `docs/DECISIONS.md`.
+
+Still explicitly out of scope:
+- Minimap, and off-screen enemy or door arrows.
 - Ammunition, ammo counters, reloading, or ammo pickups.
-- Coins or currency pickups.
-- Procedurally generated rooms or procedural room layouts.
+- Health drops (until separately approved).
+- Procedurally generated rooms, maps or layouts.
 - Character selection.
 - A Settings menu.
-- Any alternative folder layout inferred from the concept image.
+- Any alternative folder layout inferred from the concept images.
 - Online features, accounts, multiplayer, online leaderboard, and monetization.
 
 Do not implement excluded features unless the user explicitly approves a
@@ -34,19 +41,23 @@ follow the written spec and record any material clarification in
 
 ## Requirements
 
-- Build an original top-down dungeon shooter inspired by the broad
+- Build an original top-down action roguelite inspired by the broad
   genre, not a clone. Do not reproduce Enter the Gungeon assets,
   characters, room designs, names, or distinctive content.
-- Five levels in order. Each has a theme, a small set of reusable
-  hand-authored room layouts, increasing difficulty, and a clear
-  exit/goal. Level 5 ends with a final encounter and victory screen.
+- A peaceful village prologue, then five levels in order (Bamboo Forest,
+  River, Snowy Mountain, Abandoned Village, The Void). Each level is one
+  unique, hand-authored continuous map with encounter areas, a mini-boss
+  and a final boss, and increasing difficulty. The Void ends with The
+  Hollow Warden and the victory screen.
 - WASD movement; mouse aim; hold left mouse button to shoot; Space
   dash; E interact; Escape/P pause.
 - Implement real 2D physics/collision: walls block movement,
   projectiles collide with walls/enemies, enemies move and damage the
   player, and the player takes damage.
-- Placeholder graphics only at first: rectangles, circles, simple
-  tiles and generated textures. No external sprite sheets.
+- Art comes from the CC0 Ninja Adventure pack (credited in
+  `CREDITS.md`). Copy into `public/assets/ninja/` only the sheets in use,
+  each recorded in `src/data/artManifest.ts`. The generated placeholder
+  art remains the automatic fallback.
 - 16-bit-inspired pixel look, nearest-neighbor/pixelated rendering
   where appropriate, crisp outlines and readable silhouettes.
 - Lighting must use inexpensive 2D tricks: floor/wall layers, dark

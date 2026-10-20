@@ -89,6 +89,61 @@ collision boxes, room layouts and combat behaviour stay unchanged.
     **Acceptance:** the whole game uses the new art with identical
     gameplay; tests and build pass.
 
+## v2 — Ninja Survivor (spec: docs/GAME_DESIGN.md, approved 2026-10-20)
+
+## Milestone 8 --- Engine
+
+-   [ ] Rename to Ninja Survivor (title, page title, package, docs).
+-   [ ] Map format for large maps: terrain symbols (water as a low
+    obstacle, gates), encounter areas (waves, ambush triggers).
+-   [ ] Following camera with a slight aim lean; screen-sized lighting.
+-   [ ] Tall walls drawn in a base layer and a foreground layer
+    (walk-behind) with unchanged collision; silhouettes for hidden actors.
+-   [ ] Low obstacles: block movement and pathfinding, not bullets.
+-   [ ] Encounter areas: gates close on entry and reopen when cleared;
+    waves and ambushes with telegraphs and a minimum spawn distance.
+-   [ ] Flow-field pathfinding for enemies; enemies only attack near the
+    screen.
+-   [ ] Test map (`?testmap`) reviewed by the user.
+    **Acceptance:** the test map plays with every engine feature; the
+    existing game still runs unchanged; tests and build pass.
+
+## Milestone 9 --- World kit
+
+-   [ ] Decoration catalogue and placed objects (solid, walk-over,
+    breakable, light sources with colour).
+-   [ ] Animated scenery, ambient creatures, ambient particles.
+-   [ ] Outdoor tilesets (village, forest, river, snow).
+-   [ ] Test map reviewed. **Acceptance:** a living outdoor test area
+    with readable threats and unchanged performance.
+
+## Milestone 10 --- Economy
+
+-   [ ] Coins (enemy and breakable drops, magnet pickup), pocket coins.
+-   [ ] Save v2: saved coins and unlocks (validated, failure-tolerant,
+    migrating the v1 best score).
+-   [ ] Shuriken weapons; village shop (unlocks); travelling merchant.
+-   [ ] Death keeps half the pocket coins, victory keeps all.
+    **Acceptance:** coins, shop and weapons work and persist correctly.
+
+## Milestone 11 --- Levels
+
+-   [ ] Village prologue with an in-world tutorial.
+-   [ ] Bamboo Forest (baseline).
+-   [ ] River (water channels).
+-   [ ] Snowy Mountain (ice).
+-   [ ] Abandoned Village (night, ambushes).
+-   [ ] The Void (abyss: falling, dash-jumps) with The Hollow Warden.
+-   [ ] A mini-boss plus a wave, and a final boss, per level.
+    **Acceptance:** each level reviewed by the user and committed on
+    its own.
+
+## Milestone 12 --- Balance and release
+
+-   [ ] Difficulty check and tuning across the whole run.
+-   [ ] Full prologue-to-Void run, cleanup, performance, production build.
+-   [ ] Docs and known issues. **Acceptance:** stable, balanced v2.
+
 ## Post-v1 only
 
 Real sprite replacement, new weapons, extra enemy patterns, online

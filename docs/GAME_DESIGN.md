@@ -1,164 +1,298 @@
-# Dungeon Survivor --- Game Design Document
+# Ninja Survivor — Game Design v2
 
-![Concept reference](../assets/dungeon-survivor-concept.png)
+> Status: **approved by the user (2026-10-20); this is the authoritative
+> specification.** The v1 spec ("Dungeon Survivor") is kept for history
+> in `docs/archive/GAME_DESIGN_V1.md`. The scope changes are recorded in
+> `docs/DECISIONS.md`.
 
-## High concept
+## 1. Vision
 
-A compact top-down, 16-bit-inspired dungeon shooter. Explore rooms,
-manually aim and shoot, collect upgrades, and clear five increasingly
-difficult levels. Use placeholder geometry until the core game works;
-real sprites come later.
+A colourful top-down action roguelite set in the world of the Ninja
+Adventure art pack. You leave a peaceful home village, fight across a
+living world that darkens from morning to night, and finally cross into
+**the Void**, a spiritual realm, to face The Hollow Warden.
 
-## Platform and scope
+The core loop is unchanged from v1: move, aim, shoot and dash, clear
+encounters, pick upgrades, beat bosses, and chase a best score. What
+changes is the world. It is now continuous, alive and varied, instead of
+a chain of dark rectangular rooms.
 
--   Desktop browser, keyboard and mouse.
--   TypeScript, Phaser 3, Vite.
--   One short run across five levels; offline/local only.
--   Use a small set of reusable room layouts. No procedural generation
-    required in v1.
--   No backend, multiplayer, accounts, meta-progression, crafting, or
-    online leaderboards.
+## 2. Scope changes from v1 (approved in discussion)
 
-## Controls
+| v1 rule | v2 |
+|---|---|
+| Name "Dungeon Survivor" | **Ninja Survivor** |
+| Five dungeon themes (Ruins, Sewers, Temple, Foundry, Void) | Village prologue + **Bamboo Forest, River, Snowy Mountain, Abandoned Village, The Void** |
+| Rooms reached through doors, one screen each | **One continuous, hand-made map per level**, with encounter areas |
+| A small set of reused room layouts | **Every map unique**, no repeated layouts or patterns |
+| No coins or currency pickups | **Coins** from enemies and breakable objects |
+| No meta-progression | **Saved coins and permanent weapon unlocks** |
+| One starter gun, no weapon inventory | **Shuriken weapons**: a base shuriken plus unlockable variants |
+| Elite in each final room; one boss | **A mini-boss (with a wave) and a final boss in every level** |
 
-  Input             Action
-  ----------------- --------------------------
-  WASD              Move
-  Mouse             Aim
-  Hold left mouse   Shoot
-  Space             Dash
-  E                 Interact with chest/exit
-  Escape / P        Pause/resume
+**Still excluded:** minimap, ammo counters and reloading, character
+selection, a Settings menu, procedural generation, online features,
+health drops (see §9), and off-screen enemy arrows ("look around").
 
-Normalize diagonal movement. Aim must use correct world coordinates.
-Prevent browser scrolling during gameplay.
+## 3. Structure of a run
 
-## Core loop
+1. **Home Village (prologue):** morning, peaceful, no combat.
+   -   An in-world tutorial: a training dummy to shoot, a fence to dash
+       past, and signs to read with E.
+   -   **The village shop** sells permanent weapon unlocks for saved
+       coins.
+   -   The run starts at the village gate. The run timer and score start
+       there; the village never counts.
+2. **Levels 1–5.** Each is one continuous map:
+   -   A safe arrival area with the **travelling merchant**.
+   -   Several **encounter areas** joined by paths, with free
+       exploration between them.
+   -   A **mini-boss encounter** midway (mini-boss plus a wave of
+       adds).
+   -   A **final boss arena** at the end. Beating it leads to the next
+       level.
+3. **Victory** after The Hollow Warden; **game over** at 0 HP. The
+   results screen shows the v1 stats plus coins earned and kept.
 
-1.  Start at title menu.
-2.  Enter Level 1 and clear combat rooms.
-3.  Defeat enemies for score and currency/XP.
-4.  Choose an upgrade from a simple reward/level-up panel.
-5.  Clear the final room and defeat its boss/elite.
-6.  Continue through five levels.
-7.  Beat Level 5's final encounter; show results and best score.
-8.  Restart or return to menu.
+Repeat runs must stay quick. The village is compact, the gate is close
+to the spawn, and the tutorial is never mandatory.
 
-## Five level themes
+## 4. The levels
 
-1.  **Dungeon Ruins** --- stone, warm torches, baseline enemies.
-2.  **Toxic Sewers** --- teal/green palette, more fast enemies.
-3.  **Ancient Temple** --- ochre/gold palette, pillars and tighter
-    rooms.
-4.  **Forgotten Foundry** --- dark iron, red-orange lights, projectile
-    pressure.
-5.  **The Void** --- deep blue/purple palette, strongest combinations
-    and final boss.
+| # | Level | Light | Terrain twist | Feel |
+|---|---|---|---|---|
+| 0 | Home Village | Morning | None (tutorial) | Villagers, animals, houses, fields |
+| 1 | Bamboo Forest | Afternoon | None: the combat baseline | Cramped paths opening into clearings |
+| 2 | River | Golden hour | **Water channels:** block walking, not bullets; bridges | Riverbanks, watermill, waterfalls |
+| 3 | Snowy Mountain | Dusk | **Ice patches:** slippery movement | Narrow passes, wind-swept plateaus |
+| 4 | Abandoned Village | Night, lanterns | **Ambush streets** (houses and alleys) | Empty homes, fireflies, haunting |
+| 5 | The Void | Darkness | **The abyss:** falling, dash-jumping gaps | Broken platforms, spirit motes |
 
-Each level should have a start room, several combat rooms, an
-upgrade/reward opportunity, and a final room with exit/elite. Start with
-3--5 rooms per level. If needed to ship the first playable build, begin
-with one arena per level and expand later.
+**Lighting arc:** the existing lighting system becomes a storytelling
+tool. Daylight levels use little or no darkness, and darkness only
+arrives at night and in the Void.
 
-## Player and physics
+**Terrain rules (shared by several levels):**
+-   **Low obstacle** (water, abyss): blocks walking and pathfinding;
+    bullets fly over it.
+-   **Ice:** the player keeps momentum (lower friction). Enemies are
+    unaffected in a first version.
+-   **Falling** (Void only): walking or dashing into the abyss costs
+    1 HP, then you respawn at the last safe tile with brief
+    invulnerability. **Knockback can never push you over an edge.** A
+    dash can cross gaps of 1–2 tiles.
 
--   Normalized top-down movement, health, brief damage feedback, dash
-    cooldown.
--   Use Phaser Arcade Physics or an equivalent Phaser-supported 2D
-    collision system.
--   Static walls/obstacles block player and enemy movement.
--   Projectiles travel toward aim, collide with enemies/walls, then are
-    removed.
--   Enemy contact damage has a cooldown to avoid damage every frame.
--   Dash moves quickly in movement direction, or aim direction if
-    stationary; default to brief invulnerability during dash.
--   Collision bodies may be slightly smaller than art to avoid snagging
-    on corners.
+## 5. Encounters
 
-## Placeholder visuals
+-   **Entering an encounter area closes its exits** with fences,
+    brambles, ice walls or spirit barriers, depending on the level.
+    Clearing it reopens them.
+-   **Waves:** reinforcements arrive when the current group is nearly
+    defeated. Used in larger areas, mini-boss fights and boss arenas.
+-   **Ambushes:** enemies appear when you cross a trigger, for example
+    entering a side clearing. Used sparingly.
+-   **Fairness rules:**
+    -   Spawn markers always pulse about 1 s before enemies appear.
+    -   Enemies never spawn within a minimum distance of the player.
+    -   Enemies only shoot when on screen or near it.
+    -   Anything that shoots shows a telegraph line or ring first.
+-   **No arrows.** The player explores. Pathfinding brings melee enemies
+    to the player, and cleared exits glow.
 
-Do not use external sprite sheets yet. - Player: blue square/rounded
-rectangle with direction indicator/barrel. - Enemies: distinct
-shapes/colors (red chaser, amber tank, purple ranged). - Projectiles:
-tiny bright squares/circles with short trails. - Walls: dark tiles with
-bright edge lines. - Props: crates, barrels, pillars, doors, chests made
-from primitives. - Make reusable placeholder drawing/texture helpers so
-sprite replacement later does not require rewriting game logic. - Keep
-collision/gameplay code separate from visual representation where
-practical.
+## 6. Enemies and bosses
 
-## Cheap lighting and shadows
+-   **Behaviour families** stay as in v1:
+    -   chaser (melee rush)
+    -   tank (slow, heavy)
+    -   ranged (keeps distance, telegraphed shots)
+    -   boss (radial bursts, enrage)
+-   **Pathfinding:** enemies take the shortest walkable route to the
+    player, using a flow field over the tile grid recomputed a few times
+    per second within the active area. They avoid water and the abyss.
+-   **Variants per biome:** same behaviour, new sprite and tuned stats.
+    Candidates from the pack:
+    -   **Forest:** mushrooms, spiders, bamboo.
+    -   **River:** frogs, axolotls, kappa, octopus.
+    -   **Snow:** snow creatures, yetis (subject to what the pack has).
+    -   **Abandoned Village:** skulls, spirits, lanterns.
+    -   **Void:** eyes, spirits, demons.
+-   **Bosses** (proposed; final picks in the per-level review):
 
--   Separate layers: floor/background, walls/props, blob shadows,
-    actors/projectiles/pickups, optional foreground occlusion,
-    lighting/glow, HUD.
--   Draw soft oval/blob shadows beneath player, enemies and props using
-    cached low-opacity ellipse textures.
--   Add a dark translucent overlay, then reveal light pools with cached
-    radial gradients and a supported render-texture/mask/blend
-    technique. Prototype and verify the technique before building around
-    it.
--   Add a few warm radial pools around torches; use additive glow
-    sparingly.
--   Optional subtle vignette.
--   Use wall/prop silhouettes as a foreground occlusion layer where
-    useful.
--   Keep enemies/projectiles readable. Use a small number of lights,
-    cache textures, avoid rebuilding gradients every frame.
--   No Lumen, Nanite, ray tracing, full 3D dynamic shadows or expensive
-    per-pixel lighting.
+| Level | Mini-boss | Final boss |
+|---|---|---|
+| Bamboo Forest | Giant Bamboo (variant) | Giant Bamboo |
+| River | Giant Frog (variant) | Squid |
+| Snowy Mountain | Blue Tengu | Giant Blue Samurai |
+| Abandoned Village | Giant Racoon | Giant Red Samurai |
+| The Void | Demon Cyclops | **The Hollow Warden** (Giant Spirit) |
 
-## Enemies
+Mini-bosses are scaled-down versions of the boss pattern, with fewer
+bullets and less health. A bespoke attack pattern per boss is optional
+later work.
 
--   **Chaser:** follows player, low health, common.
--   **Tank:** slow, high health, strong contact threat.
--   **Ranged:** keeps distance and fires slow, telegraphed projectiles.
--   **Elite/final boss:** initially reuse an enemy base with higher
-    health and a simple attack pattern. Unique boss per level is not
-    required.
+## 7. A living world
 
-## Upgrades
+-   **Dense set dressing,** clustered naturally around the edges of
+    combat spaces, with open ground kept where fights happen.
+-   **Animated scenery** from the pack: water ripples, waterfalls, flags,
+    the watermill, plants and flowers.
+-   **Ambient creatures:** chickens, cats, dogs, butterflies, fish and
+    villagers. **They have no health bars, are never red, and flee from
+    the player.**
+-   **Ambient particles:** leaves (forest), snow (mountain), fireflies
+    (night village), motes (Void).
+-   **Environmental storytelling:** small scenes such as a cold
+    campfire, a broken cart, or doors left open.
+-   **Tall terrain:** cliffs, trees, buildings and walls are drawn tall
+    with a walk-behind layer, so the player can walk under canopies and
+    behind roofs. **Collision boxes stay tile-based.**
+-   **Breakable pots and crates:** they shatter when shot (pack vase and
+    wood particles) and drop coins.
 
-One starter gun, no weapon inventory in v1. Upgrade options: - Damage -
-Fire rate - Projectile speed - Movement speed - Maximum health - Extra
-projectile (limited cap/spread)
+**Readability guardrails:**
+-   Only hostiles have health bars.
+-   Threats keep strong outlines and colours.
+-   Bullets and telegraphs always render above scenery and darkness.
+-   Decoration is drawn slightly darker than actors.
 
-Show three distinct options when possible. Each has a clear description.
-Clamp stats to sensible bounds.
+**Performance guardrails:**
+-   Static scenery is baked into the map texture.
+-   Animated scenery and critters update only near the camera.
+-   Particles are pooled; nothing is created per frame.
+-   Lighting moves to a screen-sized overlay.
 
-## Score and UI
+## 8. Weapons, coins and the shop
 
-Score for enemy defeats and room/level completion. Track score, level,
-enemies defeated and run time. Save best score/best level locally in
-`localStorage`, validating loaded data and catching storage errors.
+**Weapons:** all are shuriken-family, and player shots never look like
+enemy shots. Upgrades from the 3-choice panel apply to whichever weapon
+you carry.
 
-Screens: - Title menu with Play and controls. - HUD with health, score,
-level, dash cooldown and current reward/upgrade hint. - Level banner. -
-Three-choice upgrade panel. - Pause overlay. - Game-over/results with
-score, highest level, time, enemies defeated, best score, retry/menu. -
-Victory screen after Level 5.
+| Weapon | Feel (to tune) | How you get it |
+|---|---|---|
+| Shuriken | Balanced (v1 behaviour) | Always, at the start of every run |
+| Kunai | Fast, narrow, pierces one enemy | Unlock in the village shop |
+| Big Shuriken | Slow, large, high damage, pierces | Unlock in the village shop (expensive) |
+| Magic Shuriken | Slight homing | Unlock in the village shop |
 
-## Visual direction
+**Coins:**
+-   **Sources:** enemies (more for tougher ones and bosses), plus
+    breakable pots and crates.
+-   **Pickup:** coins fly to the player within a short radius.
+-   **During a run** you carry "pocket" coins (HUD counter).
+-   **On victory** all pocket coins are saved. **On death** half of the
+    pocket coins are saved; coins saved from earlier runs are never lost.
+    Quitting from pause counts as death.
 
-16-bit-inspired palette, crisp tile edges, limited colors, high
-contrast, pixel-like UI borders. Use simple shapes or generated
-textures. The concept image is mood reference only, not required to be
-recreated exactly.
+**Shops:**
+-   **Village shop** (between runs, saved coins): permanent weapon
+    unlocks. Each is bought once, forever.
+-   **Travelling merchant** (in each level's arrival area, pocket coins):
+    -   run upgrades, such as extra damage or a small heal-to-full;
+    -   **weapons you have unlocked**, at a fair run price.
 
-## Success criteria
+    Every run still starts with the basic shuriken, so the early game
+    stays meaningful. Unlocks add variety and options, not an instant
+    win.
 
-Player completes all five levels; movement, shooting, collision, dash,
-enemies, upgrades, level progression and results work; cheap
-shadows/lighting add depth without hiding threats; high score persists;
-build and tests pass.
+**Save data:**
+-   Saved coins and unlocks join the best score in local storage, under
+    a new versioned key.
+-   Data is validated on load; missing, malformed or blocked storage
+    falls back to a fresh save, never a crash.
+-   If saving fails, the game says so and keeps working.
 
+## 9. HUD and screens
 
-## Explicit exclusions
+-   **HUD:** hearts, dash meter, pocket coins, current weapon icon,
+    score and time, and level/area name. **No minimap, no ammo.**
+-   **Screens:**
+    -   title menu with the new name;
+    -   village shop and merchant;
+    -   the upgrade panel, pause, results and victory (as v1, plus
+        coins).
+-   **Health drops are not included.** Healing comes from new levels and
+    the merchant. Adding drops would be a separate decision.
 
-The concept image is mood reference only and does not define game scope.
-For v1, do not implement a minimap; ammunition, ammo counters, reloading,
-or ammo pickups; coins or currency pickups; procedural room generation;
-character selection; a Settings menu; or an alternative folder layout
-inferred from the image. Rooms are reusable, hand-authored layouts. The
-written requirements in this document take precedence over visual details
-in the concept image.
+## 10. Technical plan (summary)
+
+-   **Map format:** large ASCII terrain grids per level, plus:
+    -   a terrain-type layer (wall, low obstacle, ice, abyss);
+    -   placed objects (decoration, solid props, breakables, critters,
+        lights);
+    -   encounter areas (rectangles with gates, spawn lists, waves and
+        ambush triggers).
+
+    All of it is plain, testable data.
+-   **Camera:** follows the player with smoothing and a slight lean
+    toward the aim, clamped to the map. Aim stays in world coordinates.
+-   **Lighting:** a screen-sized overlay with per-light colour (blue and
+    purple braziers, lanterns, campfires) and per-level ambient light.
+-   **Keeps from v1:**
+    -   swept projectile collision;
+    -   pause-safe simulation clock;
+    -   restart and transition cleanup rules;
+    -   the hitbox constants;
+    -   art fallback to placeholders;
+    -   explicit scene data on every start.
+-   **Folder layout:** the existing `src/` structure extends with new
+    data files (maps, objects, weapons, shop) and systems (camera,
+    encounters, pathfinding, economy). No rewrite.
+
+## 11. Milestones (each: implement → test area review → commit)
+
+| Milestone | Content |
+|---|---|
+| **8 — Engine** | Map format; camera; encounter areas with gates, waves and ambushes; flow-field pathfinding; low obstacles; tall terrain and walk-behind; screen-space lighting with coloured lights; rename to Ninja Survivor. **Test map.** |
+| **9 — World kit** | Decoration catalogue; animated scenery; critters; ambient particles; breakables; outdoor tiles. **Test map.** |
+| **10 — Economy** | Coins and pickups; save v2 (bank, unlocks); village shop and merchant; weapons. **Test map.** |
+| **11 — Levels** | Village prologue, then Forest → River (water) → Snow (ice) → Abandoned Village (night, ambushes) → Void (abyss). Each level with its mini-boss and boss, **reviewed and committed one at a time.** |
+| **12 — Balance and release** | Difficulty check (bigger maps, pathfinding, weapons and coins all shift balance); full runs; performance; docs; known issues. |
+
+The game stays launchable after every milestone. The v1 dungeon levels
+remain playable until their replacements land.
+
+## 12. Test plan additions
+
+-   **Maps:**
+    -   every map is enclosed;
+    -   every encounter area, the merchant and the boss arena are
+        reachable on foot;
+    -   gates close when an encounter starts and reopen when it is
+        cleared;
+    -   no object blocks a path or a spawn;
+    -   nothing important sits under the HUD.
+-   **Pathfinding:** routes around walls, water and the abyss; never
+    targets an unreachable tile; recomputes within budget.
+-   **Encounters:** wave triggers, ambush triggers, the minimum spawn
+    distance, telegraph timing, and that every encounter can be cleared.
+-   **Terrain:**
+    -   low obstacles block movement but not bullets;
+    -   ice momentum is bounded;
+    -   falling costs exactly 1 HP and respawns safely;
+    -   knockback never causes a fall;
+    -   dash-jumps over 1–2 tile gaps succeed and wider ones fail.
+-   **Economy:**
+    -   coin totals;
+    -   the death split (half of pocket coins saved);
+    -   unlocks persist;
+    -   unlocked weapons appear in the merchant's stock;
+    -   prices and caps;
+    -   save v2 with missing, malformed and blocked storage, plus
+        migration from the v1 best-score key.
+-   **Weapons:** each changes only what it should; upgrades apply to
+    every weapon; player shots stay visually distinct from enemy shots.
+-   **Regression:** a full prologue → Void run in the browser; cleanup
+    across transitions; performance with dense scenery; the production
+    build.
+
+## 13. Risks
+
+-   **Scope:** this is a large expansion. Mitigation: milestone-by-
+    milestone delivery, each with a review gate, and levels one at a
+    time.
+-   **Balance:** many new power and difficulty sources. Mitigation:
+    tunable data and a dedicated balance milestone.
+-   **Readability in daylight:** no darkness to make threats pop.
+    Mitigation: the guardrails in §7, checked in every review.
+-   **Authoring time for large unique maps.** Mitigation: map validity
+    tests catch errors early, so authoring can move fast.

@@ -514,6 +514,39 @@
     (CC0)". The README now covers art, credits, the URL flags and the
     remaining known issues (audio, wall autotile).
 
+### v2 approved — Ninja Survivor (2026-10-20)
+
+-   **Why:** after the Ninja Adventure art landed, the user observed
+    that a colourful, cute pack fights against a dark dungeon setting.
+    The rooms also read as "big rectangles with a few objects", reused
+    across levels.
+-   **What changed:** the design was discussed and agreed with the user
+    over several exchanges, and written up as v2 in
+    `docs/GAME_DESIGN.md`. The user approved it explicitly. v1 is
+    archived in `docs/archive/GAME_DESIGN_V1.md`.
+-   **Approved scope changes** (each was previously excluded or
+    different in v1):
+    -   name: **Ninja Survivor**;
+    -   world: a village prologue, then Bamboo Forest, River, Snowy
+        Mountain, Abandoned Village and The Void;
+    -   one continuous, unique, hand-authored map per level, with
+        encounter areas;
+    -   a mini-boss with a wave, and a final boss, per level;
+    -   one terrain twist per level;
+    -   waves and ambushes; pathfinding;
+    -   **coins and shops** (previously excluded);
+    -   **saved coins and permanent weapon unlocks** (meta-progression,
+        previously excluded);
+    -   **shuriken weapon variants** (v1: one gun, no inventory);
+    -   death keeps half the pocket coins; victory keeps all.
+-   **Still excluded:** minimap and off-screen arrows, ammo and
+    reloading, health drops, procedural generation, character selection,
+    a Settings menu, and online features. `CLAUDE.md` is updated to
+    match.
+-   **Impact:** delivered as milestones 8–12 in `docs/TASKS.md`, each
+    with a test-area review gate. The game stays launchable throughout,
+    and the v1 dungeon levels remain playable until replaced.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose
