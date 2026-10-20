@@ -26,10 +26,10 @@ Complete in order and keep the game launchable at each milestone.
 
 ## Milestone 2 --- Room and physics
 
--   [ ] Static obstacle collision for player and enemies.
--   [ ] Room-clear state and exit/door.
--   [ ] Reusable room definitions/transitions.
--   [ ] Dash and cooldown. **Acceptance:** clear a room and exit; no
+-   [x] Static obstacle collision for player and enemies.
+-   [x] Room-clear state and exit/door.
+-   [x] Reusable room definitions/transitions.
+-   [x] Dash and cooldown. **Acceptance:** clear a room and exit; no
     broken collisions after transition.
 
 ## Milestone 3 --- Five levels

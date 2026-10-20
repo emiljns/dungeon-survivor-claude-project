@@ -1,24 +1,72 @@
 import * as Phaser from "phaser";
-import { Depth, FONT_FAMILY, PALETTE } from "../game/config.ts";
+import { Depth, FONT_FAMILY, GAME_WIDTH, PALETTE } from "../game/config.ts";
 import type { HealthState } from "../logic/health.ts";
+import type { RoomState } from "../logic/room.ts";
 
-/** Screen-space HUD. scrollFactor 0 keeps it fixed if a camera moves later. */
+export interface HudInfo {
+  readonly health: HealthState;
+  /** 0..1, 1 = dash ready. */
+  readonly dashReadiness: number;
+  readonly room: RoomState;
+}
+
+/** Screen-space HUD. scrollFactor 0 keeps it fixed if the camera moves. */
 export class Hud {
   private readonly hearts: Phaser.GameObjects.Graphics;
-  private shown = "";
+  private readonly dashBar: Phaser.GameObjects.Graphics;
+  private readonly status: Phaser.GameObjects.Text;
+  private shownHealth = "";
+  private shownDash = -1;
 
-  constructor(scene: Phaser.Scene) {
-    scene.add
-      .text(6, 3, "HP", { fontFamily: FONT_FAMILY, fontSize: "10px", color: PALETTE.text, fontStyle: "bold" })
-      .setScrollFactor(0)
-      .setDepth(Depth.hud);
-    this.hearts = scene.add.graphics().setScrollFactor(0).setDepth(Depth.hud);
+  constructor(private readonly scene: Phaser.Scene, roomLabel: string) {
+    const label = { fontFamily: FONT_FAMILY, fontSize: "10px", color: PALETTE.text, fontStyle: "bold" };
+    const fixed = <T extends Phaser.GameObjects.Components.ScrollFactor & Phaser.GameObjects.Components.Depth>(o: T): T => {
+      o.setScrollFactor(0).setDepth(Depth.hud);
+      return o;
+    };
+    fixed(scene.add.text(6, 3, "HP", label));
+    fixed(scene.add.text(6, 15, "DASH", { ...label, fontSize: "8px" }));
+    this.hearts = fixed(scene.add.graphics());
+    this.dashBar = fixed(scene.add.graphics());
+    fixed(scene.add.text(GAME_WIDTH - 6, 3, roomLabel, { ...label, color: PALETTE.textDim }).setOrigin(1, 0));
+    this.status = fixed(scene.add.text(GAME_WIDTH - 6, 15, "", { ...label, fontSize: "9px" }).setOrigin(1, 0));
   }
 
-  update(health: HealthState): void {
+  update(info: HudInfo): void {
+    this.drawHearts(info.health);
+    this.drawDash(info.dashReadiness);
+    const status =
+      info.room.phase === "cleared"
+        ? "DOOR OPEN"
+        : `ENEMIES ${info.room.enemiesRemaining}/${info.room.enemiesTotal}`;
+    this.status.setText(status).setColor(info.room.phase === "cleared" ? "#7dff9b" : PALETTE.danger);
+  }
+
+  /** Large centred message that fades out. */
+  banner(title: string, subtitle: string, color: string = PALETTE.text): void {
+    const cx = GAME_WIDTH / 2;
+    const objs = [
+      this.scene.add
+        .text(cx, 120, title, { fontFamily: FONT_FAMILY, fontSize: "22px", color, fontStyle: "bold" })
+        .setOrigin(0.5),
+      this.scene.add
+        .text(cx, 146, subtitle, { fontFamily: FONT_FAMILY, fontSize: "11px", color: PALETTE.textDim })
+        .setOrigin(0.5),
+    ];
+    for (const o of objs) o.setScrollFactor(0).setDepth(Depth.hud).setStroke("#05070d", 4);
+    this.scene.tweens.add({
+      targets: objs,
+      alpha: 0,
+      delay: 1100,
+      duration: 400,
+      onComplete: () => objs.forEach((o) => o.destroy()),
+    });
+  }
+
+  private drawHearts(health: HealthState): void {
     const key = `${health.current}/${health.max}`;
-    if (key === this.shown) return;
-    this.shown = key;
+    if (key === this.shownHealth) return;
+    this.shownHealth = key;
     this.hearts.clear();
     for (let i = 0; i < health.max; i++) {
       const x = 26 + i * 11;
@@ -26,5 +74,14 @@ export class Hud {
       this.hearts.fillStyle(i < health.current ? 0xff5d73 : 0x3a2030).fillRect(x + 1, 5, 7, 7);
       if (i < health.current) this.hearts.fillStyle(0xffb3bd).fillRect(x + 2, 6, 2, 2);
     }
+  }
+
+  private drawDash(readiness: number): void {
+    const px = Math.round(readiness * 32);
+    if (px === this.shownDash) return;
+    this.shownDash = px;
+    this.dashBar.clear();
+    this.dashBar.fillStyle(0x0a0d16).fillRect(32, 16, 34, 6);
+    this.dashBar.fillStyle(readiness >= 1 ? 0x8fb8ff : 0x3d5a8f).fillRect(33, 17, px, 4);
   }
 }

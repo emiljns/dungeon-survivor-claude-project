@@ -1,5 +1,6 @@
 import * as Phaser from "phaser";
-import { FONT_FAMILY, GAME_HEIGHT, GAME_WIDTH, PALETTE } from "./config.ts";
+import { newRun } from "../logic/room.ts";
+import { FONT_FAMILY, GAME_HEIGHT, GAME_WIDTH, PALETTE, Tuning } from "./config.ts";
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -15,7 +16,7 @@ export class MenuScene extends Phaser.Scene {
     this.add.text(cx, 114, "Five levels. One dungeon.", { ...small, fontSize: "12px" }).setOrigin(0.5);
 
     this.add
-      .text(cx, 180, ["WASD     Move", "Mouse    Aim", "Hold LMB Shoot"].join("\n"), { ...small, lineSpacing: 4 })
+      .text(cx, 176, ["WASD      Move", "Mouse     Aim", "Hold LMB  Shoot", "Space     Dash", "E         Exit door"].join("\n"), { ...small, lineSpacing: 4 })
       .setOrigin(0.5);
 
     const prompt = this.add
@@ -27,13 +28,14 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     this.tweens.add({ targets: prompt, alpha: 0.35, duration: 600, yoyo: true, repeat: -1 });
-    this.add.text(cx, GAME_HEIGHT - 20, "Milestone 1 combat prototype", { ...small, fontSize: "9px" }).setOrigin(0.5);
+    this.add.text(cx, GAME_HEIGHT - 20, "Milestone 2 room prototype", { ...small, fontSize: "9px" }).setOrigin(0.5);
 
     let started = false;
     const start = (): void => {
       if (started) return;
       started = true;
-      this.scene.start("game");
+      // Explicit data: Phaser would otherwise reuse the last run's room/health.
+      this.scene.start("game", newRun(Tuning.player.maxHealth));
     };
     this.input.once("pointerdown", start);
     this.input.keyboard?.once("keydown-ENTER", start);

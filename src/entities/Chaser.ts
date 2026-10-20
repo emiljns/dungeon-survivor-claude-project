@@ -17,6 +17,8 @@ export class Chaser {
     this.body.setCircle(6, 1, 1);
     this.bar = scene.add.graphics().setDepth(Depth.effects);
     this.drawBar();
+    this.sprite.setScale(0.2);
+    scene.tweens.add({ targets: this.sprite, scale: 1, duration: 180, ease: "Back.Out" });
   }
 
   get body(): Phaser.Physics.Arcade.Body {

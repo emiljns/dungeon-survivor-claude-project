@@ -108,6 +108,54 @@
 -   **Deferred to later milestones, as planned:** dash, pause, score,
     upgrades, level progression, high-score storage and lighting.
 
+### Milestone 2 (2026-10-20)
+
+-   **Rooms are hand-authored ASCII layouts** in `src/data/rooms.ts`:
+    Entry Hall (safe start room, no enemies), Pillar Hall (3 chasers),
+    and Storeroom (4 chasers). New symbols: `D` exit door, `c` crate,
+    `b` barrel. Each `E` spawns one enemy. The milestone 1 test arena was
+    removed. Unit tests check every room: 40×22, enclosed, exactly one
+    door on the outer edge, wall merge coverage, and a flood fill from
+    the player spawn that must reach the door and every enemy spawn.
+-   **Props (crates/barrels) are static obstacles** in the same static
+    group as walls. They block the player, enemies and bullets, and they
+    are not destructible in v1.
+-   **Room clear → door → E to exit.** A room's door is solid for
+    movement and bullets until every enemy is dead (pure `room.ts`
+    state). Then its body is removed and E within 14 px of the door
+    starts the transition. Enemies appear after a 0.9 s spawn telegraph
+    (pulsing markers). The milestone 1 respawning chaser is gone: rooms
+    must be clearable.
+-   **Transitions = `scene.restart(runState)`.** Every room starts from a
+    fresh physics world, reusing the restart path proven in milestone 1.
+    Player health and the room index carry over in `RunState`.
+    `sanitizeRunState` validates the data and falls back to a fresh run.
+-   **Phaser data trap:** `Systems.start` keeps the previous scene data
+    when started without data (`if (data) settings.data = data`), so a
+    bare `scene.restart()` after a transition would reload the old room
+    and health. Game-over restart and Menu → Play therefore always pass
+    `newRun(...)`. Verified in the browser: dying in room 2 with reduced
+    HP, then R or M → Enter, starts room 1 at full HP.
+-   **The room sequence loops** (room 3 → room 1, `roomsCleared` keeps
+    counting). This is a temporary stand-in until milestone 3 adds
+    ordered levels with an end state.
+-   **Dash:** Space, 360 px/s for 150 ms, 750 ms cooldown measured from
+    the dash start. It goes in the movement direction, or the aim
+    direction when standing still. It is invulnerable while active
+    (`takeHit` ignores damage), cancels knockback, and leaves cheap
+    afterimage sprites. Dash speed is ~6 px per 60 Hz physics step, so
+    Arcade's wall collision cannot be tunnelled. Checked in the browser:
+    a dash into the left wall stops at the wall face. The player also
+    collides with world bounds, so an open door gap never lets them
+    leave the map.
+-   **Bug found during self-review:** `Keyboard.JustDown` keeps its flag
+    until read. Reading E only near the door would have exited instantly
+    if E had been pressed earlier anywhere in the room. E is now read
+    every frame. Verified: pressing E away from the door and then walking
+    to it does not exit.
+-   **HUD:** a dash meter, room number and name, enemies remaining or
+    DOOR OPEN, an `[E] EXIT` prompt, and room/clear banners.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose

@@ -12,6 +12,9 @@ export const Tex = {
   chaser: "ph-chaser",
   bullet: "ph-bullet",
   spark: "ph-spark",
+  crate: "ph-crate",
+  barrel: "ph-barrel",
+  spawnMarker: "ph-spawn-marker",
 } as const;
 
 const OUTLINE = 0x0a0d16;
@@ -63,6 +66,25 @@ export function ensurePlaceholderTextures(scene: Phaser.Scene): void {
 
   bake(Tex.spark, 2, 2, () => {
     g.fillStyle(0xffffff).fillRect(0, 0, 2, 2);
+  });
+
+  bake(Tex.crate, TILE, TILE, () => {
+    g.fillStyle(OUTLINE).fillRect(0, 0, TILE, TILE);
+    g.fillStyle(0x8a5a2b).fillRect(1, 1, 14, 14);
+    g.fillStyle(0xb07a3e).fillRect(1, 1, 14, 2).fillRect(1, 1, 2, 14);
+    g.fillStyle(0x5e3b1a).fillRect(3, 7, 10, 2).fillRect(7, 3, 2, 10);
+  });
+
+  bake(Tex.barrel, TILE, TILE, () => {
+    g.fillStyle(OUTLINE).fillCircle(8, 8, 8);
+    g.fillStyle(0xa0522d).fillCircle(8, 8, 7);
+    g.fillStyle(0x3b3f4a).fillRect(1, 5, 14, 2).fillRect(1, 10, 14, 2);
+    g.fillStyle(0xd08850).fillRect(4, 3, 2, 2);
+  });
+
+  bake(Tex.spawnMarker, 14, 14, () => {
+    g.lineStyle(2, 0xff5d73).strokeCircle(7, 7, 6);
+    g.fillStyle(0xff5d73).fillRect(6, 6, 2, 2);
   });
 
   g.destroy();

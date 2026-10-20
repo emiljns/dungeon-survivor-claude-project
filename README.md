@@ -24,7 +24,7 @@ online leaderboard.
 
 This is a specification and starter scaffold, not a finished game.
 
-## Current state: Milestone 1 combat prototype
+## Current state: Milestone 2 room prototype
 
 ``` text
 npm install
@@ -34,8 +34,11 @@ npm test
 npm run build      # production build in dist/ (npm run preview to serve it)
 ```
 
-Click or press Enter on the menu. WASD moves, the mouse aims, and
-holding the left mouse button shoots. Kill the red chaser (it respawns)
-and avoid its contact damage. At 0 HP the Game Over screen offers
+Click or press Enter on the menu. WASD moves, the mouse aims, holding
+the left mouse button shoots, and Space dashes (brief invulnerability,
+cooldown shown under HP). Each room's door stays locked until every
+enemy is dead. Then stand at the door and press E to go to the next
+room. Health carries over between rooms, and the three rooms loop until
+levels arrive in Milestone 3. At 0 HP the Game Over screen offers
 R / click to restart and M for the menu. Add `?debug` to the URL to see
 physics bodies.

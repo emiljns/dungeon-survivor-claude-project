@@ -13,6 +13,7 @@ export const FONT_FAMILY = '"Courier New", monospace';
  */
 export const Depth = {
   tiles: 0,
+  props: 5,
   shadows: 10,
   actors: 20,
   projectiles: 30,
@@ -23,11 +24,13 @@ export const Depth = {
   overlay: 110,
 } as const;
 
-/** Milestone 1 tuning values; expected to change with playtesting. */
+/** Tuning values; expected to change with playtesting. */
 export const Tuning = {
   player: { maxHealth: 5, speed: 120, invulnerableMs: 900, knockback: 220, knockbackMs: 120 },
+  dash: { speed: 360, durationMs: 150, cooldownMs: 750 },
   gun: { intervalMs: 140, bulletSpeed: 420, bulletLifeMs: 1100, bulletRadius: 2, damage: 1 },
-  chaser: { maxHealth: 6, speed: 62, contactDamage: 1, respawnMs: 1500 },
+  chaser: { maxHealth: 6, speed: 62, contactDamage: 1 },
+  room: { enemySpawnDelayMs: 900, doorInteractRange: 14, transitionFadeMs: 220 },
 } as const;
 
 export const PALETTE = {

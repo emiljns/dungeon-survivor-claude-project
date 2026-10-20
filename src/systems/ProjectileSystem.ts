@@ -20,7 +20,8 @@ export class ProjectileSystem {
   private bullets: LiveBullet[] = [];
   private readonly trails: Phaser.GameObjects.Graphics;
 
-  constructor(private readonly scene: Phaser.Scene, private readonly walls: readonly Rect[]) {
+  /** `solids` is read every step, so walls/props/doors can change (e.g. a door opening). */
+  constructor(private readonly scene: Phaser.Scene, private readonly solids: () => readonly Rect[]) {
     this.trails = scene.add.graphics().setDepth(Depth.projectiles - 1);
   }
 
@@ -43,7 +44,7 @@ export class ProjectileSystem {
       radius: bulletRadius,
       lifeMs: bulletLifeMs,
     };
-    const toMuzzle = stepProjectile(initial, (muzzleDistance / bulletSpeed) * 1000, this.walls, []);
+    const toMuzzle = stepProjectile(initial, (muzzleDistance / bulletSpeed) * 1000, this.solids(), []);
     if (toMuzzle.kind !== "flying") {
       this.impact(toMuzzle, 0xc9d4ff);
       return;
@@ -59,9 +60,10 @@ export class ProjectileSystem {
    */
   update(dtMs: number, targets: readonly Rect[], onHit: (index: number, at: Vec2) => void): void {
     this.trails.clear();
+    const solids = this.solids();
     const survivors: LiveBullet[] = [];
     for (const b of this.bullets) {
-      const step = stepProjectile(b.state, dtMs, this.walls, targets);
+      const step = stepProjectile(b.state, dtMs, solids, targets);
       switch (step.kind) {
         case "flying":
           b.prev = { x: b.state.x, y: b.state.y };
