@@ -5,11 +5,13 @@ import { dashReadiness, dashVelocity, IDLE_DASH, isDashing, tryStartDash, type D
 import { applyDamage, createHealth, isDead, type DamageResult, type HealthState } from "../logic/health.ts";
 import type { PlayerStats } from "../logic/upgrades.ts";
 import { directionTo, movementVelocity, type DirectionalInput, type Vec2 } from "../logic/vector.ts";
+import { LightTex } from "../rendering/LightTextures.ts";
 import { Tex } from "../rendering/PlaceholderArt.ts";
 
 export class Player {
   readonly sprite: Phaser.Physics.Arcade.Sprite;
   private readonly gun: Phaser.GameObjects.Image;
+  private readonly shadow: Phaser.GameObjects.Image;
   private healthState: HealthState;
   private dash: DashState = IDLE_DASH;
   private knockbackUntil = 0;
@@ -28,6 +30,7 @@ export class Player {
     // An open door is a gap in the outer wall; never let the player leave the room.
     this.sprite.setCollideWorldBounds(true);
     this.gun = scene.add.image(x, y, Tex.gun).setOrigin(0.1, 0.5).setDepth(Depth.actors + 1);
+    this.shadow = scene.add.image(x, y + 7, LightTex.shadow).setDepth(Depth.shadows).setScale(0.6);
   }
 
   get body(): Phaser.Physics.Arcade.Body {
@@ -98,6 +101,7 @@ export class Player {
       this.body.setVelocity(move.x, move.y);
     }
 
+    this.shadow.setPosition(this.sprite.x, this.sprite.y + 7);
     const angle = Math.atan2(this.aimDir.y, this.aimDir.x);
     this.gun.setPosition(this.sprite.x, this.sprite.y + 1).setRotation(angle);
     this.gun.setFlipY(this.aimDir.x < 0);

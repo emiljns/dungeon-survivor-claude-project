@@ -298,6 +298,66 @@
     game code changed for this, and the game ships with the default
     rAF loop.
 
+### Milestone 5 (2026-10-20)
+
+-   **Lighting technique: erase-based darkness overlay.** A world-sized
+    `RenderTexture` at `Depth.lighting` is filled each frame with the
+    theme's tinted darkness. Light pools are then erased out of it with
+    one cached 256 px radial-gradient texture, drawn through a pool of
+    reusable off-display-list stamp images (position, scale and alpha
+    per light) in a single batched `erase`. This was chosen over masks
+    and per-pixel shaders: it works in both WebGL and Canvas, it is one
+    fill plus one batch per frame, and nothing is created per frame.
+    -   **Lights per frame:** the player (theme radius 120–140 px, subtle
+        flicker), every torch pool (92 px, flicker), and a small
+        "presence" light on each living enemy (30 px at 55%) so threats
+        stay visible in dark corners.
+    -   **Cached textures** (`LightTextures.ts`): light gradient, blob
+        shadow, vignette and pixel flame. Each is generated once per
+        game; the texture count holds steady across rooms once each
+        theme is seen.
+-   **Readability rule:** bullets (both sides), enemy telegraph lines,
+    enemy health bars, spawn markers, score popups, muzzle flashes and
+    the door state render *above* the darkness. They are emissive, so
+    lighting can never hide a threat. Actors stay under it with presence
+    lights. Theme darkness is 0.50–0.66, and a test caps it at 0.7. The
+    tinted darkness reads better than black. Checked visually in the
+    Ruins, Foundry and Void, with enemies placed in the darkest corners.
+-   **Torches are hand-authored:** a new layout symbol `T` (a solid wall
+    tile with a torch). There are 4–6 per room; each faces its open
+    floor neighbour (pure `torchLights`), with a flickering additive
+    glow and a tinted pixel flame. Flicker is a deterministic two-sine
+    function, so there is no per-frame randomness.
+-   **Bug found during visual check:** top-wall torches at columns 7/32
+    sat under the score and room label. They moved to columns 17/22,
+    flanking the top-centre door. The HUD test now also checks every
+    torch (and the boss bar zone) against the HUD zones.
+-   **Shadows:** cached soft-ellipse blobs under the player and every
+    enemy, sized to the body and following it each frame (an enemy's
+    is destroyed on death). Prop shadows and a thin wall-base
+    ambient-occlusion strip are baked once into the room's tile
+    texture.
+-   **Polish:** a muzzle flash (3 frames, emissive) and a vignette.
+-   **Performance, measured** in the browser with a stress room (55–71
+    live enemies, 85 light stamps, enemy bullets in flight):
+    -   Lighting on: average CPU per frame 0.91–1.19 ms, worst 1.8–4.2 ms.
+    -   Lighting off: 0.95 ms average, worst 2.4 ms.
+    -   The lighting cost is within run-to-run noise, and the 60 fps
+        budget is 16.7 ms.
+    -   Caveat: this measures CPU time per frame (update plus render
+        submission). WebGL GPU work is asynchronous and not fully
+        captured, though the overlay is a single 640×352 texture.
+-   **`?nolight` URL flag** disables the overlay, glow and vignette for
+    debugging and performance comparison. It is a debug flag like
+    `?debug`, not a Settings menu.
+-   **Foreground occlusion was not implemented.** It is optional in the
+    spec. Walls are drawn top-down with front faces and actors never
+    walk behind them, so occlusion would add complexity for little
+    visual gain.
+-   **Transitions:** re-entering rooms keeps object, collider, listener
+    and stamp counts identical. The off-display-list stamps are
+    destroyed on scene shutdown via a self-removing `once` hook.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose

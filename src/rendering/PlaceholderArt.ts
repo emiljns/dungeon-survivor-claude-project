@@ -2,6 +2,8 @@ import * as Phaser from "phaser";
 import type { Theme } from "../data/themes.ts";
 import { TILE } from "../game/config.ts";
 import type { EnemyKind } from "../logic/enemyStats.ts";
+import type { Prop } from "../logic/layout.ts";
+import { LightTex } from "./LightTextures.ts";
 
 // All placeholder art is generated once per game from primitives. Swapping in
 // real sprites later only requires loading textures under the same keys.
@@ -158,6 +160,7 @@ export function bakeTileLayer(
   wall: readonly (readonly boolean[])[],
   depth: number,
   theme: Theme,
+  props: readonly Prop[] = [],
 ): Phaser.GameObjects.RenderTexture {
   const keys = ensureThemeTextures(scene, theme);
   const rows = wall.length;
@@ -172,6 +175,11 @@ export function bakeTileLayer(
       const y = r * TILE;
       if (!isWall(c, r)) {
         rt.draw(keys.floor, x, y);
+        // Ambient occlusion: a soft dark strip where the floor meets a wall above.
+        if (isWall(c, r - 1)) {
+          edges.fillStyle(0x000000, 0.28).fillRect(x, y, TILE, 2);
+          edges.fillStyle(0x000000, 0.14).fillRect(x, y + 2, TILE, 2);
+        }
         continue;
       }
       rt.draw(keys.wall, x, y);
@@ -188,5 +196,12 @@ export function bakeTileLayer(
   }
   rt.draw(edges);
   edges.destroy();
+
+  // Blob shadows under static props, baked once (the cached shadow texture).
+  if (props.length > 0 && scene.textures.exists(LightTex.shadow)) {
+    const stamp = scene.make.image({ key: LightTex.shadow }, false).setScale(0.62);
+    for (const p of props) rt.draw(stamp, p.rect.x + TILE / 2, p.rect.y + TILE - 1);
+    stamp.destroy();
+  }
   return rt;
 }

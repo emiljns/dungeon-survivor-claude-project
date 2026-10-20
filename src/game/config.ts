@@ -8,18 +8,24 @@ export const GAME_HEIGHT = 352; // 22 tiles
 export const FONT_FAMILY = '"Courier New", monospace';
 
 /**
- * Render order. Gaps are reserved for later milestones (blob shadows,
- * foreground occlusion, lighting overlay) so they slot in without renumbering.
+ * Render order: floor/walls → props → blob shadows → actors → darkness overlay
+ * → torch glow → vignette → emissive gameplay layers → HUD.
+ *
+ * Projectiles and effects (bullets, telegraph lines, health bars, spawn
+ * markers, score popups, door state) are drawn *above* the darkness: they are
+ * "glowing" and must never be hidden by lighting. Actors sit under it but get
+ * a small presence light each (see LightingSystem).
  */
 export const Depth = {
   tiles: 0,
   props: 5,
   shadows: 10,
   actors: 20,
-  projectiles: 30,
-  effects: 40,
-  foreground: 50,
   lighting: 60,
+  glow: 62,
+  vignette: 65,
+  projectiles: 70,
+  effects: 72,
   hud: 100,
   overlay: 110,
 } as const;

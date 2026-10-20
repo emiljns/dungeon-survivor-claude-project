@@ -28,6 +28,9 @@ import {
 } from "../logic/upgrades.ts";
 import type { Vec2 } from "../logic/vector.ts";
 import { FireCooldown } from "../logic/weapon.ts";
+import { torchLights } from "../logic/lighting.ts";
+import { LightingSystem } from "../rendering/LightingSystem.ts";
+import { ensureLightTextures } from "../rendering/LightTextures.ts";
 import { bakeTileLayer, ensurePlaceholderTextures, Tex } from "../rendering/PlaceholderArt.ts";
 import { browserStorage, loadBest, mergeBest, saveBest } from "../systems/HighScoreStore.ts";
 import { ProjectileSystem, type BulletSpec } from "../systems/ProjectileSystem.ts";
@@ -121,6 +124,7 @@ export class GameScene extends Phaser.Scene {
   private runTimeMs = 0;
   private simTime = 0;
   private panel: UpgradePanel | null = null;
+  private lighting: LightingSystem | null = null;
 
   constructor() {
     super("game");
@@ -138,6 +142,7 @@ export class GameScene extends Phaser.Scene {
     this.boss = null;
     this.solidRects = [];
     this.panel = null;
+    this.lighting = null;
     this.phase = "playing";
     this.leaving = false;
   }
@@ -157,7 +162,8 @@ export class GameScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, worldW, worldH);
     this.cameras.main.setBounds(0, 0, worldW, worldH).setBackgroundColor(level.theme.background);
 
-    bakeTileLayer(this, this.layout.wall, Depth.tiles, level.theme);
+    ensureLightTextures(this);
+    bakeTileLayer(this, this.layout.wall, Depth.tiles, level.theme, this.layout.props);
 
     // Walls and props never change during a room: one static group.
     const solids = this.physics.add.staticGroup();
@@ -169,7 +175,8 @@ export class GameScene extends Phaser.Scene {
     // Doors are separate so they can be removed when the room is cleared.
     this.doors = this.physics.add.staticGroup();
     for (const d of this.layout.doorRects) this.doors.add(this.add.zone(d.x + d.width / 2, d.y + d.height / 2, d.width, d.height));
-    this.doorGfx = this.add.graphics().setDepth(Depth.props);
+    // Door state (locked bars / open outline) is gameplay information: above the darkness.
+    this.doorGfx = this.add.graphics().setDepth(Depth.effects);
     this.doorPrompt = this.add
       .text(0, 0, "[E] EXIT", { fontFamily: FONT_FAMILY, fontSize: "10px", color: "#7dff9b", fontStyle: "bold" })
       .setOrigin(0.5)
@@ -210,9 +217,29 @@ export class GameScene extends Phaser.Scene {
     this.showEntryBanner();
     this.cameras.main.fadeIn(Tuning.room.transitionFadeMs, 5, 7, 13);
 
+    this.lighting = new LightingSystem(
+      this,
+      level.theme,
+      worldW,
+      worldH,
+      torchLights(this.layout, TILE),
+      !new URLSearchParams(window.location.search).has("nolight"),
+    );
+    // Off-display-list light stamps are not destroyed by Phaser; `once` fires and removes itself each shutdown.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.lighting?.destroy());
+
     this.refreshDoors();
     this.telegraphEnemySpawns();
     this.updateHud();
+    this.updateLighting(); // first frame is already lit, no full-bright flash
+  }
+
+  private updateLighting(): void {
+    this.lighting?.update(
+      this.simTime,
+      this.player.position,
+      this.enemies.filter((e) => e.alive).map((e) => e.position),
+    );
   }
 
   override update(_time: number, delta: number): void {
@@ -245,6 +272,7 @@ export class GameScene extends Phaser.Scene {
       for (const dir of spreadDirections(this.player.aim, n, this.stats.spreadRad * (n - 1))) {
         this.playerShots.fire(this.player.position, dir, 9, spec);
       }
+      this.muzzleFlash();
     }
 
     const ctx: EnemyContext = {
@@ -286,6 +314,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.updateHud();
+    this.updateLighting();
   }
 
   private get isFinalRoom(): boolean {
@@ -386,6 +415,18 @@ export class GameScene extends Phaser.Scene {
     if (this.isFinalRoom) this.hud.banner("LEVEL CLEAR", "The way down is open", "#7dff9b", true);
     else this.hud.banner("ROOM CLEAR", "The door is open", "#7dff9b");
     if (this.levelRoom.reward) this.offerUpgrade();
+  }
+
+  /** A 3-frame bright square at the gun tip; emissive, so visible in the dark. */
+  private muzzleFlash(): void {
+    const { x, y } = this.player.position;
+    const aim = this.player.aim;
+    const flash = this.add
+      .image(x + aim.x * 11, y + aim.y * 11 + 1, Tex.spark)
+      .setScale(2.5)
+      .setTint(0xfff2a8)
+      .setDepth(Depth.projectiles);
+    this.tweens.add({ targets: flash, alpha: 0, scale: 1, duration: 50, onComplete: () => flash.destroy() });
   }
 
   private addScore(points: number, at: Vec2 | null): void {

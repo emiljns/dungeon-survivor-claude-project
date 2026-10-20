@@ -18,6 +18,15 @@ describe("HUD placement", () => {
     }
   });
 
+  // Regression: top-wall torches used to sit under the score and room label.
+  it.each(ALL_LAYOUTS.map((l) => [l.id, l] as const))("no HUD zone covers a torch in %s", (_id, layout) => {
+    for (const t of parseLayout(layout.rows, TILE).torches) {
+      const tile: Rect = { x: t.col * TILE, y: t.row * TILE, width: TILE, height: TILE };
+      for (const zone of HudLayout.zones) expect(overlaps(tile, zone), JSON.stringify({ torch: t, zone })).toBe(false);
+      expect(overlaps(tile, HudLayout.bossZone), JSON.stringify({ torch: t })).toBe(false);
+    }
+  });
+
   it("the boss bar does not cover the door in any boss room", () => {
     const bossRooms = LEVELS.flatMap((l) => l.rooms).filter((r) => r.enemies.some((e) => e.kind === "boss"));
     expect(bossRooms.length).toBeGreaterThan(0);

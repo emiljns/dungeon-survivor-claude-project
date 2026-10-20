@@ -4,6 +4,7 @@
 //   P  player spawn  E  enemy spawn      (both are floor)
 //   D  exit door     (solid until the room is cleared)
 //   c  crate         b  barrel           (static props: block movement and bullets)
+//   T  wall with a torch (solid like '#'; lights the floor next to it)
 
 import type { Rect } from "./collision.ts";
 import type { Vec2 } from "./vector.ts";
@@ -18,7 +19,7 @@ export interface Prop {
 export interface ParsedLayout {
   readonly cols: number;
   readonly rows: number;
-  /** wall[row][col] — true only for '#' (doors and props are separate). */
+  /** wall[row][col] — true for '#' and 'T' (doors and props are separate). */
   readonly wall: readonly (readonly boolean[])[];
   /** Merged wall rectangles in pixels (few large bodies instead of one per tile). */
   readonly wallRects: readonly Rect[];
@@ -28,10 +29,12 @@ export interface ParsedLayout {
   /** Tile-centre pixel positions. */
   readonly playerSpawn: Vec2;
   readonly enemySpawns: readonly Vec2[];
+  /** Torch wall tiles as tile coordinates. */
+  readonly torches: readonly { readonly col: number; readonly row: number }[];
 }
 
 const PROPS: Readonly<Record<string, PropKind>> = { c: "crate", b: "barrel" };
-const KNOWN = new Set(["#", ".", "P", "E", "D", ...Object.keys(PROPS)]);
+const KNOWN = new Set(["#", ".", "P", "E", "D", "T", ...Object.keys(PROPS)]);
 
 export function parseLayout(rows: readonly string[], tile: number): ParsedLayout {
   const cols = rows[0]?.length ?? 0;
@@ -42,6 +45,7 @@ export function parseLayout(rows: readonly string[], tile: number): ParsedLayout
   const props: Prop[] = [];
   let playerSpawn: Vec2 | null = null;
   const enemySpawns: Vec2[] = [];
+  const torches: { col: number; row: number }[] = [];
   const centre = (c: number, r: number): Vec2 => ({ x: (c + 0.5) * tile, y: (r + 0.5) * tile });
 
   rows.forEach((line, r) => {
@@ -50,7 +54,8 @@ export function parseLayout(rows: readonly string[], tile: number): ParsedLayout
     const doorRow: boolean[] = [];
     [...line].forEach((ch, c) => {
       if (!KNOWN.has(ch)) throw new Error(`Unknown layout symbol "${ch}" at ${c},${r}`);
-      wallRow.push(ch === "#");
+      wallRow.push(ch === "#" || ch === "T");
+      if (ch === "T") torches.push({ col: c, row: r });
       doorRow.push(ch === "D");
       const prop = PROPS[ch];
       if (prop) props.push({ kind: prop, rect: { x: c * tile, y: r * tile, width: tile, height: tile } });
@@ -74,6 +79,7 @@ export function parseLayout(rows: readonly string[], tile: number): ParsedLayout
     props,
     playerSpawn,
     enemySpawns,
+    torches,
   };
 }
 

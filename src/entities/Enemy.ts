@@ -12,6 +12,7 @@ import type { Rect } from "../logic/collision.ts";
 import { bossAttackFor, type EnemyAttack, type EnemyStats } from "../logic/enemyStats.ts";
 import { applyDamage, createHealth, healthFraction, isDead, type DamageResult, type HealthState } from "../logic/health.ts";
 import { directionTo, type Vec2 } from "../logic/vector.ts";
+import { LightTex } from "../rendering/LightTextures.ts";
 import { ENEMY_TEXTURE } from "../rendering/PlaceholderArt.ts";
 
 /** What an enemy needs from the room each frame. */
@@ -39,6 +40,8 @@ export class Enemy {
   private lockedAim: Vec2 = { x: 1, y: 0 };
   private readonly strafeSign: 1 | -1;
   private readonly barWidth: number;
+  private readonly shadow: Phaser.GameObjects.Image;
+  private readonly shadowOffsetY: number;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -59,6 +62,14 @@ export class Enemy {
     else this.body.setSize(size, size);
     // Tanks and the boss shrug off being shoved by other enemies.
     if (stats.kind === "tank" || stats.kind === "boss") this.body.pushable = false;
+
+    // Cached blob shadow sized to the body (32px-wide texture).
+    const shadowW = size * stats.scale * 1.3;
+    this.shadowOffsetY = (size * stats.scale) / 2 + 1;
+    this.shadow = scene.add
+      .image(x, y + this.shadowOffsetY, LightTex.shadow)
+      .setDepth(Depth.shadows)
+      .setScale(shadowW / 32, shadowW / 32);
 
     this.barWidth = stats.elite ? 22 : 16;
     this.bar = scene.add.graphics().setDepth(Depth.effects);
@@ -99,6 +110,7 @@ export class Enemy {
     this.move(ctx);
     this.attack(ctx);
     this.positionBar();
+    this.shadow.setPosition(this.sprite.x, this.sprite.y + this.shadowOffsetY);
   }
 
   takeHit(amount: number, now: number): DamageResult {
@@ -180,6 +192,7 @@ export class Enemy {
     this.body.enable = false;
     this.bar.destroy();
     this.telegraph.destroy();
+    this.shadow.destroy();
     this.scene.tweens.add({
       targets: this.sprite,
       scale: this.stats.scale * 1.8,

@@ -24,7 +24,7 @@ online leaderboard.
 
 This is a specification and starter scaffold, not a finished game.
 
-## Current state: Milestone 4 upgrades and results
+## Current state: Milestone 5 lighting and polish
 
 ``` text
 npm install
@@ -54,4 +54,7 @@ Score and time are shown at the top. Beating the boss, or reaching
 0 HP, opens the results screen (score, highest level, time, enemies
 defeated, best score). On it, R / click retries and M returns to the
 menu. Your best score and level are saved in the browser and shown on
-the menu. Add `?debug` to the URL to see physics bodies.
+the menu. Rooms are lit by flickering torches and a light that follows
+you. Bullets, telegraphs and health bars always glow above the darkness.
+Add `?debug` to the URL to see physics bodies, or `?nolight` to turn the
+lighting off.

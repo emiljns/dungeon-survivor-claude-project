@@ -15,6 +15,16 @@ export interface Theme {
   };
   /** CSS colour for level banners. */
   readonly title: string;
+  readonly light: {
+    /** Alpha of the dark overlay outside light pools (kept ≤ 0.7 for readability). */
+    readonly darkness: number;
+    /** Tint of the darkness (a deep theme colour reads better than pure black). */
+    readonly darkColor: number;
+    /** Torch flame and additive glow colour. */
+    readonly torch: number;
+    /** Radius of the light that follows the player. */
+    readonly playerRadius: number;
+  };
 }
 
 export const THEMES = {
@@ -24,6 +34,7 @@ export const THEMES = {
     floor: { base: 0x2b3042, line: 0x252a3a, speck: 0x32384c },
     wall: { base: 0x161b29, block: 0x1d2334, face: 0x2e3652, faceEdge: 0x7d8fc4, edge: 0x56648f },
     title: "#c9d4ff",
+    light: { darkness: 0.58, darkColor: 0x04060d, torch: 0xffa040, playerRadius: 130 },
   },
   sewers: {
     id: "sewers",
@@ -31,6 +42,7 @@ export const THEMES = {
     floor: { base: 0x1f3a36, line: 0x1a312e, speck: 0x2c5a4a },
     wall: { base: 0x0e1f1d, block: 0x143029, face: 0x1f4a40, faceEdge: 0x6fe0b0, edge: 0x3f9a7c },
     title: "#7dffc9",
+    light: { darkness: 0.6, darkColor: 0x020a08, torch: 0x7dffb0, playerRadius: 130 },
   },
   temple: {
     id: "temple",
@@ -38,6 +50,7 @@ export const THEMES = {
     floor: { base: 0x4a3d24, line: 0x3f331e, speck: 0x5c4b2c },
     wall: { base: 0x2a2012, block: 0x352915, face: 0x5a4522, faceEdge: 0xf0c060, edge: 0xb08a3c },
     title: "#ffd166",
+    light: { darkness: 0.5, darkColor: 0x0c0703, torch: 0xffd166, playerRadius: 140 },
   },
   foundry: {
     id: "foundry",
@@ -45,6 +58,7 @@ export const THEMES = {
     floor: { base: 0x2e2a2a, line: 0x262222, speck: 0x3d3030 },
     wall: { base: 0x161212, block: 0x1f1818, face: 0x3a2420, faceEdge: 0xff7a3d, edge: 0xa04a2a },
     title: "#ff8a4d",
+    light: { darkness: 0.62, darkColor: 0x0a0303, torch: 0xff5a2a, playerRadius: 125 },
   },
   void: {
     id: "void",
@@ -52,5 +66,6 @@ export const THEMES = {
     floor: { base: 0x221a3d, line: 0x1c1533, speck: 0x34285c },
     wall: { base: 0x0f0b1f, block: 0x171030, face: 0x2c2052, faceEdge: 0xb68cff, edge: 0x6c4fc4 },
     title: "#c49bff",
+    light: { darkness: 0.66, darkColor: 0x05031a, torch: 0xb68cff, playerRadius: 120 },
   },
 } as const satisfies Record<string, Theme>;

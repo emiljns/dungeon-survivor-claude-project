@@ -54,12 +54,12 @@ Complete in order and keep the game launchable at each milestone.
 
 ## Milestone 5 --- Lighting and polish
 
--   [ ] Consistent pixel-like placeholder art.
--   [ ] Cached ellipse/blob shadows.
--   [ ] Dark overlay and cheap radial light pools.
--   [ ] Torch/prop glow and optional vignette.
--   [ ] Optional foreground occlusion.
--   [ ] Check readability/performance with many entities.
+-   [x] Consistent pixel-like placeholder art.
+-   [x] Cached ellipse/blob shadows.
+-   [x] Dark overlay and cheap radial light pools.
+-   [x] Torch/prop glow and optional vignette.
+-   [ ] Optional foreground occlusion. (Not implemented: optional; see DECISIONS.md.)
+-   [x] Check readability/performance with many entities.
     **Acceptance:** atmosphere improves without obscuring threats or
     harming performance.
 
