@@ -4,11 +4,11 @@ Complete in order and keep the game launchable at each milestone.
 
 ## Milestone 0 --- Setup
 
--   [ ] Inspect repo and report baseline.
--   [ ] Set up Phaser, Vite, TypeScript strict mode, and a compatible Vitest version.
--   [ ] Add dev/typecheck/test/build scripts and a committed lockfile.
--   [ ] Add at least one meaningful pure-logic test; use explicit Vitest imports unless globals are intentionally configured.
--   [ ] Boot a simple menu/canvas. **Acceptance:** app launches; typecheck, tests, and build work.
+-   [x] Inspect repo and report baseline.
+-   [x] Set up Phaser, Vite, TypeScript strict mode, and a compatible Vitest version.
+-   [x] Add dev/typecheck/test/build scripts and a committed lockfile.
+-   [x] Add at least one meaningful pure-logic test; use explicit Vitest imports unless globals are intentionally configured.
+-   [x] Boot a simple menu/canvas. **Acceptance:** app launches; typecheck, tests, and build work.
 
 ## Milestone 1 --- Combat prototype
 
