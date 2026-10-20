@@ -1,0 +1,79 @@
+# Implementation Tasks
+
+Complete in order and keep the game launchable at each milestone.
+
+## Milestone 0 --- Setup
+
+-   [ ] Inspect repo and report baseline.
+-   [ ] Set up Phaser, Vite, TypeScript strict mode, and a compatible Vitest version.
+-   [ ] Add dev/typecheck/test/build scripts and a committed lockfile.
+-   [ ] Add at least one meaningful pure-logic test; use explicit Vitest imports unless globals are intentionally configured.
+-   [ ] Boot a simple menu/canvas. **Acceptance:** app launches; typecheck, tests, and build work.
+
+## Milestone 1 --- Combat prototype
+
+-   [ ] Placeholder arena floor/walls.
+-   [ ] WASD movement with normalized diagonals.
+-   [ ] Mouse aim and hold-to-shoot.
+-   [ ] Projectile physics and wall collision.
+-   [ ] One chaser enemy.
+-   [ ] Player/enemy health and visible damage feedback.
+-   [ ] Game-over state and UI when player health reaches zero.
+-   [ ] Restart a clean run without stale entities or duplicate listeners.
+    **Acceptance:** move, aim, shoot, hit walls/enemy, take damage,
+    reach game over, and restart successfully. Game over and restart are
+    mandatory.
+
+## Milestone 2 --- Room and physics
+
+-   [ ] Static obstacle collision for player and enemies.
+-   [ ] Room-clear state and exit/door.
+-   [ ] Reusable room definitions/transitions.
+-   [ ] Dash and cooldown. **Acceptance:** clear a room and exit; no
+    broken collisions after transition.
+
+## Milestone 3 --- Five levels
+
+-   [ ] Chaser, Tank and Ranged enemies.
+-   [ ] Level data for all five themes.
+-   [ ] 3--5 room definitions per level, reusing layouts as appropriate.
+-   [ ] Level 5 final encounter.
+-   [ ] Level transitions and level banners. **Acceptance:** complete
+    Levels 1--5 in order.
+
+## Milestone 4 --- Upgrades and results
+
+-   [ ] Score, enemies defeated and run time.
+-   [ ] XP/currency or room reward loop.
+-   [ ] Three-choice upgrade panel.
+-   [ ] Damage, fire-rate, projectile-speed, movement-speed, max-health
+    and extra-projectile upgrades.
+-   [ ] HUD, pause, game-over, victory, retry/menu.
+-   [ ] Persistent local best score and best level. **Acceptance:**
+    upgrades affect gameplay; run produces correct results.
+
+## Milestone 5 --- Lighting and polish
+
+-   [ ] Consistent pixel-like placeholder art.
+-   [ ] Cached ellipse/blob shadows.
+-   [ ] Dark overlay and cheap radial light pools.
+-   [ ] Torch/prop glow and optional vignette.
+-   [ ] Optional foreground occlusion.
+-   [ ] Check readability/performance with many entities.
+    **Acceptance:** atmosphere improves without obscuring threats or
+    harming performance.
+
+## Milestone 6 --- Release
+
+-   [ ] Play through all five levels to victory and test game over.
+-   [ ] Verify restart/transition cleanup.
+-   [ ] Verify storage failures do not crash.
+-   [ ] Run typecheck, tests and production build.
+-   [ ] Document controls/run instructions and known issues.
+    **Acceptance:** stable playable five-level prototype.
+
+## Post-v1 only
+
+Real sprite replacement, new weapons, extra enemy patterns, online
+leaderboards, gamepad/mobile support, additional bosses/audio. Do not
+implement without approval.
