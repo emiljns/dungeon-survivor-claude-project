@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ROOM_SEQUENCE } from "../src/data/rooms.ts";
+import { ALL_LAYOUTS } from "../src/data/rooms.ts";
 import { pointInRect } from "../src/logic/collision.ts";
 import { parseLayout } from "../src/logic/layout.ts";
 
@@ -34,8 +34,8 @@ describe("parseLayout", () => {
   });
 });
 
-describe.each(ROOM_SEQUENCE.map((room) => [room.id, room] as const))("room %s", (_id, room) => {
-  const l = parseLayout(room.layout, TILE);
+describe.each(ALL_LAYOUTS.map((room) => [room.id, room] as const))("layout %s", (_id, room) => {
+  const l = parseLayout(room.rows, TILE);
   const solidAt = (c: number, r: number): boolean =>
     l.wall[r]?.[c] !== false || l.props.some((p) => p.rect.x === c * TILE && p.rect.y === r * TILE);
   const isDoorTile = (c: number, r: number): boolean =>
@@ -95,14 +95,5 @@ describe.each(ROOM_SEQUENCE.map((room) => [room.id, room] as const))("room %s", 
     for (const e of l.enemySpawns) {
       expect(seen.has(`${Math.floor(e.x / TILE)},${Math.floor(e.y / TILE)}`)).toBe(true);
     }
-  });
-});
-
-describe("room sequence", () => {
-  it("starts with a safe room and contains combat rooms", () => {
-    const counts = ROOM_SEQUENCE.map((r) => parseLayout(r.layout, TILE).enemySpawns.length);
-    expect(counts[0]).toBe(0);
-    expect(counts.slice(1).every((n) => n > 0)).toBe(true);
-    expect(new Set(ROOM_SEQUENCE.map((r) => r.id)).size).toBe(ROOM_SEQUENCE.length);
   });
 });

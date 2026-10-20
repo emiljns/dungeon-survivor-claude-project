@@ -1,20 +1,32 @@
 import * as Phaser from "phaser";
-import { Depth, Tuning } from "../game/config.ts";
+import { Depth } from "../game/config.ts";
 import type { Rect } from "../logic/collision.ts";
 import { stepProjectile, type ProjectileState } from "../logic/projectile.ts";
 import type { Vec2 } from "../logic/vector.ts";
 import { Tex } from "../rendering/PlaceholderArt.ts";
 
+export interface BulletSpec {
+  readonly speed: number;
+  readonly lifeMs: number;
+  readonly radius: number;
+  readonly damage: number;
+  readonly texture: string;
+  readonly trailColor: number;
+  readonly impactColor: number;
+}
+
 interface LiveBullet {
   state: ProjectileState;
   prev: Vec2;
+  readonly spec: BulletSpec;
   readonly sprite: Phaser.GameObjects.Image;
 }
 
 /**
- * Player bullets. Movement and collision use the pure swept `stepProjectile`
- * (no Arcade bodies), so fast bullets cannot tunnel through thin walls at any
- * frame rate. Phaser objects here are only the visual representation.
+ * A set of bullets owned by one side (player or enemies). Movement and
+ * collision use the pure swept `stepProjectile` (no Arcade bodies), so fast
+ * bullets cannot tunnel through thin walls at any frame rate. Phaser objects
+ * here are only the visual representation.
  */
 export class ProjectileSystem {
   private bullets: LiveBullet[] = [];
@@ -34,31 +46,30 @@ export class ProjectileSystem {
    * muzzle with a swept step, so a shooter pressed against a wall cannot spawn
    * a bullet on the far side of it.
    */
-  fire(origin: Vec2, dir: Vec2, muzzleDistance: number): void {
-    const { bulletSpeed, bulletLifeMs, bulletRadius } = Tuning.gun;
+  fire(origin: Vec2, dir: Vec2, muzzleDistance: number, spec: BulletSpec): void {
     const initial: ProjectileState = {
       x: origin.x,
       y: origin.y,
-      vx: dir.x * bulletSpeed,
-      vy: dir.y * bulletSpeed,
-      radius: bulletRadius,
-      lifeMs: bulletLifeMs,
+      vx: dir.x * spec.speed,
+      vy: dir.y * spec.speed,
+      radius: spec.radius,
+      lifeMs: spec.lifeMs,
     };
-    const toMuzzle = stepProjectile(initial, (muzzleDistance / bulletSpeed) * 1000, this.solids(), []);
+    const toMuzzle = stepProjectile(initial, (muzzleDistance / spec.speed) * 1000, this.solids(), []);
     if (toMuzzle.kind !== "flying") {
-      this.impact(toMuzzle, 0xc9d4ff);
+      this.impact(toMuzzle, spec.impactColor);
       return;
     }
-    const state = { ...toMuzzle.state, lifeMs: bulletLifeMs };
-    const sprite = this.scene.add.image(state.x, state.y, Tex.bullet).setDepth(Depth.projectiles);
-    this.bullets.push({ state, prev: { x: state.x, y: state.y }, sprite });
+    const state = { ...toMuzzle.state, lifeMs: spec.lifeMs };
+    const sprite = this.scene.add.image(state.x, state.y, spec.texture).setDepth(Depth.projectiles);
+    this.bullets.push({ state, prev: { x: state.x, y: state.y }, spec, sprite });
   }
 
   /**
-   * Advances all bullets. `onHit` is called with the index into `targets` for
-   * each bullet that strikes one; that bullet is then removed.
+   * Advances all bullets. `onHit` is called with the index into `targets` and
+   * the bullet's damage for each bullet that strikes one; that bullet is removed.
    */
-  update(dtMs: number, targets: readonly Rect[], onHit: (index: number, at: Vec2) => void): void {
+  update(dtMs: number, targets: readonly Rect[], onHit: (index: number, damage: number, at: Vec2) => void): void {
     this.trails.clear();
     const solids = this.solids();
     const survivors: LiveBullet[] = [];
@@ -69,17 +80,17 @@ export class ProjectileSystem {
           b.prev = { x: b.state.x, y: b.state.y };
           b.state = step.state;
           b.sprite.setPosition(step.state.x, step.state.y);
-          this.trails.lineStyle(2, 0xffd166, 0.35).lineBetween(b.prev.x, b.prev.y, step.state.x, step.state.y);
+          this.trails.lineStyle(2, b.spec.trailColor, 0.35).lineBetween(b.prev.x, b.prev.y, step.state.x, step.state.y);
           survivors.push(b);
           break;
         case "wall":
-          this.impact(step, 0xc9d4ff);
+          this.impact(step, b.spec.impactColor);
           b.sprite.destroy();
           break;
         case "target":
           this.impact(step, 0xffffff);
           b.sprite.destroy();
-          onHit(step.index, step);
+          onHit(step.index, b.spec.damage, step);
           break;
         case "expired":
           b.sprite.destroy();

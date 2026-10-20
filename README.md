@@ -24,7 +24,7 @@ online leaderboard.
 
 This is a specification and starter scaffold, not a finished game.
 
-## Current state: Milestone 2 room prototype
+## Current state: Milestone 3 five-level run
 
 ``` text
 npm install
@@ -38,7 +38,13 @@ Click or press Enter on the menu. WASD moves, the mouse aims, holding
 the left mouse button shoots, and Space dashes (brief invulnerability,
 cooldown shown under HP). Each room's door stays locked until every
 enemy is dead. Then stand at the door and press E to go to the next
-room. Health carries over between rooms, and the three rooms loop until
-levels arrive in Milestone 3. At 0 HP the Game Over screen offers
-R / click to restart and M for the menu. Add `?debug` to the URL to see
-physics bodies.
+room. The run covers five themed levels (Dungeon Ruins → Toxic Sewers →
+Ancient Temple → Forgotten Foundry → The Void), with 4–5 rooms each.
+Each level ends with an elite, and Level 5 with the boss. Enemies are
+chasers (red), tanks (amber, hit hard), and ranged shooters (purple).
+Ranged shooters flash and show an aim line before firing. Dash through
+bullets to avoid them. Health carries over between rooms and is restored
+at each new level. Beating the boss shows the Victory screen; at 0 HP
+the Game Over screen appears. On either screen, R / click starts a new
+run and M returns to the menu. Add `?debug` to the URL to see physics
+bodies.

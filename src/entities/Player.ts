@@ -1,5 +1,6 @@
 import * as Phaser from "phaser";
 import { Depth, Tuning } from "../game/config.ts";
+import type { Rect } from "../logic/collision.ts";
 import { dashReadiness, dashVelocity, IDLE_DASH, isDashing, tryStartDash, type DashState } from "../logic/dash.ts";
 import { applyDamage, createHealth, isDead, type DamageResult, type HealthState } from "../logic/health.ts";
 import { directionTo, movementVelocity, type DirectionalInput, type Vec2 } from "../logic/vector.ts";
@@ -40,6 +41,12 @@ export class Player {
 
   get aim(): Vec2 {
     return this.aimDir;
+  }
+
+  /** Hit box for enemy bullets (the physics body bounds). */
+  get hitRect(): Rect {
+    const b = this.body;
+    return { x: b.x, y: b.y, width: b.width, height: b.height };
   }
 
   dashReadiness(now: number): number {

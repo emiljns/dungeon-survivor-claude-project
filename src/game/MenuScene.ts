@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { newRun } from "../logic/room.ts";
+import { newRun } from "../logic/progression.ts";
 import { FONT_FAMILY, GAME_HEIGHT, GAME_WIDTH, PALETTE, Tuning } from "./config.ts";
 
 export class MenuScene extends Phaser.Scene {
@@ -28,7 +28,7 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     this.tweens.add({ targets: prompt, alpha: 0.35, duration: 600, yoyo: true, repeat: -1 });
-    this.add.text(cx, GAME_HEIGHT - 20, "Milestone 2 room prototype", { ...small, fontSize: "9px" }).setOrigin(0.5);
+    this.add.text(cx, GAME_HEIGHT - 20, "Milestone 3 · five levels", { ...small, fontSize: "9px" }).setOrigin(0.5);
 
     let started = false;
     const start = (): void => {

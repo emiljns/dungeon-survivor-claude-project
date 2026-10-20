@@ -156,6 +156,74 @@
 -   **HUD:** a dash meter, room number and name, enemies remaining or
     DOOR OPEN, an `[E] EXIT` prompt, and room/clear banners.
 
+### Milestone 3 (2026-10-20)
+
+-   **One data-driven `Enemy` class** (`src/entities/Enemy.ts`) replaces
+    `Chaser`. Base stats live in `src/data/enemies.ts`, and pure
+    scaling/AI lives in `src/logic/enemyStats.ts` and `src/logic/ai.ts`.
+    -   **Chaser:** red circle, walks straight at the player.
+    -   **Tank:** amber block, 20 HP, slow, 2 contact damage, not
+        pushable.
+    -   **Ranged:** purple diamond. It keeps 100–170 px away, strafing
+        inside that band, and fires slow magenta orbs. Each shot is
+        telegraphed: the enemy stops, blinks and shows an aim line for
+        500 ms, and the aim locks when the telegraph starts so the shot
+        can be dodged. A windup only starts with line of sight (a swept
+        segment against solids), and a started telegraph always fires.
+    -   **Elite** (final room of levels 1–4): ×3 HP, +1 contact damage,
+        ×1.35 size, +2 bullets per shot and faster attacks.
+    -   **Boss** (level 5 final room), named "The Hollow Warden": slow
+        chase, telegraphed 10-bullet radial bursts. Below 50% HP it
+        enrages to 16 bullets with a 30% shorter cooldown. It has a
+        large HUD bar instead of an overhead one.
+-   **Enemy bullets reuse `ProjectileSystem`** (generalised with a
+    `BulletSpec`), so they get the same swept, non-tunnelling collision
+    against walls, props and locked doors. Dashing removes the player
+    from enemy-bullet targets, so bullets pass through during a dash.
+-   **Levels** (`src/data/levels.ts`): Dungeon Ruins → Toxic Sewers →
+    Ancient Temple → Forgotten Foundry → The Void, with 4, 4, 5, 5 and
+    5 rooms. Each level is a safe start room, combat rooms, then a final
+    Arena with the elite or boss. There are 7 hand-authored layouts,
+    reused across levels with different enemy lists, themes and
+    difficulty. The milestone 2 layouts are kept.
+-   **Difficulty:** enemy health multipliers rise every level
+    (1.0 → 1.6). Speed is a theme trait in 1.0–1.25 (the sewers are the
+    "fast" level, as the spec asks), and the boss never speeds up. All
+    scaled stats are clamped, and tests require every enemy to stay
+    slower than the player. Boss base HP was lowered from 110 to 75
+    after measuring: the 1.6× multiplier made it 176 HP, about 25 s of
+    sustained fire. It is now 120 HP.
+-   **Health is restored at the start of each new level** (it still
+    carries over between rooms within a level). There are no
+    upgrades/healing until milestone 4, and 23 rooms on 5 HP was
+    otherwise very punishing. Upgrades may make this unnecessary;
+    revisit when tuning.
+-   **Progression** (`src/logic/progression.ts`) is strictly ordered:
+    `advanceRun` returns next room / next level / victory, and
+    `sanitizeRunState` rejects levels or rooms that do not exist.
+    Clearing the final room of level 5 is victory; there is no level 6.
+-   **Victory screen is minimal** (title, rooms cleared, new run or
+    menu). Score, time, best score and the results panel belong to
+    milestone 4.
+-   **Themes** (`src/data/themes.ts`): per-level floor and wall palettes
+    plus the camera background, baked into the room's tile texture.
+    Lighting, glow and torches are milestone 5.
+-   **Verified in the browser:** a full run through all 23 rooms of
+    levels 1–5 in order, ending on the Victory screen. Enemies were
+    frozen for this pass and killed with real player bullets; the run
+    used real doors and E presses. Every room showed 6 colliders,
+    identical listener counts and 0 leftover bullets.
+-   **Enemy behaviour verified separately:**
+    -   Ranged: telegraph 500 ms → fire → 1900 ms cooldown, and the hit
+        cost 1 HP. With a wall between, no windup and no bullets.
+        Through a gap at the same distance, it fires.
+    -   Dash: dashing through an enemy bullet cost 0 HP; the control
+        without a dash cost 1 HP.
+    -   Boss: 120 HP, 10-bullet bursts becoming 16 after enrage, boss bar
+        shown.
+    -   Tank: contact cost 2 HP. Elite chaser: 18 HP, contact 2, scale
+        1.35 with a scaled body.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose

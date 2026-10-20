@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { Depth, FONT_FAMILY, GAME_WIDTH, PALETTE } from "../game/config.ts";
+import { Depth, FONT_FAMILY, GAME_HEIGHT, GAME_WIDTH, PALETTE } from "../game/config.ts";
 import type { HealthState } from "../logic/health.ts";
 import type { RoomState } from "../logic/room.ts";
 
@@ -8,6 +8,8 @@ export interface HudInfo {
   /** 0..1, 1 = dash ready. */
   readonly dashReadiness: number;
   readonly room: RoomState;
+  /** Boss health 0..1, or null when no boss is present. */
+  readonly boss: number | null;
 }
 
 /** Screen-space HUD. scrollFactor 0 keeps it fixed if the camera moves. */
@@ -17,6 +19,9 @@ export class Hud {
   private readonly status: Phaser.GameObjects.Text;
   private shownHealth = "";
   private shownDash = -1;
+  private shownBoss = -1;
+  private bossBar: Phaser.GameObjects.Graphics | null = null;
+  private bossLabel: Phaser.GameObjects.Text | null = null;
 
   constructor(private readonly scene: Phaser.Scene, roomLabel: string) {
     const label = { fontFamily: FONT_FAMILY, fontSize: "10px", color: PALETTE.text, fontStyle: "bold" };
@@ -35,6 +40,7 @@ export class Hud {
   update(info: HudInfo): void {
     this.drawHearts(info.health);
     this.drawDash(info.dashReadiness);
+    this.drawBoss(info.boss);
     const status =
       info.room.phase === "cleared"
         ? "DOOR OPEN"
@@ -43,24 +49,54 @@ export class Hud {
   }
 
   /** Large centred message that fades out. */
-  banner(title: string, subtitle: string, color: string = PALETTE.text): void {
+  banner(title: string, subtitle: string, color: string = PALETTE.text, big = false): void {
     const cx = GAME_WIDTH / 2;
     const objs = [
       this.scene.add
-        .text(cx, 120, title, { fontFamily: FONT_FAMILY, fontSize: "22px", color, fontStyle: "bold" })
+        .text(cx, 120, title, { fontFamily: FONT_FAMILY, fontSize: big ? "30px" : "22px", color, fontStyle: "bold" })
         .setOrigin(0.5),
       this.scene.add
-        .text(cx, 146, subtitle, { fontFamily: FONT_FAMILY, fontSize: "11px", color: PALETTE.textDim })
+        .text(cx, big ? 152 : 146, subtitle, { fontFamily: FONT_FAMILY, fontSize: big ? "14px" : "11px", color: big ? color : PALETTE.textDim })
         .setOrigin(0.5),
     ];
     for (const o of objs) o.setScrollFactor(0).setDepth(Depth.hud).setStroke("#05070d", 4);
     this.scene.tweens.add({
       targets: objs,
       alpha: 0,
-      delay: 1100,
+      delay: big ? 1700 : 1100,
       duration: 400,
       onComplete: () => objs.forEach((o) => o.destroy()),
     });
+  }
+
+  /** Shows the large boss bar at the bottom of the screen. */
+  showBoss(name: string): void {
+    if (this.bossBar) return;
+    this.bossLabel = this.scene.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT - 26, name, { fontFamily: FONT_FAMILY, fontSize: "9px", color: "#e0c3ff", fontStyle: "bold" })
+      .setOrigin(0.5)
+      .setStroke("#05070d", 3)
+      .setScrollFactor(0)
+      .setDepth(Depth.hud);
+    this.bossBar = this.scene.add.graphics().setScrollFactor(0).setDepth(Depth.hud);
+  }
+
+  private drawBoss(fraction: number | null): void {
+    if (!this.bossBar) return;
+    const visible = fraction !== null && fraction > 0;
+    this.bossBar.setVisible(visible);
+    this.bossLabel?.setVisible(visible);
+    if (!visible) return;
+    const w = 240;
+    const px = Math.round(fraction * (w - 2));
+    if (px === this.shownBoss) return;
+    this.shownBoss = px;
+    const x = (GAME_WIDTH - w) / 2;
+    const y = GAME_HEIGHT - 16;
+    this.bossBar.clear();
+    this.bossBar.fillStyle(0x0a0d16).fillRect(x - 1, y - 1, w + 2, 8);
+    this.bossBar.fillStyle(0x2a1745).fillRect(x, y, w, 6);
+    this.bossBar.fillStyle(fraction <= 0.5 ? 0xff4fd8 : 0x9b5de5).fillRect(x + 1, y + 1, px, 4);
   }
 
   private drawHearts(health: HealthState): void {

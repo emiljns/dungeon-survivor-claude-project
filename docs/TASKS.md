@@ -34,11 +34,11 @@ Complete in order and keep the game launchable at each milestone.
 
 ## Milestone 3 --- Five levels
 
--   [ ] Chaser, Tank and Ranged enemies.
--   [ ] Level data for all five themes.
--   [ ] 3--5 room definitions per level, reusing layouts as appropriate.
--   [ ] Level 5 final encounter.
--   [ ] Level transitions and level banners. **Acceptance:** complete
+-   [x] Chaser, Tank and Ranged enemies.
+-   [x] Level data for all five themes.
+-   [x] 3--5 room definitions per level, reusing layouts as appropriate.
+-   [x] Level 5 final encounter.
+-   [x] Level transitions and level banners. **Acceptance:** complete
     Levels 1--5 in order.
 
 ## Milestone 4 --- Upgrades and results
