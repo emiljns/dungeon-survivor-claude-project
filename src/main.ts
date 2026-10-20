@@ -2,6 +2,8 @@ import * as Phaser from "phaser";
 import { GAME_HEIGHT, GAME_WIDTH, PALETTE } from "./game/config.ts";
 import { GameScene } from "./game/GameScene.ts";
 import { MenuScene } from "./game/MenuScene.ts";
+import { PauseScene } from "./game/PauseScene.ts";
+import { ResultsScene } from "./game/ResultsScene.ts";
 
 const parent = document.querySelector<HTMLDivElement>("#app");
 if (!parent) throw new Error("Missing #app mount element");
@@ -20,7 +22,8 @@ const game = new Phaser.Game({
     // Append ?debug to the URL to draw physics bodies.
     arcade: { debug: new URLSearchParams(window.location.search).has("debug") },
   },
-  scene: [MenuScene, GameScene],
+  // Later scenes render on top: Pause and Results overlay the game.
+  scene: [MenuScene, GameScene, PauseScene, ResultsScene],
 });
 
 // Dev builds expose the game for manual diagnostics (e.g. GameScene.debugSnapshot()).

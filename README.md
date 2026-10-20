@@ -24,7 +24,7 @@ online leaderboard.
 
 This is a specification and starter scaffold, not a finished game.
 
-## Current state: Milestone 3 five-level run
+## Current state: Milestone 4 upgrades and results
 
 ``` text
 npm install
@@ -44,7 +44,14 @@ Each level ends with an elite, and Level 5 with the boss. Enemies are
 chasers (red), tanks (amber, hit hard), and ranged shooters (purple).
 Ranged shooters flash and show an aim line before firing. Dash through
 bullets to avoid them. Health carries over between rooms and is restored
-at each new level. Beating the boss shows the Victory screen; at 0 HP
-the Game Over screen appears. On either screen, R / click starts a new
-run and M returns to the menu. Add `?debug` to the URL to see physics
-bodies.
+at each new level.
+
+Rooms marked "UPGRADE ON CLEAR" offer a choice of three upgrades (click
+a card or press 1–3): damage, fire rate, bullet speed, move speed, max
+HP, or an extra bullet. You get 9 upgrades per run. Esc or P pauses
+(and shows your upgrades); M on the pause screen quits to the menu.
+Score and time are shown at the top. Beating the boss, or reaching
+0 HP, opens the results screen (score, highest level, time, enemies
+defeated, best score). On it, R / click retries and M returns to the
+menu. Your best score and level are saved in the browser and shown on
+the menu. Add `?debug` to the URL to see physics bodies.

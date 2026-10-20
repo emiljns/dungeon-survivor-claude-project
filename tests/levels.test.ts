@@ -72,6 +72,18 @@ describe("level data", () => {
     expect(LEVELS[1]?.difficulty.speedMul).toBe(Math.max(...LEVELS.slice(0, 4).map((l) => l.difficulty.speedMul)));
   });
 
+  it("reward rooms: every level offers an upgrade, start rooms and the victory room never do", () => {
+    for (const level of LEVELS) {
+      expect(level.rooms[0]?.reward, `level ${level.number} start`).toBe(false);
+      expect(level.rooms.some((r) => r.reward), `level ${level.number}`).toBe(true);
+      for (const r of level.rooms) if (r.reward) expect(r.enemies.length).toBeGreaterThan(0);
+    }
+    const last = LEVELS[LEVELS.length - 1];
+    expect(last?.rooms[last.rooms.length - 1]?.reward).toBe(false); // clearing it is victory
+    // 9 upgrades per run: fewer than the 15 total upgrade levels, so choices never run dry.
+    expect(LEVELS.flatMap((l) => l.rooms).filter((r) => r.reward)).toHaveLength(9);
+  });
+
   it("every scaled enemy stays inside safe stat bounds", () => {
     for (const level of LEVELS) {
       for (const stats of Object.values(ENEMY_STATS)) {

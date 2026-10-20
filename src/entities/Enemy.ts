@@ -46,6 +46,8 @@ export class Enemy {
     x: number,
     y: number,
     readonly stats: EnemyStats,
+    /** Room simulation time at spawn (pause-safe; not Phaser's wall-clock `time.now`). */
+    now: number,
   ) {
     this.healthState = createHealth(stats.maxHealth);
     this.sprite = scene.physics.add.sprite(x, y, ENEMY_TEXTURE[stats.kind]).setDepth(Depth.actors);
@@ -62,7 +64,7 @@ export class Enemy {
     this.bar = scene.add.graphics().setDepth(Depth.effects);
     this.telegraph = scene.add.graphics().setDepth(Depth.effects);
     this.strafeSign = Math.random() < 0.5 ? 1 : -1;
-    this.attackCycle = stats.attack ? initialAttackCycle(scene.time.now, 600 + Math.random() * 900) : null;
+    this.attackCycle = stats.attack ? initialAttackCycle(now, 600 + Math.random() * 900) : null;
     this.drawBar();
     this.positionBar();
 

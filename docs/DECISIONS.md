@@ -224,6 +224,80 @@
     -   Tank: contact cost 2 HP. Elite chaser: 18 HP, contact 2, scale
         1.35 with a scaled body.
 
+### Milestone 4 (2026-10-20)
+
+-   **Room reward loop, not XP or currency.** Coin/currency pickups are
+    excluded from v1, so rewards come from clearing specific rooms.
+    `LevelRoom.reward` marks 9 reward rooms per run: the room before
+    each level's final room, plus the elite rooms of levels 1–4.
+    Clearing the boss room is victory, so it gives no reward. The 9
+    rewards are fewer than the 15 total upgrade levels, so a run never
+    runs out of choices.
+-   **Upgrades** (`src/logic/upgrades.ts`). Each is capped, and each
+    changes only its own stat (tested):
+    -   Heavy Rounds: +50% damage, cap 3.
+    -   Quick Trigger: −15% fire interval, cap 3, floor 70 ms.
+    -   Rifled Barrel: +20% bullet speed, cap 2.
+    -   Light Boots: +10% move speed, cap 2, so 144 px/s maximum, still
+        above every enemy.
+    -   Iron Heart: +1 max HP and heal 1, cap 3, max 8 HP.
+    -   Split Shot: +1 bullet in an 8° fan, cap 2, 3 bullets maximum.
+-   **Three-choice panel:** distinct, not-yet-capped options via a
+    Fisher–Yates shuffle with injected randomness. A frequency test
+    confirms each upgrade appears in about 50% of rolls. Picking is by
+    click or keys 1–3. The room freezes while the panel is open
+    (physics paused, the run timer stops), and key presses made during
+    it are dropped on close.
+-   **Score** (`src/logic/score.ts`):
+    -   Enemy base points: chaser 100, ranged 150, tank 250, boss 5000.
+        Elites are worth ×3.
+    -   Enemy points get ×(1 + 0.25 × (level − 1)).
+    -   Room clear +200, and level clear +1000, both level-scaled.
+    -   Victory +10,000.
+    -   Floating "+N" popups appear on kills.
+-   **Simulation clock instead of `time.now`.** Phaser's scene clock is
+    the absolute loop time: it stops while the scene is paused, then
+    jumps forward on resume, which would instantly expire every
+    cooldown and enemy telegraph. Gameplay now uses `simTime`, which
+    only advances while playing. The run timer accumulates the same way,
+    so it excludes pauses and upgrade panels. Verified: after a 1.5 s
+    pause, an enemy cooldown was still pending on resume.
+-   **Pause is a `PauseScene` overlay over a paused `GameScene`**
+    (Esc/P). It freezes update, physics, timers and tweens together.
+    Verified: no change in time, enemy positions or attack timers over
+    1.5 s paused. It shows owned upgrades, and M quits to the menu
+    (abandoning the run, which is not recorded as a best score).
+-   **Phaser 3.90 bug workaround:** `KeyboardPlugin.shutdown` calls
+    `game.events.off(BLUR, resetKeys)` *without a context*, removing the
+    blur handler of every scene's keyboard, including the running game
+    scene's. This was measured: blur listeners went 3 → 4 → 2 after one
+    pause. Afterwards, alt-tabbing with a movement key held left it
+    stuck down. The pause overlay therefore sleeps and wakes instead of
+    stopping. Verified: blur listeners stay constant across pauses, and
+    a blur while holding D stops the player.
+-   **Results** (`ResultsScene`, over the frozen game): score, highest
+    level, time, enemies defeated, rooms cleared, best score, a "NEW
+    BEST SCORE!" badge, and retry (R/click) or menu (M). Retry uses
+    `scene.start("game", newRun())`, which shuts the old run down
+    first. The milestone 3 end overlay was removed.
+-   **Best score storage** (`src/systems/HighScoreStore.ts`): key
+    `dungeon-survivor:best:v1`, holding `{bestScore, bestLevel}`.
+    Storage is injected so the rules are unit tested for missing, valid,
+    malformed (bad JSON, wrong types, Infinity, out-of-range level) and
+    throwing storage. Each field only improves. In the browser:
+    -   With `setItem` throwing, results show "(not saved)" and the game
+        keeps running.
+    -   With `getItem` throwing, the menu shows "NO BEST SCORE YET".
+    -   The best score persists across a page reload.
+-   **HUD:** score and run time (top centre), and an "UPGRADE ON CLEAR"
+    hint in reward rooms. The menu shows the best score and level.
+-   **Testing note:** the in-app browser pane was hidden for parts of
+    this session, which pauses `requestAnimationFrame`. For those
+    browser checks, the test harness switched the page's Phaser loop to
+    its built-in `setTimeout` mode at runtime (`forceSetTimeOut`). No
+    game code changed for this, and the game ships with the default
+    rAF loop.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose

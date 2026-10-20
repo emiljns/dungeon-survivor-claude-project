@@ -2,6 +2,7 @@ import * as Phaser from "phaser";
 import { Depth, FONT_FAMILY, GAME_HEIGHT, GAME_WIDTH, PALETTE } from "../game/config.ts";
 import type { HealthState } from "../logic/health.ts";
 import type { RoomState } from "../logic/room.ts";
+import { formatTime } from "../logic/score.ts";
 
 export interface HudInfo {
   readonly health: HealthState;
@@ -10,6 +11,10 @@ export interface HudInfo {
   readonly room: RoomState;
   /** Boss health 0..1, or null when no boss is present. */
   readonly boss: number | null;
+  readonly score: number;
+  readonly runTimeMs: number;
+  /** True while fighting in a room whose clear grants an upgrade. */
+  readonly rewardOnClear: boolean;
 }
 
 /** Screen-space HUD. scrollFactor 0 keeps it fixed if the camera moves. */
@@ -17,6 +22,8 @@ export class Hud {
   private readonly hearts: Phaser.GameObjects.Graphics;
   private readonly dashBar: Phaser.GameObjects.Graphics;
   private readonly status: Phaser.GameObjects.Text;
+  private readonly scoreText: Phaser.GameObjects.Text;
+  private readonly hint: Phaser.GameObjects.Text;
   private shownHealth = "";
   private shownDash = -1;
   private shownBoss = -1;
@@ -35,6 +42,10 @@ export class Hud {
     this.dashBar = fixed(scene.add.graphics());
     fixed(scene.add.text(GAME_WIDTH - 6, 3, roomLabel, { ...label, color: PALETTE.textDim }).setOrigin(1, 0));
     this.status = fixed(scene.add.text(GAME_WIDTH - 6, 15, "", { ...label, fontSize: "9px" }).setOrigin(1, 0));
+    this.scoreText = fixed(scene.add.text(GAME_WIDTH / 2, 3, "", { ...label, color: PALETTE.accent }).setOrigin(0.5, 0));
+    this.hint = fixed(
+      scene.add.text(GAME_WIDTH - 6, 26, "UPGRADE ON CLEAR", { ...label, fontSize: "8px", color: PALETTE.accent }).setOrigin(1, 0),
+    );
   }
 
   update(info: HudInfo): void {
@@ -46,6 +57,9 @@ export class Hud {
         ? "DOOR OPEN"
         : `ENEMIES ${info.room.enemiesRemaining}/${info.room.enemiesTotal}`;
     this.status.setText(status).setColor(info.room.phase === "cleared" ? "#7dff9b" : PALETTE.danger);
+    // setText is a no-op when the string is unchanged, so this is cheap per frame.
+    this.scoreText.setText(`SCORE ${String(info.score).padStart(6, "0")}   ${formatTime(info.runTimeMs)}`);
+    this.hint.setVisible(info.rewardOnClear);
   }
 
   /** Large centred message that fades out. */

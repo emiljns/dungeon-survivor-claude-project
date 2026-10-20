@@ -15,6 +15,8 @@ export interface LevelRoom {
   readonly layout: RoomLayout;
   /** Spawned at the layout's 'E' points in reading order (cycling if more enemies than points). */
   readonly enemies: readonly EnemySpec[];
+  /** Clearing this room offers the three-choice upgrade panel. */
+  readonly reward: boolean;
 }
 
 export interface LevelDefinition {
@@ -30,7 +32,12 @@ const t: EnemySpec = { kind: "tank", elite: false };
 const r: EnemySpec = { kind: "ranged", elite: false };
 const elite = (kind: EnemyKind): EnemySpec => ({ kind, elite: true });
 const boss: EnemySpec = { kind: "boss", elite: false };
-const start: LevelRoom = { layout: ENTRY_HALL, enemies: [] };
+const start: LevelRoom = { layout: ENTRY_HALL, enemies: [], reward: false };
+/**
+ * A combat room. `reward` marks the level's upgrade opportunities: the room
+ * before the final room, plus the elite room on levels 1–4 (9 upgrades a run).
+ */
+const room = (layout: RoomLayout, enemies: readonly EnemySpec[], reward = false): LevelRoom => ({ layout, enemies, reward });
 
 export const LEVELS: readonly LevelDefinition[] = [
   {
@@ -40,9 +47,9 @@ export const LEVELS: readonly LevelDefinition[] = [
     difficulty: { healthMul: 1, speedMul: 1 },
     rooms: [
       start,
-      { layout: PILLAR_HALL, enemies: [c, c, c] },
-      { layout: STOREROOM, enemies: [c, c, c, c] },
-      { layout: ARENA, enemies: [elite("chaser"), c, c] },
+      room(PILLAR_HALL, [c, c, c]),
+      room(STOREROOM, [c, c, c, c], true),
+      room(ARENA, [elite("chaser"), c, c], true),
     ],
   },
   {
@@ -52,9 +59,9 @@ export const LEVELS: readonly LevelDefinition[] = [
     difficulty: { healthMul: 1.1, speedMul: 1.2 },
     rooms: [
       start,
-      { layout: CROSSROADS, enemies: [c, c, c, t] },
-      { layout: FURNACE, enemies: [c, c, c, c, c, c] },
-      { layout: ARENA, enemies: [elite("chaser"), c, c, c, c] },
+      room(CROSSROADS, [c, c, c, t]),
+      room(FURNACE, [c, c, c, c, c, c], true),
+      room(ARENA, [elite("chaser"), c, c, c, c], true),
     ],
   },
   {
@@ -64,10 +71,10 @@ export const LEVELS: readonly LevelDefinition[] = [
     difficulty: { healthMul: 1.25, speedMul: 1.1 },
     rooms: [
       start,
-      { layout: GALLERY, enemies: [c, c, r, r] },
-      { layout: PILLAR_HALL, enemies: [t, r, c] },
-      { layout: CROSSROADS, enemies: [t, r, r, c] },
-      { layout: ARENA, enemies: [elite("tank"), r, c, c] },
+      room(GALLERY, [c, c, r, r]),
+      room(PILLAR_HALL, [t, r, c]),
+      room(CROSSROADS, [t, r, r, c], true),
+      room(ARENA, [elite("tank"), r, c, c], true),
     ],
   },
   {
@@ -77,10 +84,10 @@ export const LEVELS: readonly LevelDefinition[] = [
     difficulty: { healthMul: 1.4, speedMul: 1.15 },
     rooms: [
       start,
-      { layout: FURNACE, enemies: [r, r, r, c, c] },
-      { layout: STOREROOM, enemies: [r, r, t, c] },
-      { layout: GALLERY, enemies: [r, r, r, t, c] },
-      { layout: ARENA, enemies: [elite("ranged"), r, t, c] },
+      room(FURNACE, [r, r, r, c, c]),
+      room(STOREROOM, [r, r, t, c]),
+      room(GALLERY, [r, r, r, t, c], true),
+      room(ARENA, [elite("ranged"), r, t, c], true),
     ],
   },
   {
@@ -90,10 +97,10 @@ export const LEVELS: readonly LevelDefinition[] = [
     difficulty: { healthMul: 1.6, speedMul: 1.2 },
     rooms: [
       start,
-      { layout: CROSSROADS, enemies: [t, t, r, r, c] },
-      { layout: FURNACE, enemies: [r, r, r, t, c, c] },
-      { layout: GALLERY, enemies: [t, r, r, r, c, c] },
-      { layout: ARENA, enemies: [boss, c, c] },
+      room(CROSSROADS, [t, t, r, r, c]),
+      room(FURNACE, [r, r, r, t, c, c]),
+      room(GALLERY, [t, r, r, r, c, c], true),
+      room(ARENA, [boss, c, c]),
     ],
   },
 ];

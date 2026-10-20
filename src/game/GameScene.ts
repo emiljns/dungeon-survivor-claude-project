@@ -3,7 +3,7 @@ import { BOSS_NAME, ENEMY_STATS } from "../data/enemies.ts";
 import { LEVELS, ROOMS_PER_LEVEL, type LevelDefinition, type LevelRoom } from "../data/levels.ts";
 import { Enemy, type EnemyContext } from "../entities/Enemy.ts";
 import { Player } from "../entities/Player.ts";
-import { hasLineOfSight } from "../logic/ai.ts";
+import { hasLineOfSight, spreadDirections } from "../logic/ai.ts";
 import { expandRect, pointInRect, type Rect } from "../logic/collision.ts";
 import { makeElite, scaleForDifficulty, type EnemyAttack } from "../logic/enemyStats.ts";
 import { healthFraction } from "../logic/health.ts";
@@ -12,19 +12,31 @@ import {
   advanceRun,
   isFinalLevel,
   isFinalRoomOfLevel,
-  newRun,
   sanitizeRunState,
   type RunState,
 } from "../logic/progression.ts";
 import { canExit, enemyDefeated, startRoom, type RoomState } from "../logic/room.ts";
+import { enemyScore, roomClearScore, SCORE } from "../logic/score.ts";
+import {
+  applyUpgrade,
+  computeStats,
+  rollUpgradeChoices,
+  type BaseStats,
+  type PlayerStats,
+  type UpgradeId,
+  type UpgradeLevels,
+} from "../logic/upgrades.ts";
 import type { Vec2 } from "../logic/vector.ts";
 import { FireCooldown } from "../logic/weapon.ts";
 import { bakeTileLayer, ensurePlaceholderTextures, Tex } from "../rendering/PlaceholderArt.ts";
+import { browserStorage, loadBest, mergeBest, saveBest } from "../systems/HighScoreStore.ts";
 import { ProjectileSystem, type BulletSpec } from "../systems/ProjectileSystem.ts";
 import { Hud } from "../ui/Hud.ts";
-import { Depth, FONT_FAMILY, GAME_HEIGHT, GAME_WIDTH, PALETTE, TILE, Tuning } from "./config.ts";
+import { UpgradePanel } from "../ui/UpgradePanel.ts";
+import { Depth, FONT_FAMILY, PALETTE, TILE, Tuning } from "./config.ts";
+import type { RunResult } from "./ResultsScene.ts";
 
-type Phase = "playing" | "exiting" | "gameOver" | "victory";
+type Phase = "playing" | "reward" | "exiting" | "gameOver" | "victory";
 
 interface Keys {
   readonly up: Phaser.Input.Keyboard.Key;
@@ -33,17 +45,27 @@ interface Keys {
   readonly right: Phaser.Input.Keyboard.Key;
   readonly dash: Phaser.Input.Keyboard.Key;
   readonly interact: Phaser.Input.Keyboard.Key;
+  readonly pause: Phaser.Input.Keyboard.Key;
+  readonly pauseAlt: Phaser.Input.Keyboard.Key;
 }
 
-const PLAYER_BULLET: BulletSpec = {
-  speed: Tuning.gun.bulletSpeed,
+const BASE_STATS: BaseStats = {
+  damage: Tuning.gun.damage,
+  fireIntervalMs: Tuning.gun.intervalMs,
+  bulletSpeed: Tuning.gun.bulletSpeed,
+  moveSpeed: Tuning.player.speed,
+  maxHealth: Tuning.player.maxHealth,
+};
+
+const playerBulletSpec = (stats: PlayerStats): BulletSpec => ({
+  speed: stats.bulletSpeed,
   lifeMs: Tuning.gun.bulletLifeMs,
   radius: Tuning.gun.bulletRadius,
-  damage: Tuning.gun.damage,
+  damage: stats.damage,
   texture: Tex.bullet,
   trailColor: 0xffd166,
   impactColor: 0xc9d4ff,
-};
+});
 
 const enemyBulletSpec = (attack: EnemyAttack): BulletSpec => ({
   speed: attack.bulletSpeed,
@@ -65,6 +87,10 @@ const enemyBulletSpec = (attack: EnemyAttack): BulletSpec => ({
  * Phaser clears on shutdown; nothing is attached to `window`, `game.events`
  * or `this.events`. Restarts always pass explicit data: Phaser keeps the
  * previous data when restarted without any.
+ *
+ * Time: gameplay cooldowns use `simTime`, which only advances while playing.
+ * Phaser's `time.now` jumps forward after a pause, which would instantly
+ * expire every cooldown and telegraph on resume.
  */
 export class GameScene extends Phaser.Scene {
   private run!: RunState;
@@ -87,6 +113,14 @@ export class GameScene extends Phaser.Scene {
   private keys!: Keys;
   private phase: Phase = "playing";
   private leaving = false;
+  // Run-wide values, carried in RunState between rooms.
+  private upgrades!: UpgradeLevels;
+  private stats!: PlayerStats;
+  private score = 0;
+  private enemiesDefeated = 0;
+  private runTimeMs = 0;
+  private simTime = 0;
+  private panel: UpgradePanel | null = null;
 
   constructor() {
     super("game");
@@ -94,9 +128,16 @@ export class GameScene extends Phaser.Scene {
 
   init(data: unknown): void {
     this.run = sanitizeRunState(data, ROOMS_PER_LEVEL, Tuning.player.maxHealth);
+    this.upgrades = this.run.upgrades;
+    this.stats = computeStats(BASE_STATS, this.upgrades);
+    this.score = this.run.score;
+    this.enemiesDefeated = this.run.enemiesDefeated;
+    this.runTimeMs = this.run.runTimeMs;
+    this.simTime = 0;
     this.enemies = [];
     this.boss = null;
     this.solidRects = [];
+    this.panel = null;
     this.phase = "playing";
     this.leaving = false;
   }
@@ -136,11 +177,11 @@ export class GameScene extends Phaser.Scene {
       .setDepth(Depth.hud)
       .setVisible(false);
 
-    this.player = new Player(this, this.layout.playerSpawn.x, this.layout.playerSpawn.y, this.run.playerHealth);
+    this.player = new Player(this, this.layout.playerSpawn.x, this.layout.playerSpawn.y, this.run.playerHealth, this.stats);
     this.enemyGroup = this.physics.add.group();
     this.playerShots = new ProjectileSystem(this, () => this.solidRects);
     this.enemyShots = new ProjectileSystem(this, () => this.solidRects);
-    this.gun = new FireCooldown(Tuning.gun.intervalMs);
+    this.gun = new FireCooldown(this.stats.fireIntervalMs);
 
     this.physics.add.collider(this.player.sprite, solids);
     this.physics.add.collider(this.player.sprite, this.doors);
@@ -159,6 +200,8 @@ export class GameScene extends Phaser.Scene {
       right: kb.addKey(K.D),
       dash: kb.addKey(K.SPACE), // addKey captures Space, so the page never scrolls
       interact: kb.addKey(K.E),
+      pause: kb.addKey(K.ESC),
+      pauseAlt: kb.addKey(K.P),
     };
 
     const roomCount = level.rooms.length;
@@ -174,14 +217,21 @@ export class GameScene extends Phaser.Scene {
 
   override update(_time: number, delta: number): void {
     if (this.phase !== "playing") return;
-    const now = this.time.now;
+    const k = this.keys;
+    if (Phaser.Input.Keyboard.JustDown(k.pause) || Phaser.Input.Keyboard.JustDown(k.pauseAlt)) {
+      this.pauseGame();
+      return;
+    }
+
     const dt = Math.min(delta, 50);
+    this.simTime += dt;
+    this.runTimeMs += Math.min(delta, 250);
+    const now = this.simTime;
 
     // Convert the pointer to world space every frame: correct even when the
     // mouse is still but the camera scrolls.
     const pointer = this.input.activePointer;
     const aim = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-    const k = this.keys;
     this.player.update(
       { up: k.up.isDown, down: k.down.isDown, left: k.left.isDown, right: k.right.isDown },
       aim,
@@ -190,7 +240,11 @@ export class GameScene extends Phaser.Scene {
     );
 
     if (pointer.leftButtonDown() && this.gun.tryFire(now)) {
-      this.playerShots.fire(this.player.position, this.player.aim, 9, PLAYER_BULLET);
+      const n = this.stats.projectiles;
+      const spec = playerBulletSpec(this.stats);
+      for (const dir of spreadDirections(this.player.aim, n, this.stats.spreadRad * (n - 1))) {
+        this.playerShots.fire(this.player.position, dir, 9, spec);
+      }
     }
 
     const ctx: EnemyContext = {
@@ -238,6 +292,26 @@ export class GameScene extends Phaser.Scene {
     return isFinalRoomOfLevel(this.run, ROOMS_PER_LEVEL);
   }
 
+  /** The run as it stands right now, for transitions. */
+  private currentRun(): RunState {
+    return {
+      ...this.run,
+      score: this.score,
+      enemiesDefeated: this.enemiesDefeated,
+      runTimeMs: this.runTimeMs,
+      upgrades: this.upgrades,
+    };
+  }
+
+  private pauseGame(): void {
+    // Pausing the scene freezes update, physics, timers and tweens together.
+    // The overlay sleeps between pauses (see PauseScene for why it is not stopped).
+    const data = { upgrades: this.upgrades };
+    if (this.scene.isSleeping("pause")) this.scene.wake("pause", data);
+    else this.scene.launch("pause", data);
+    this.scene.pause();
+  }
+
   private showEntryBanner(): void {
     const level = this.level;
     if (this.run.roomIndex === 0) {
@@ -253,9 +327,12 @@ export class GameScene extends Phaser.Scene {
   private updateHud(): void {
     this.hud.update({
       health: this.player.health,
-      dashReadiness: this.player.dashReadiness(this.time.now),
+      dashReadiness: this.player.dashReadiness(this.simTime),
       room: this.room,
       boss: this.boss ? healthFraction(this.boss.health) : null,
+      score: this.score,
+      runTimeMs: this.runTimeMs,
+      rewardOnClear: this.levelRoom.reward && !canExit(this.room),
     });
   }
 
@@ -277,7 +354,7 @@ export class GameScene extends Phaser.Scene {
       if (this.phase !== "playing") return;
       for (const { spec, at } of placements) {
         const scaled = scaleForDifficulty(ENEMY_STATS[spec.kind], this.level.difficulty);
-        const enemy = new Enemy(this, this.enemyGroup, at.x, at.y, spec.elite ? makeElite(scaled) : scaled);
+        const enemy = new Enemy(this, this.enemyGroup, at.x, at.y, spec.elite ? makeElite(scaled) : scaled, this.simTime);
         this.enemies.push(enemy);
         if (spec.kind === "boss") {
           this.boss = enemy;
@@ -292,16 +369,62 @@ export class GameScene extends Phaser.Scene {
     const result = enemy.takeHit(damage, now);
     if (!result.died) return;
     this.enemies = this.enemies.filter((e) => e !== enemy);
+    this.enemiesDefeated++;
+    const points = enemyScore(enemy.stats.kind, enemy.stats.elite, this.level.number);
+    this.addScore(points, enemy.position);
     this.room = enemyDefeated(this.room);
     if (!canExit(this.room)) return;
 
+    this.addScore(roomClearScore(this.level.number, this.isFinalRoom), null);
     this.refreshDoors();
+    // Refresh now: the upgrade panel / victory stop update() before its own HUD refresh.
+    this.updateHud();
     if (this.isFinalRoom && isFinalLevel(this.run, ROOMS_PER_LEVEL)) {
       this.victory();
       return;
     }
     if (this.isFinalRoom) this.hud.banner("LEVEL CLEAR", "The way down is open", "#7dff9b", true);
     else this.hud.banner("ROOM CLEAR", "The door is open", "#7dff9b");
+    if (this.levelRoom.reward) this.offerUpgrade();
+  }
+
+  private addScore(points: number, at: Vec2 | null): void {
+    this.score += points;
+    if (!at) return;
+    const popup = this.add
+      .text(at.x, at.y - 8, `+${points}`, { fontFamily: FONT_FAMILY, fontSize: "9px", color: PALETTE.accent, fontStyle: "bold" })
+      .setOrigin(0.5)
+      .setStroke("#05070d", 3)
+      .setDepth(Depth.effects);
+    this.tweens.add({ targets: popup, y: at.y - 26, alpha: 0, duration: 700, onComplete: () => popup.destroy() });
+  }
+
+  /** Freezes the room and shows the three-choice panel (after the clear banner). */
+  private offerUpgrade(): void {
+    const choices = rollUpgradeChoices(this.upgrades, Math.random);
+    if (choices.length === 0) return; // everything is capped
+    this.phase = "reward";
+    this.player.halt();
+    this.enemyShots.clear();
+    this.time.delayedCall(450, () => {
+      if (this.phase !== "reward") return;
+      this.physics.pause();
+      this.panel = new UpgradePanel(this, choices, this.upgrades, (id) => this.chooseUpgrade(id));
+    });
+  }
+
+  private chooseUpgrade(id: UpgradeId): void {
+    this.panel = null;
+    this.upgrades = applyUpgrade(this.upgrades, id);
+    this.stats = computeStats(BASE_STATS, this.upgrades);
+    this.player.applyStats(this.stats);
+    this.gun = new FireCooldown(this.stats.fireIntervalMs);
+    this.player.body.enable = true;
+    this.physics.resume();
+    // Drop key presses made while the panel was open (e.g. a "1" or Space).
+    this.input.keyboard?.resetKeys();
+    this.phase = "playing";
+    this.updateHud();
   }
 
   /** Locked doors block movement and bullets; cleared rooms remove them. */
@@ -338,7 +461,7 @@ export class GameScene extends Phaser.Scene {
 
   private exitRoom(): void {
     if (this.phase !== "playing" || this.leaving) return;
-    const next = advanceRun(this.run, ROOMS_PER_LEVEL, this.player.health.current, Tuning.player.maxHealth);
+    const next = advanceRun(this.currentRun(), ROOMS_PER_LEVEL, this.player.health.current, this.stats.maxHealth);
     if (next.kind === "victory") {
       this.victory();
       return;
@@ -361,7 +484,7 @@ export class GameScene extends Phaser.Scene {
 
   private damagePlayer(amount: number, from: Vec2): void {
     if (this.phase !== "playing") return;
-    const result = this.player.takeHit(amount, from, this.time.now);
+    const result = this.player.takeHit(amount, from, this.simTime);
     if (result.applied) this.updateHud();
     if (result.died) this.gameOver();
   }
@@ -378,62 +501,36 @@ export class GameScene extends Phaser.Scene {
     this.phase = "gameOver";
     this.player.die();
     this.endRun();
-    this.showEndOverlay(
-      "GAME OVER",
-      PALETTE.danger,
-      0xff5d73,
-      `Fell in Level ${this.level.number} · ${this.level.name} · rooms cleared: ${this.run.roomsCleared}`,
-      0,
-    );
+    this.finishRun("defeat", this.run.roomsCleared, 700);
   }
 
-  /** Minimal end state for Milestone 3; full results/score arrive in Milestone 4. */
   private victory(): void {
     this.phase = "victory";
     this.player.halt();
     this.endRun();
+    this.addScore(SCORE.victory, null);
     this.updateHud();
-    this.showEndOverlay(
-      "VICTORY",
-      "#7dff9b",
-      0x7dff9b,
-      `The Void falls silent · all 5 levels cleared · rooms cleared: ${this.run.roomsCleared + 1}`,
-      900,
-    );
+    this.finishRun("victory", this.run.roomsCleared + 1, 1100);
   }
 
-  private showEndOverlay(title: string, color: string, stroke: number, detail: string, delayMs: number): void {
-    this.time.delayedCall(delayMs, () => {
-      const cx = GAME_WIDTH / 2;
-      const cy = GAME_HEIGHT / 2;
-      const ui = [
-        this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x05070d, 0.72).setOrigin(0),
-        this.add.rectangle(cx, cy, 420, 120, 0x111626).setStrokeStyle(2, stroke),
-        this.add.text(cx, cy - 32, title, { fontFamily: FONT_FAMILY, fontSize: "28px", color, fontStyle: "bold" }).setOrigin(0.5),
-        this.add.text(cx, cy + 2, detail, { fontFamily: FONT_FAMILY, fontSize: "10px", color: PALETTE.textDim }).setOrigin(0.5),
-        this.add
-          .text(cx, cy + 32, "[R] / Click  New run     [M]  Menu", { fontFamily: FONT_FAMILY, fontSize: "11px", color: PALETTE.accent })
-          .setOrigin(0.5),
-      ];
-      for (const o of ui) o.setScrollFactor(0).setDepth(Depth.overlay);
-
-      // Short delay so a held fire button or key does not skip the screen.
-      this.time.delayedCall(600, () => {
-        const kb = this.input.keyboard;
-        kb?.once("keydown-R", () => this.leave("game"));
-        kb?.once("keydown-ENTER", () => this.leave("game"));
-        kb?.once("keydown-M", () => this.leave("menu"));
-        this.input.once("pointerdown", () => this.leave("game"));
-      });
-    });
-  }
-
-  private leave(target: "game" | "menu"): void {
-    if (this.leaving) return;
-    this.leaving = true;
-    // Always pass explicit data: a fresh run starts at level 1, room 1, full health.
-    if (target === "game") this.scene.restart(newRun(Tuning.player.maxHealth));
-    else this.scene.start("menu");
+  /** Records the best score (never throws on storage errors) and shows results. */
+  private finishRun(outcome: RunResult["outcome"], roomsCleared: number, delayMs: number): void {
+    const storage = browserStorage();
+    const merged = mergeBest(loadBest(storage), this.score, this.level.number);
+    const saved = saveBest(storage, merged.record);
+    const result: RunResult = {
+      outcome,
+      score: this.score,
+      levelReached: this.level.number,
+      levelName: this.level.name,
+      runTimeMs: this.runTimeMs,
+      enemiesDefeated: this.enemiesDefeated,
+      roomsCleared,
+      best: merged.record,
+      newBestScore: merged.newBestScore,
+      saved,
+    };
+    this.time.delayedCall(delayMs, () => this.scene.launch("results", result));
   }
 
   /** Dev-only diagnostics used to verify that restarts/transitions leave nothing behind. */
@@ -449,7 +546,15 @@ export class GameScene extends Phaser.Scene {
       roomsCleared: this.run.roomsCleared,
       roomPhase: this.room.phase,
       enemiesRemaining: this.room.enemiesRemaining,
-      playerHp: this.player.health.current,
+      playerHp: `${this.player.health.current}/${this.player.health.max}`,
+      score: this.score,
+      enemiesDefeated: this.enemiesDefeated,
+      runTimeMs: Math.round(this.runTimeMs),
+      simTime: Math.round(this.simTime),
+      upgrades: Object.entries(this.upgrades)
+        .filter(([, v]) => v > 0)
+        .map(([k, v]) => `${k}:${v}`)
+        .join(","),
       enemies: this.enemies.map((e) => `${e.stats.elite ? "elite-" : ""}${e.stats.kind}:${e.health.current}`).join(","),
       enemiesActive: this.enemyGroup.countActive(true),
       playerBullets: this.playerShots.count,

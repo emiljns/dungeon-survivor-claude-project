@@ -43,13 +43,13 @@ Complete in order and keep the game launchable at each milestone.
 
 ## Milestone 4 --- Upgrades and results
 
--   [ ] Score, enemies defeated and run time.
--   [ ] XP/currency or room reward loop.
--   [ ] Three-choice upgrade panel.
--   [ ] Damage, fire-rate, projectile-speed, movement-speed, max-health
+-   [x] Score, enemies defeated and run time.
+-   [x] XP/currency or room reward loop.
+-   [x] Three-choice upgrade panel.
+-   [x] Damage, fire-rate, projectile-speed, movement-speed, max-health
     and extra-projectile upgrades.
--   [ ] HUD, pause, game-over, victory, retry/menu.
--   [ ] Persistent local best score and best level. **Acceptance:**
+-   [x] HUD, pause, game-over, victory, retry/menu.
+-   [x] Persistent local best score and best level. **Acceptance:**
     upgrades affect gameplay; run produces correct results.
 
 ## Milestone 5 --- Lighting and polish

@@ -3,6 +3,7 @@ import { Depth, Tuning } from "../game/config.ts";
 import type { Rect } from "../logic/collision.ts";
 import { dashReadiness, dashVelocity, IDLE_DASH, isDashing, tryStartDash, type DashState } from "../logic/dash.ts";
 import { applyDamage, createHealth, isDead, type DamageResult, type HealthState } from "../logic/health.ts";
+import type { PlayerStats } from "../logic/upgrades.ts";
 import { directionTo, movementVelocity, type DirectionalInput, type Vec2 } from "../logic/vector.ts";
 import { Tex } from "../rendering/PlaceholderArt.ts";
 
@@ -14,10 +15,12 @@ export class Player {
   private knockbackUntil = 0;
   private nextGhostAt = 0;
   private aimDir: Vec2 = { x: 1, y: 0 };
+  private moveSpeed: number;
 
-  constructor(private readonly scene: Phaser.Scene, x: number, y: number, startHealth: number) {
-    const full = createHealth(Tuning.player.maxHealth);
+  constructor(private readonly scene: Phaser.Scene, x: number, y: number, startHealth: number, stats: PlayerStats) {
+    const full = createHealth(stats.maxHealth);
     this.healthState = { ...full, current: Math.min(full.max, Math.max(1, startHealth)) };
+    this.moveSpeed = stats.moveSpeed;
     this.sprite = scene.physics.add.sprite(x, y, Tex.player).setDepth(Depth.actors);
     // Slightly smaller than the art so the player does not snag on corners.
     this.body.setSize(10, 10);
@@ -49,6 +52,20 @@ export class Player {
     return { x: b.x, y: b.y, width: b.width, height: b.height };
   }
 
+  /**
+   * Applies new upgrade stats mid-run. A higher max health also heals by the
+   * amount gained (the Iron Heart upgrade: "+1 max HP and heal 1").
+   */
+  applyStats(stats: PlayerStats): void {
+    this.moveSpeed = stats.moveSpeed;
+    const gained = Math.max(0, stats.maxHealth - this.healthState.max);
+    this.healthState = {
+      ...this.healthState,
+      max: stats.maxHealth,
+      current: Math.min(stats.maxHealth, this.healthState.current + gained),
+    };
+  }
+
   dashReadiness(now: number): number {
     return dashReadiness(this.dash, now, Tuning.dash);
   }
@@ -61,7 +78,7 @@ export class Player {
     const dir = directionTo(this.position, aimWorld);
     if (dir.x !== 0 || dir.y !== 0) this.aimDir = dir;
 
-    const move = movementVelocity(input, Tuning.player.speed);
+    const move = movementVelocity(input, this.moveSpeed);
     if (dashPressed) {
       const started = tryStartDash(this.dash, now, move, this.aimDir, Tuning.dash);
       if (started) {
