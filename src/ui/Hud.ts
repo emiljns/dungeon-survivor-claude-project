@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { Depth, FONT_FAMILY, GAME_HEIGHT, GAME_WIDTH, PALETTE } from "../game/config.ts";
+import { Depth, FONT_FAMILY, GAME_HEIGHT, GAME_WIDTH, HudLayout, PALETTE } from "../game/config.ts";
 import type { HealthState } from "../logic/health.ts";
 import type { RoomState } from "../logic/room.ts";
 import { formatTime } from "../logic/score.ts";
@@ -42,7 +42,8 @@ export class Hud {
     this.dashBar = fixed(scene.add.graphics());
     fixed(scene.add.text(GAME_WIDTH - 6, 3, roomLabel, { ...label, color: PALETTE.textDim }).setOrigin(1, 0));
     this.status = fixed(scene.add.text(GAME_WIDTH - 6, 15, "", { ...label, fontSize: "9px" }).setOrigin(1, 0));
-    this.scoreText = fixed(scene.add.text(GAME_WIDTH / 2, 3, "", { ...label, color: PALETTE.accent }).setOrigin(0.5, 0));
+    // Top-left, not top-centre: several rooms have their door at the top centre.
+    this.scoreText = fixed(scene.add.text(HudLayout.scoreX, 3, "", { ...label, color: PALETTE.accent }));
     this.hint = fixed(
       scene.add.text(GAME_WIDTH - 6, 26, "UPGRADE ON CLEAR", { ...label, fontSize: "8px", color: PALETTE.accent }).setOrigin(1, 0),
     );

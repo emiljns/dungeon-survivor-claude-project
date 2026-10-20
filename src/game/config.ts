@@ -24,6 +24,22 @@ export const Depth = {
   overlay: 110,
 } as const;
 
+/**
+ * HUD placement. The HUD keeps to the top corners because rooms put doors at
+ * the top centre; `zones` are the screen areas it may cover, and a unit test
+ * checks that no room's door sits under them.
+ */
+export const HudLayout = {
+  /** Score/time start after the HP hearts (8 hearts max end at x = 112). */
+  scoreX: 124,
+  zones: [
+    { x: 0, y: 0, width: 262, height: 26 }, // HP, dash, score/time
+    { x: 430, y: 0, width: 210, height: 36 }, // room label, status, reward hint
+  ],
+  /** Boss bar at the bottom centre (boss rooms only). */
+  bossZone: { x: 196, y: GAME_HEIGHT - 30, width: 248, height: 30 },
+} as const;
+
 /** Tuning values; expected to change with playtesting. */
 export const Tuning = {
   player: { maxHealth: 5, speed: 120, invulnerableMs: 900, knockback: 220, knockbackMs: 120 },
