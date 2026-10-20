@@ -55,23 +55,30 @@ export class LightingSystem {
     const m = OVERLAY_MARGIN;
     this.overlay = scene.add.renderTexture(-m, -m, GAME_WIDTH + 2 * m, GAME_HEIGHT + 2 * m).setOrigin(0).setDepth(Depth.lighting);
     for (const t of torches) {
+      const color = t.color ?? theme.light.torch;
       this.glows.push(
         scene.add
           .image(t.flame.x, t.flame.y, LightTex.light)
           .setDepth(Depth.glow)
           .setBlendMode(Phaser.BlendModes.ADD)
-          .setTint(theme.light.torch)
-          .setScale((TORCH_GLOW_RADIUS * 2) / LIGHT_TEXTURE_SIZE)
+          .setTint(color)
+          .setScale(((t.radius ? t.radius / 2 : TORCH_GLOW_RADIUS) * 2) / LIGHT_TEXTURE_SIZE)
           .setAlpha(0.35),
       );
-      // Sprite-art mode: the pack's animated fire (untinted: fire is fire; the glow carries the theme colour).
+      if (t.showFlame === false) continue;
+      // Sprite-art mode: the pack's animated fire (untinted: fire is fire; the glow carries the colour).
       const flame =
         artMode(scene) === "ninja"
           ? scene.add.sprite(t.flame.x, t.flame.y - 2, sheetKey("torchFire")).play({ key: "na-torch-fire", startFrame: Math.floor(t.seed) % 12 })
-          : scene.add.image(t.flame.x, t.flame.y, LightTex.flame).setTint(theme.light.torch);
+          : scene.add.image(t.flame.x, t.flame.y, LightTex.flame).setTint(color);
       this.flames.push(flame.setDepth(Depth.glow + 1));
     }
-    this.vignette = scene.add.image(0, 0, LightTex.vignette).setOrigin(0).setScrollFactor(0).setDepth(Depth.vignette);
+    this.vignette = scene.add
+      .image(0, 0, LightTex.vignette)
+      .setOrigin(0)
+      .setScrollFactor(0)
+      .setDepth(Depth.vignette)
+      .setAlpha(theme.light.vignette ?? 1);
     this.setEnabled(enabled);
   }
 
@@ -82,7 +89,8 @@ export class LightingSystem {
   /** Lighting can be switched off (?nolight) for debugging and performance comparison. */
   setEnabled(on: boolean): void {
     this.on = on;
-    this.overlay.setVisible(on);
+    // Full daylight has no darkness to draw at all.
+    this.overlay.setVisible(on && this.darkness > 0);
     this.vignette.setVisible(on);
     for (const g of this.glows) g.setVisible(on);
     // Flames stay visible either way; they are part of the wall art.
@@ -91,7 +99,7 @@ export class LightingSystem {
   /** `view`: the camera's scroll position (top-left of the screen in world px). */
   update(now: number, player: Vec2, enemies: readonly Vec2[], view: Vec2): void {
     this.animateTorches(now);
-    if (!this.on) return;
+    if (!this.on || this.darkness <= 0) return;
     const ox = Math.round(view.x) - OVERLAY_MARGIN;
     const oy = Math.round(view.y) - OVERLAY_MARGIN;
     this.overlay.setPosition(ox, oy);
@@ -103,7 +111,7 @@ export class LightingSystem {
       ...this.torches.map((t) => ({
         x: t.pool.x,
         y: t.pool.y,
-        radius: TORCH_POOL_RADIUS * flicker(now, t.seed, 0.05),
+        radius: (t.radius ?? TORCH_POOL_RADIUS) * flicker(now, t.seed, 0.05),
         intensity: 0.9,
       })),
       ...enemies.map((e) => ({ x: e.x, y: e.y, radius: ENEMY_LIGHT.radius, intensity: ENEMY_LIGHT.intensity })),
@@ -125,10 +133,12 @@ export class LightingSystem {
   }
 
   private animateTorches(now: number): void {
+    let flameIndex = 0;
     this.torches.forEach((t, i) => {
       const f = flicker(now, t.seed, 0.12);
       this.glows[i]?.setAlpha(0.3 * f);
-      const flame = this.flames[i];
+      if (t.showFlame === false) return;
+      const flame = this.flames[flameIndex++];
       // Animated sprites flicker on their own; only the generated flame is squashed.
       if (flame instanceof Phaser.GameObjects.Image && !(flame instanceof Phaser.GameObjects.Sprite)) flame.setScale(1, f);
     });

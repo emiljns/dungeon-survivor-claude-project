@@ -2,12 +2,19 @@
 // room layouts (see src/logic/layout.ts), plus encounter areas defined here.
 
 import type { EncounterDef } from "../logic/encounter.ts";
+import { biomeFor } from "./biomes.ts";
+import type { PlacedCritter, PlacedObject } from "./decor.ts";
 import { LEVELS, type EnemySpec, type LevelDefinition } from "./levels.ts";
 import type { RoomLayout } from "./rooms.ts";
+import { THEMES } from "./themes.ts";
 
 export interface MapDef {
   readonly layout: RoomLayout;
   readonly encounters: readonly EncounterDef[];
+  /** Placed decoration (Milestone 9); top-left tiles. */
+  readonly objects?: readonly PlacedObject[];
+  /** Ambient animals and their home tiles. */
+  readonly critters?: readonly PlacedCritter[];
 }
 
 const c: EnemySpec = { kind: "chaser", elite: false };
@@ -88,24 +95,185 @@ export const TEST_MAP: MapDef = {
   ],
 };
 
-/** Validates untrusted scene data: true only when the test map was requested. */
-export function parseTestMap(data: unknown): boolean {
-  return typeof data === "object" && data !== null && (data as { testmap?: unknown }).testmap === true;
+/**
+ * World-kit test map (?testmap=world&theme=forest|village|river|snow),
+ * 72 x 44 tiles: a safe meadow with a camp, chickens and breakable pots; a
+ * path; a glade with cover (two waves); a corridor; a river with fish, a
+ * bridge ambush and a blue spirit fire; then the exit east.
+ */
+export const WORLD_TEST_MAP: MapDef = {
+  layout: {
+    id: "world-test-map",
+    name: "World Test Map",
+    rows: [
+    "########################################################################",
+    "########################################################################",
+    "########################################################################",
+    "#######................########..................#######################",
+    "#######................########...........E......#######################",
+    "#######................########.....E............#######################",
+    "###....................########..................#######################",
+    "###............................G.......................#################",
+    "###............................G..................E....#################",
+    "###............................G.......................#################",
+    "###.....P......................G............##.........#################",
+    "###............................G............##.........#################",
+    "###............................G............##.......E.#################",
+    "###....................########........................#################",
+    "###................############........................#################",
+    "###................############.......E................#################",
+    "###.........####...################....................#################",
+    "###################################.............E......#################",
+    "###################################....................#################",
+    "###################################.....GGGG...........#################",
+    "########################################....############################",
+    "########################################....############################",
+    "########################################....############################",
+    "########################################....############################",
+    "########################################....############################",
+    "########################################....############################",
+    "############################............GGGG.......................#####",
+    "############################.......................................#####",
+    "############################..E...................E......E.........#####",
+    "############################.......................................#####",
+    "####################...............................................#####",
+    "####################~~~~~~~~~~~~~~~~~~~~====~~~~~~~~~~~~~~~~~~~~~~~#####",
+    "####################~~~~~~~~~~~~~~~~~~~~====~~~~~~~~~~~~~~~~~~~~~~~#####",
+    "####################~~~~~~~~~~~~~~~~~~~~====~~~~~~~~~~~~~~~~~~~~~~~#####",
+    "####################...............................................#####",
+    "####################....................................E.........G....D",
+    "####################..........E...................E...........E...G....D",
+    "####################..............................................G....#",
+    "####################................E.....................##############",
+    "##########################................................##############",
+    "##########################................................##############",
+    "##########################................................##############",
+    "########################################################################",
+    "########################################################################"
+  ],
+  },
+  encounters: [
+    { id: "glade", area: { col: 31, row: 3, cols: 24, rows: 17 }, waves: [[c, c, c, r], [c, t, r]], reward: false },
+    {
+      id: "river",
+      area: { col: 20, row: 26, cols: 47, rows: 16 },
+      // Ambush: stepping onto the bridge.
+      trigger: { col: 40, row: 31, cols: 4, rows: 3 },
+      waves: [[c, c, r, r], [t, c, r]],
+      reward: true,
+    },
+  ],
+  objects: [
+    {id: "campfire", col: 13, row: 5},
+    {id: "tent", col: 17, row: 4},
+    {id: "pot", col: 19, row: 7},
+    {id: "jar", col: 20, row: 7},
+    {id: "crate", col: 21, row: 6},
+    {id: "logs", col: 13, row: 8},
+    {id: "oak", col: 3, row: 7},
+    {id: "bigOak", col: 19, row: 10},
+    {id: "treeRound", col: 9, row: 14},
+    {id: "blossom", col: 16, row: 13},
+    {id: "daisy", col: 5, row: 12},
+    {id: "daisy", col: 10, row: 12},
+    {id: "sunflower", col: 21, row: 9},
+    {id: "clover", col: 7, row: 7},
+    {id: "poppy", col: 15, row: 11},
+    {id: "tuft", col: 4, row: 15},
+    {id: "tuft", col: 12, row: 3},
+    {id: "flowerPlant", col: 6, row: 10},
+    {id: "flowerPlant", col: 12, row: 12},
+    {id: "flag", col: 11, row: 3},
+    {id: "pebbles", col: 18, row: 15},
+    {id: "bush", col: 22, row: 12},
+    {id: "rockGrey", col: 24, row: 7},
+    {id: "pine", col: 28, row: 11},
+    {id: "tuft", col: 27, row: 10},
+    {id: "fern", col: 30, row: 8},
+    {id: "stones", col: 26, row: 12},
+    {id: "rockBrownBig", col: 36, row: 8},
+    {id: "treeLime", col: 47, row: 13},
+    {id: "pineGrove", col: 50, row: 13},
+    {id: "stump", col: 40, row: 15},
+    {id: "pot", col: 33, row: 4},
+    {id: "barrel", col: 54, row: 9},
+    {id: "crate", col: 35, row: 15},
+    {id: "tuft", col: 34, row: 12},
+    {id: "fern", col: 41, row: 7},
+    {id: "bushRound", col: 52, row: 4},
+    {id: "greyStones", col: 46, row: 6},
+    {id: "daisy", col: 38, row: 12},
+    {id: "reeds", col: 33, row: 9},
+    {id: "tuft", col: 40, row: 22},
+    {id: "fern", col: 43, row: 24},
+    {id: "treeOlive", col: 22, row: 34},
+    {id: "bigAutumn", col: 60, row: 27},
+    {id: "rockBrown", col: 45, row: 38},
+    {id: "logs", col: 32, row: 40},
+    {id: "spiritFire", col: 52, row: 38},
+    {id: "crate", col: 27, row: 35},
+    {id: "pot", col: 64, row: 30},
+    {id: "jar", col: 37, row: 29},
+    {id: "reeds", col: 29, row: 30},
+    {id: "reeds", col: 35, row: 34},
+    {id: "reeds", col: 47, row: 30},
+    {id: "reeds", col: 55, row: 34},
+    {id: "tuft", col: 24, row: 37},
+    {id: "daisy", col: 61, row: 35},
+    {id: "clover", col: 34, row: 27},
+  ],
+  critters: [
+    {kind: "chicken", col: 10, row: 7},
+    {kind: "chicken", col: 11, row: 9},
+    {kind: "chicken", col: 6, row: 13},
+    {kind: "cat", col: 16, row: 9},
+    {kind: "frog", col: 43, row: 14},
+    {kind: "frog", col: 33, row: 30},
+    {kind: "frog", col: 51, row: 34},
+    {kind: "fish", col: 27, row: 32},
+    {kind: "fish", col: 48, row: 32},
+    {kind: "fish", col: 60, row: 32},
+  ],
+};
+
+export type TestMapKind = "engine" | "world";
+
+export interface TestMapOptions {
+  readonly map: TestMapKind;
+  /** Theme id for the world map (an outdoor theme). */
+  readonly theme: string;
 }
 
-/** The test map as a one-room level (level 1 theme and difficulty). */
-export function testMapLevel(): LevelDefinition {
+/** Validates untrusted scene data: the requested test map, or null. */
+export function parseTestMap(data: unknown): TestMapOptions | null {
+  if (typeof data !== "object" || data === null) return null;
+  const t = (data as { testmap?: unknown }).testmap;
+  if (typeof t !== "object" || t === null) return null;
+  const { map, theme } = t as { map?: unknown; theme?: unknown };
+  return {
+    map: map === "world" ? "world" : "engine",
+    theme: typeof theme === "string" && biomeFor(theme) ? theme : "forest",
+  };
+}
+
+/** A test map as a one-room level (level 1 difficulty). */
+export function testMapLevel(opts: TestMapOptions): LevelDefinition {
   const base = LEVELS[0];
   if (!base) throw new Error("No levels defined");
+  const map = opts.map === "world" ? WORLD_TEST_MAP : TEST_MAP;
+  const theme = opts.map === "world" ? Object.values(THEMES).find((t) => t.id === opts.theme) : undefined;
   return {
     ...base,
-    name: TEST_MAP.layout.name,
+    name: map.layout.name,
+    theme: theme ?? base.theme,
     rooms: [
       {
-        layout: TEST_MAP.layout,
-        enemies: TEST_MAP.encounters.flatMap((e) => e.waves.flat()),
+        layout: map.layout,
+        enemies: map.encounters.flatMap((e) => e.waves.flat()),
         reward: false,
-        encounters: TEST_MAP.encounters,
+        encounters: map.encounters,
+        objects: map.objects ?? [],
+        critters: map.critters ?? [],
       },
     ],
   };

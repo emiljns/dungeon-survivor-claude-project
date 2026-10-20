@@ -1,4 +1,6 @@
 import { existsSync, openSync, readFileSync, readSync, closeSync } from "node:fs";
+import { BIOMES, biomeFor } from "../src/data/biomes.ts";
+import { DECOR, type DecorDef } from "../src/data/decor.ts";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -89,11 +91,43 @@ describe("art manifest: animations and tiles reference real frames", () => {
   it("every tile frame is inside its sheet, and every level theme has tile art", () => {
     for (const [name, t] of Object.entries(TILE_FRAMES)) expect(t.frame, name).toBeLessThan(frameCount(t.sheet));
     for (const theme of Object.values(THEMES)) {
+      if (biomeFor(theme.id)) continue; // outdoor themes: checked below
       const art = THEME_ART[theme.id];
       expect(art, theme.id).toBeDefined();
       if (!art) continue;
       expect(TILE_FRAMES[art.floor]).toBeDefined();
       expect(TILE_FRAMES[art.wall]).toBeDefined();
+    }
+  });
+});
+
+describe("world kit art references real tiles", () => {
+  const inSheet = (sheet: SheetId, col: number, row: number): boolean => {
+    const s = SHEETS[sheet];
+    const [w, h] = SHEET_SIZES[sheet];
+    return col >= 0 && row >= 0 && col < Math.floor(w / s.frameWidth) && row < Math.floor(h / s.frameHeight);
+  };
+
+  it("every biome's ground, cliff (3x3) and shore (4x4) blocks lie inside their sheets", () => {
+    for (const [id, b] of Object.entries(BIOMES)) {
+      expect(b.ground.length, id).toBeGreaterThan(0);
+      for (const g of b.ground) expect(inSheet(g.sheet, g.col, g.row), `${id} ground`).toBe(true);
+      expect(inSheet("relief", b.cliff.col + 2, b.cliff.row + 2), `${id} cliff`).toBe(true);
+      expect(inSheet("water", b.water.col + 3, b.water.row + 3), `${id} water`).toBe(true);
+    }
+  });
+
+  it("every decoration's tiles lie inside its sheet; solid and canopy areas fit the object", () => {
+    for (const [id, d] of Object.entries(DECOR) as [string, DecorDef][]) {
+      expect(inSheet(d.sheet, d.col, d.row) && inSheet(d.sheet, d.col + d.w - 1, d.row + d.h - 1), id).toBe(true);
+      if (d.solid) {
+        expect(d.solid.col + d.solid.cols <= d.w && d.solid.row + d.solid.rows <= d.h, `${id} solid`).toBe(true);
+        expect(d.solid.row, `${id}: blocking starts below the canopy`).toBeGreaterThanOrEqual(d.canopy ?? 0);
+      }
+      if (d.kind !== "walkover") expect(d.solid, `${id} needs a solid area`).toBeDefined();
+      if (d.anim) expect(ANIMS.some((a) => a.key === d.anim), `${id} anim`).toBe(true);
+      if (d.anim) expect(d.w === 1 && d.h === 1, `${id}: animated objects are 1x1`).toBe(true);
+      if (d.kind === "breakable") expect(d.breakable?.hp, id).toBeGreaterThan(0);
     }
   });
 });

@@ -18,8 +18,8 @@ import {
   type EncounterState,
 } from "../logic/encounter.ts";
 import { computeFlowField, flowDirection, withClearance, type FlowField } from "../logic/flowField.ts";
-import { parseLayout, type ParsedLayout, type TilePos } from "../logic/layout.ts";
-import { behindWallTop, cameraLean, inView } from "../logic/view.ts";
+import { parseLayout, type ParsedLayout, type Prop, type TilePos } from "../logic/layout.ts";
+import { cameraLean, inView, underTopLayer } from "../logic/view.ts";
 import {
   advanceRun,
   isFinalLevel,
@@ -40,15 +40,23 @@ import {
   type UpgradeLevels,
 } from "../logic/upgrades.ts";
 import type { Vec2 } from "../logic/vector.ts";
-import { parseTestMap, testMapLevel } from "../data/maps.ts";
+import { parseTestMap, testMapLevel, type TestMapOptions } from "../data/maps.ts";
+import { biomeFor } from "../data/biomes.ts";
+import { DECOR, type DecorDef, type PlacedObject } from "../data/decor.ts";
+import { solidObjectGrid } from "../logic/objects.ts";
+import { tileHash } from "../logic/terrainArt.ts";
+import { AmbientParticles } from "../rendering/AmbientParticles.ts";
+import { bakeWorld } from "../rendering/WorldBake.ts";
+import { Critters } from "../systems/Critters.ts";
+import { WorldObjects } from "../systems/WorldObjects.ts";
 import { FireCooldown } from "../logic/weapon.ts";
-import { torchLights } from "../logic/lighting.ts";
+import { torchLights, type TorchLight } from "../logic/lighting.ts";
 import { LightingSystem } from "../rendering/LightingSystem.ts";
 import { TILE_FRAMES } from "../data/artManifest.ts";
 import { parseShowcase, showcaseLevel, type ShowcaseOptions } from "../data/showcase.ts";
 import { artMode, playFx, sheetKey, type ArtMode } from "../rendering/Art.ts";
 import { ensureLightTextures } from "../rendering/LightTextures.ts";
-import { bakeTallWalls, bakeTileLayer, ensurePlaceholderTextures, Tex } from "../rendering/PlaceholderArt.ts";
+import { bakeTileLayer, ensurePlaceholderTextures, Tex } from "../rendering/PlaceholderArt.ts";
 import { browserStorage, loadBest, mergeBest, saveBest } from "../systems/HighScoreStore.ts";
 import { ProjectileSystem, type BulletSpec } from "../systems/ProjectileSystem.ts";
 import { Hud } from "../ui/Hud.ts";
@@ -169,7 +177,7 @@ export class GameScene extends Phaser.Scene {
   private art: ArtMode = "placeholder";
   private showcase: ShowcaseOptions | null = null;
   private doorSprites: Phaser.GameObjects.Image[] = [];
-  private testmap = false;
+  private testmap: TestMapOptions | null = null;
   // v2 maps (rooms with encounters): tall walls, gates and pathfinding.
   private encounters: EncounterRuntime[] = [];
   private gateBodies!: Phaser.Physics.Arcade.StaticGroup;
@@ -184,6 +192,18 @@ export class GameScene extends Phaser.Scene {
   private flowDirty = true;
   private tallWalls = false;
   private silhouettes: Phaser.GameObjects.Image[] = [];
+  // v2 world kit: placed objects, critters, ambient particles.
+  /** v1 rooms: solid crate/barrel props. Maps turn them into breakables instead. */
+  private staticProps: readonly Prop[] = [];
+  /** Blocking areas of static solid objects (trees, rocks, tents). */
+  private objectRects: Rect[] = [];
+  /** What blocks player shots: like solidRects but without breakables, which are shot targets. */
+  private playerSolids: Rect[] = [];
+  /** Tiles drawn on the foreground layer (wall tops and canopies): actors there get silhouettes. */
+  private topLayer: boolean[][] = [];
+  private world: WorldObjects | null = null;
+  private critters: Critters | null = null;
+  private particles: AmbientParticles | null = null;
 
   constructor() {
     super("game");
@@ -214,6 +234,13 @@ export class GameScene extends Phaser.Scene {
     this.flowDirty = true;
     this.tallWalls = false;
     this.silhouettes = [];
+    this.staticProps = [];
+    this.objectRects = [];
+    this.playerSolids = [];
+    this.topLayer = [];
+    this.world = null;
+    this.critters = null;
+    this.particles = null;
     this.phase = "playing";
     this.leaving = false;
   }
@@ -223,7 +250,7 @@ export class GameScene extends Phaser.Scene {
     this.art = artMode(this);
     // The art test room (?artroom) is a one-room level; everything else is the normal run.
     // The test map (?testmap) is a one-room level too.
-    const level = this.showcase ? showcaseLevel(this.showcase) : this.testmap ? testMapLevel() : LEVELS[this.run.levelIndex];
+    const level = this.showcase ? showcaseLevel(this.showcase) : this.testmap ? testMapLevel(this.testmap) : LEVELS[this.run.levelIndex];
     const levelRoom = level?.rooms[this.run.roomIndex];
     if (!level || !levelRoom) throw new Error(`No room at level ${this.run.levelIndex}, room ${this.run.roomIndex}`);
     this.level = level;
@@ -237,21 +264,41 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, worldW, worldH).setBackgroundColor(level.theme.background);
 
     ensureLightTextures(this);
-    // v2 maps get tall walls (walk-behind tops); the v1 rooms keep their flat look.
+    // v2 maps get tall walls (walk-behind tops), outdoor terrain and placed
+    // objects; the v1 rooms keep their flat look and solid props.
     this.tallWalls = levelRoom.encounters !== undefined;
+    const objects: PlacedObject[] = this.tallWalls
+      ? [
+          ...(levelRoom.objects ?? []),
+          // On maps, layout crates and barrels are breakable.
+          ...this.layout.props.map((p): PlacedObject => ({
+            id: p.kind === "crate" ? "crate" : "barrel",
+            col: Math.floor(p.rect.x / TILE),
+            row: Math.floor(p.rect.y / TILE),
+          })),
+        ]
+      : [];
+    this.staticProps = this.tallWalls ? [] : this.layout.props;
     if (this.tallWalls) {
-      bakeTallWalls(this, this.layout.wall, this.layout.low, level.theme, this.layout.props, this.art, {
+      bakeWorld(this, this.layout.wall, this.layout.low, this.layout.bridge, level.theme, biomeFor(level.theme.id), objects, this.art, {
         base: Depth.tiles,
         top: Depth.foreground,
       });
     } else {
       bakeTileLayer(this, this.layout.wall, Depth.tiles, level.theme, this.layout.props, this.art);
     }
+    this.buildTopLayer(objects);
 
-    // Walls and props never change during a room: one static group.
+    // Walls, props and static objects never change during a room: one static group.
     const solids = this.physics.add.staticGroup();
     for (const r of this.layout.wallRects) solids.add(this.add.zone(r.x + r.width / 2, r.y + r.height / 2, r.width, r.height));
-    for (const p of this.layout.props) {
+    this.objectRects = objects.flatMap((o) => {
+      const def: DecorDef = DECOR[o.id];
+      if (def.kind !== "solid" || !def.solid) return [];
+      return [{ x: (o.col + def.solid.col) * TILE, y: (o.row + def.solid.row) * TILE, width: def.solid.cols * TILE, height: def.solid.rows * TILE }];
+    });
+    for (const r of this.objectRects) solids.add(this.add.zone(r.x + r.width / 2, r.y + r.height / 2, r.width, r.height));
+    for (const p of this.staticProps) {
       const cx = p.rect.x + TILE / 2;
       const cy = p.rect.y + TILE / 2;
       const tile = TILE_FRAMES[p.kind === "crate" ? "crate" : "barrel"];
@@ -282,7 +329,7 @@ export class GameScene extends Phaser.Scene {
 
     this.player = new Player(this, this.layout.playerSpawn.x, this.layout.playerSpawn.y, this.run.playerHealth, this.stats);
     this.enemyGroup = this.physics.add.group();
-    this.playerShots = new ProjectileSystem(this, () => this.solidRects);
+    this.playerShots = new ProjectileSystem(this, () => this.playerSolids);
     this.enemyShots = new ProjectileSystem(this, () => this.solidRects);
     this.gun = new FireCooldown(this.stats.fireIntervalMs);
 
@@ -295,6 +342,11 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.player.sprite, this.gateBodies);
     this.physics.add.collider(this.enemyGroup, this.gateBodies);
     this.physics.add.collider(this.enemyGroup, this.enemyGroup);
+    if (this.tallWalls) {
+      this.world = new WorldObjects(this, objects, this.rippleTiles(), this.art);
+      this.physics.add.collider(this.player.sprite, this.world.bodies);
+      this.physics.add.collider(this.enemyGroup, this.world.bodies);
+    }
     this.physics.add.collider(this.player.sprite, this.enemyGroup, (_p, e) => this.onEnemyContact(e));
 
     const kb = this.input.keyboard;
@@ -320,7 +372,7 @@ export class GameScene extends Phaser.Scene {
     this.lighting = new LightingSystem(
       this,
       level.theme,
-      torchLights(this.layout, TILE),
+      [...torchLights(this.layout, TILE), ...objectLights(objects)],
       !new URLSearchParams(window.location.search).has("nolight"),
     );
     // Off-display-list light stamps are not destroyed by Phaser; `once` fires and removes itself each shutdown.
@@ -341,6 +393,16 @@ export class GameScene extends Phaser.Scene {
         .filter((g) => inRect(g, def.area))
         .map((g) => ({ x: g.col * TILE, y: g.row * TILE, width: TILE, height: TILE })),
     }));
+    if (levelRoom.critters?.length) {
+      this.critters = new Critters(this, levelRoom.critters, this.art, 0, (kind, x, y) => {
+        const c = Math.floor(x / TILE);
+        const r = Math.floor(y / TILE);
+        if (kind === "fish") return this.layout.low[r]?.[c] === true;
+        return this.staticBlocked[r]?.[c] === false;
+      });
+    }
+    const particleKind = this.tallWalls ? biomeFor(level.theme.id)?.particles : null;
+    if (particleKind) this.particles = new AmbientParticles(this, particleKind, this.art);
     this.refreshDoors();
     // v1 rooms spawn everything at once; maps spawn per encounter area.
     if (!levelRoom.encounters) this.telegraphEnemySpawns();
@@ -410,13 +472,19 @@ export class GameScene extends Phaser.Scene {
     if (this.phase !== "playing") return;
     for (const e of this.enemies) e.update(ctx);
 
+    // Player shots hit enemies, then breakables (which are not in playerSolids).
     const targets = this.enemies.filter((e) => e.alive);
+    const breakables = this.world?.solidRects ?? [];
     this.playerShots.update(
       dt,
-      targets.map((e) => e.hitRect),
+      [...targets.map((e) => e.hitRect), ...breakables],
       (index, damage) => {
         const hit = targets[index];
         if (hit) this.onEnemyShot(hit, damage, now);
+        else if (this.world?.hit(index - targets.length, damage)) {
+          this.refreshSolids();
+          this.flowDirty = true;
+        }
       },
     );
     if (this.phase !== "playing") return;
@@ -440,26 +508,66 @@ export class GameScene extends Phaser.Scene {
       if (interactPressed) this.exitRoom();
     }
 
+    const view = this.cameras.main.worldView;
+    this.world?.update(now, view);
+    this.critters?.update(now, dt, this.player.position, view);
+    this.particles?.update(now, dt, { x: this.cameras.main.scrollX, y: this.cameras.main.scrollY });
     this.updateSilhouettes();
     this.updateHud();
     this.updateLighting();
+  }
+
+  /** Foreground tiles: wall tops (drawn a row up) and object canopies. */
+  private buildTopLayer(objects: readonly PlacedObject[]): void {
+    const l = this.layout;
+    this.topLayer = l.wall.map((row, r) => row.map((_, c) => this.tallWalls && l.wall[r + 1]?.[c] === true));
+    for (const o of objects) {
+      const def: DecorDef = DECOR[o.id];
+      for (let dr = 0; dr < (def.canopy ?? 0); dr++) {
+        for (let dc = 0; dc < def.w; dc++) {
+          const row = this.topLayer[o.row + dr];
+          if (row && o.col + dc < row.length) row[o.col + dc] = true;
+        }
+      }
+    }
+  }
+
+  /** A few open-water tiles (away from shores) get animated ripples. */
+  private rippleTiles(): TilePos[] {
+    const l = this.layout;
+    const water = (c: number, r: number): boolean => l.low[r]?.[c] === true && l.wall[r]?.[c] === false;
+    const out: TilePos[] = [];
+    for (let r = 0; r < l.rows; r++) {
+      for (let c = 0; c < l.cols; c++) {
+        if (water(c, r) && water(c - 1, r) && water(c + 1, r) && water(c, r - 1) && water(c, r + 1) && tileHash(c, r, 7) < 0.12) {
+          out.push({ col: c, row: r });
+        }
+      }
+    }
+    return out;
   }
 
   // ---- v2 maps: pathfinding, encounters, gates, walk-behind ----
 
   private buildStaticBlocked(): void {
     const l = this.layout;
-    this.staticBlocked = l.wall.map((row, r) => row.map((w, c) => w || (l.low[r]?.[c] ?? false)));
-    for (const p of l.props) {
+    const objectGrid = solidObjectGrid(l.cols, l.rows, (this.levelRoom.objects ?? []).map((o) => ({ def: DECOR[o.id], at: o })));
+    this.staticBlocked = l.wall.map((row, r) => row.map((w, c) => w || (l.low[r]?.[c] ?? false) || (objectGrid[r]?.[c] ?? false)));
+    for (const p of this.staticProps) {
       const row = this.staticBlocked[Math.floor(p.rect.y / TILE)];
       if (row) row[Math.floor(p.rect.x / TILE)] = true;
     }
   }
 
   /** Closed gates and locked doors: they block movement, bullets and paths. */
-  private dynamicSolids(): Rect[] {
+  private gateAndDoorRects(): Rect[] {
     const gates = this.encounters.filter((e) => e.state.phase === "active").flatMap((e) => e.gates);
     return canExit(this.room) ? gates : [...gates, ...this.layout.doorRects];
+  }
+
+  /** Everything that can change during a room: gates, doors and intact breakables. */
+  private dynamicSolids(): Rect[] {
+    return [...this.gateAndDoorRects(), ...(this.world?.solidRects ?? [])];
   }
 
   /** Rebuilt when the player changes tile or gates change, at most every FLOW_REFRESH_MS. */
@@ -545,7 +653,7 @@ export class GameScene extends Phaser.Scene {
     const actors: Phaser.GameObjects.Sprite[] = [this.player.sprite, ...this.enemies.filter((e) => e.alive).map((e) => e.sprite)];
     let used = 0;
     for (const a of actors) {
-      if (!behindWallTop(this.layout.wall, { x: a.x, y: a.y }, 5, TILE)) continue;
+      if (!underTopLayer(this.topLayer, { x: a.x, y: a.y }, 5, TILE)) continue;
       let img = this.silhouettes[used];
       if (!img) {
         img = this.add.image(0, 0, a.texture.key).setDepth(Depth.silhouettes).setTintFill(0xd8e6ff).setAlpha(0.45);
@@ -762,7 +870,9 @@ export class GameScene extends Phaser.Scene {
 
   /** What blocks bullets and sight: walls, props, locked doors, closed gates. */
   private refreshSolids(): void {
-    this.solidRects = [...this.layout.wallRects, ...this.layout.props.map((p) => p.rect), ...this.dynamicSolids()];
+    const fixed = [...this.layout.wallRects, ...this.staticProps.map((p) => p.rect), ...this.objectRects];
+    this.solidRects = [...fixed, ...this.dynamicSolids()];
+    this.playerSolids = [...fixed, ...this.gateAndDoorRects()];
   }
 
   private nearbyOpenDoor(): Rect | null {
@@ -781,7 +891,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.testmap) {
       this.leaving = true;
-      this.scene.restart({ ...newRun(Tuning.player.maxHealth), testmap: true });
+      this.scene.restart({ ...newRun(Tuning.player.maxHealth), testmap: this.testmap });
       return;
     }
     const next = advanceRun(this.currentRun(), ROOMS_PER_LEVEL, this.player.health.current, this.stats.maxHealth);
@@ -884,6 +994,9 @@ export class GameScene extends Phaser.Scene {
       playerBullets: this.playerShots.count,
       enemyBullets: this.enemyShots.count,
       solidRects: this.solidRects.length,
+      breakables: this.world?.count ?? 0,
+      animatedActive: this.world?.activeAnimated ?? 0,
+      critters: this.critters?.count ?? 0,
       doorBodies: this.doors.getLength(),
       colliders: world.colliders.length,
       dynamicBodies: world.bodies.size,
@@ -896,4 +1009,15 @@ export class GameScene extends Phaser.Scene {
       gameEventListeners: listeners(this.game.events),
     };
   }
+}
+
+/** Light sources among placed objects (campfires, spirit fires). */
+function objectLights(objects: readonly PlacedObject[]): TorchLight[] {
+  return objects.flatMap((o) => {
+    const def: DecorDef = DECOR[o.id];
+    if (!def.light) return [];
+    const x = (o.col + def.w / 2) * TILE;
+    const y = (o.row + def.h / 2) * TILE;
+    return [{ flame: { x, y: y - 3 }, pool: { x, y }, seed: (o.col * 92821 + o.row * 68917) % 1000, color: def.light.color, radius: def.light.radius, showFlame: def.light.flame }];
+  });
 }

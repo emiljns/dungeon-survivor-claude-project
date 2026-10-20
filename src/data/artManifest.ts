@@ -45,6 +45,23 @@ export const SHEETS = {
   floors: { key: "na-floors", file: "tiles-interior-floor.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Tilesets/Interior/TilesetInteriorFloor.png" },
   elements: { key: "na-elements", file: "tiles-element.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Tilesets/TilesetElement.png" },
   dungeon: { key: "na-dungeon", file: "tiles-dungeon.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Tilesets/TilesetDungeon.png" },
+  // v2 world kit (Milestone 9). TilesetFloor is cropped from 417 to 416 px (its last row is a stray pixel row).
+  outdoorFloor: { key: "na-outdoor-floor", file: "tiles-floor-outdoor.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Tilesets/TilesetFloor.png" },
+  nature: { key: "na-nature", file: "tiles-nature.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Tilesets/TilesetNature.png" },
+  water: { key: "na-water", file: "tiles-water.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Tilesets/TilesetWater.png" },
+  relief: { key: "na-relief", file: "tiles-relief.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Tilesets/TilesetRelief.png" },
+  camp: { key: "na-camp", file: "tiles-camp.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Tilesets/tileset_camp.png" },
+  ripples: { key: "na-ripples", file: "anim-water-ripples.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Animated/Water Ripples/SpriteSheet16x16.png" },
+  plant: { key: "na-plant", file: "anim-plant.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Animated/Plant/SpriteSheet16x16.png" },
+  flag: { key: "na-flag", file: "anim-flag-red.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Animated/Flag/FlagRed16x16.png" },
+  chicken: { key: "na-chicken", file: "critter-chicken.png", frameWidth: 16, frameHeight: 16, source: "Actor/Animal/Chicken/SpriteSheetWhite.png" },
+  cat: { key: "na-cat", file: "critter-cat.png", frameWidth: 16, frameHeight: 16, source: "Actor/Animal/Cat/SpriteSheet.png" },
+  frog: { key: "na-frog", file: "critter-frog.png", frameWidth: 16, frameHeight: 16, source: "Actor/Animal/Frog/SpriteSheet.png" },
+  fish: { key: "na-fish", file: "critter-fish.png", frameWidth: 16, frameHeight: 16, source: "Actor/Animal/Fish/SpriteSheetYellow.png" },
+  leaf: { key: "na-leaf", file: "fx-leaf.png", frameWidth: 12, frameHeight: 7, source: "FX/Particle/Leaf.png" },
+  snowFlake: { key: "na-snow-flake", file: "fx-snow.png", frameWidth: 8, frameHeight: 8, source: "FX/Particle/Snow.png" },
+  vaseShards: { key: "na-vase-shards", file: "fx-vase-shards.png", frameWidth: 14, frameHeight: 14, source: "FX/Particle/Vase.png" },
+  woodShards: { key: "na-wood-shards", file: "fx-wood-shards.png", frameWidth: 16, frameHeight: 16, source: "FX/Particle/Wood.png" },
 } as const satisfies Record<string, SheetAsset>;
 
 export type SheetId = keyof typeof SHEETS;
@@ -69,7 +86,28 @@ export const SHEET_SIZES: Readonly<Record<SheetId, readonly [number, number]>> =
   floors: [352, 272],
   elements: [256, 240],
   dungeon: [192, 64],
+  outdoorFloor: [352, 416],
+  nature: [384, 336],
+  water: [448, 272],
+  relief: [320, 192],
+  camp: [368, 144],
+  ripples: [64, 16],
+  plant: [64, 16],
+  flag: [64, 16],
+  chicken: [32, 16],
+  cat: [32, 16],
+  frog: [32, 16],
+  fish: [32, 16],
+  leaf: [72, 7],
+  snowFlake: [56, 8],
+  vaseShards: [84, 14],
+  woodShards: [96, 16],
 };
+
+/** Frame index of the 16px tile at (col, row) in a sheet. */
+export function frameAt(sheet: SheetId, col: number, row: number): number {
+  return row * Math.floor(SHEET_SIZES[sheet][0] / SHEETS[sheet].frameWidth) + col;
+}
 
 export interface AnimDef {
   readonly key: string;
@@ -114,6 +152,11 @@ export const ANIMS: readonly AnimDef[] = [
   { key: "na-dash-dust", sheet: "dashDust", frames: range(8), frameRate: 24, repeat: 0 },
   { key: "na-torch-fire", sheet: "torchFire", frames: range(12), frameRate: 12, repeat: -1 },
   { key: "na-magic-spark", sheet: "magicSpark", frames: range(10), frameRate: 20, repeat: 0 },
+  { key: "na-ripples", sheet: "ripples", frames: range(4), frameRate: 5, repeat: -1 },
+  { key: "na-plant", sheet: "plant", frames: range(4), frameRate: 4, repeat: -1 },
+  { key: "na-flag", sheet: "flag", frames: range(4), frameRate: 8, repeat: -1 },
+  // Critters: frame 0 stands, frame 1 steps (side view facing left; flipped for right).
+  ...(["chicken", "cat", "frog", "fish"] as const).map((sheet) => ({ key: `na-${sheet}-move`, sheet, frames: [0, 1], frameRate: 6, repeat: -1 })),
 ];
 
 export const ENEMY_SHEET: Readonly<Record<Exclude<EnemyKind, "boss">, SheetId>> = {

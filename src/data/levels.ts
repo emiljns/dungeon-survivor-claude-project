@@ -3,6 +3,7 @@
 // levels with different enemy sets, themes and difficulty.
 
 import type { EncounterDef } from "../logic/encounter.ts";
+import type { PlacedCritter, PlacedObject } from "./decor.ts";
 import type { Difficulty, EnemyKind } from "../logic/enemyStats.ts";
 import { ARENA, CROSSROADS, ENTRY_HALL, FURNACE, GALLERY, PILLAR_HALL, STOREROOM, type RoomLayout } from "./rooms.ts";
 import { THEMES, type Theme } from "./themes.ts";
@@ -24,6 +25,9 @@ export interface LevelRoom {
    * nothing spawns at room start.
    */
   readonly encounters?: readonly EncounterDef[];
+  /** v2 maps: placed decoration and ambient animals. */
+  readonly objects?: readonly PlacedObject[];
+  readonly critters?: readonly PlacedCritter[];
 }
 
 export interface LevelDefinition {

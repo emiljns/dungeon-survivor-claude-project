@@ -10,6 +10,12 @@ export interface TorchLight {
   readonly pool: Vec2;
   /** Stable per-torch value so torches do not flicker in sync. */
   readonly seed: number;
+  /** Glow colour (default: the theme's torch colour). */
+  readonly color?: number;
+  /** Light pool radius in px (default: the torch radius). */
+  readonly radius?: number;
+  /** Draw an animated flame (default true). */
+  readonly showFlame?: boolean;
 }
 
 const DIRS: readonly { dc: number; dr: number }[] = [

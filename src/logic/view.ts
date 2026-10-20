@@ -36,3 +36,16 @@ export function behindWallTop(wall: readonly (readonly boolean[])[], p: Vec2, ha
   }
   return false;
 }
+
+/**
+ * Whether an actor stands under the foreground layer (`top[row][col]` marks
+ * tiles where wall tops or canopies are drawn), checked at its left, centre
+ * and right.
+ */
+export function underTopLayer(top: readonly (readonly boolean[])[], p: Vec2, halfWidth: number, tile: number): boolean {
+  const row = Math.floor(p.y / tile);
+  for (const x of [p.x - halfWidth, p.x, p.x + halfWidth]) {
+    if (top[row]?.[Math.floor(x / tile)] === true) return true;
+  }
+  return false;
+}

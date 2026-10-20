@@ -1,0 +1,132 @@
+// The decoration catalogue (Milestone 9): every object a map can place, as
+// plain data. Positions in maps are the object's top-left tile.
+//
+// - solid: blocks walking, paths and bullets on its `solid` tiles (tree
+//   trunks, rocks, tents). Its top `canopy` rows are drawn above actors, so
+//   the player walks behind tree tops.
+// - walkover: drawn on the ground; no collision (grass, flowers, pebbles).
+// - breakable: solid until shot `hp` times, then shatters (pots, crates).
+//   Coins come in Milestone 10.
+// Static solid and walkover objects are baked into the map textures once;
+// breakables, animated and lit objects stay live sprites.
+
+import type { SheetId } from "./artManifest.ts";
+
+export type DecorKind = "solid" | "walkover" | "breakable";
+
+export interface DecorDef {
+  readonly sheet: SheetId;
+  /** Top-left tile of the object in its sheet. */
+  readonly col: number;
+  readonly row: number;
+  /** Size in tiles. */
+  readonly w: number;
+  readonly h: number;
+  readonly kind: DecorKind;
+  /** Blocking tiles, relative to the object's top-left (solid and breakable). */
+  readonly solid?: { readonly col: number; readonly row: number; readonly cols: number; readonly rows: number };
+  /** Top rows drawn above actors (walk-behind). */
+  readonly canopy?: number;
+  /** A light source: coloured glow and a pool of light in dark levels. */
+  readonly light?: { readonly color: number; readonly radius: number; readonly flame: boolean };
+  /** Looping animation key: drawn as a live sprite (1x1 objects only). */
+  readonly anim?: string;
+  readonly breakable?: { readonly hp: number; readonly shards: "vase" | "wood" };
+  /** Placeholder-art colour. */
+  readonly color: number;
+}
+
+const tree2 = (col: number, row: number, color: number): DecorDef => ({
+  sheet: "nature", col, row, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 1, cols: 2, rows: 1 }, canopy: 1, color,
+});
+const tree3 = (col: number, row: number, color: number): DecorDef => ({
+  sheet: "nature", col, row, w: 3, h: 3, kind: "solid", solid: { col: 1, row: 2, cols: 1, rows: 1 }, canopy: 2, color,
+});
+const grove = (col: number, row: number, color: number): DecorDef => ({
+  sheet: "nature", col, row, w: 4, h: 3, kind: "solid", solid: { col: 0, row: 2, cols: 4, rows: 1 }, canopy: 2, color,
+});
+const plant = (col: number, row: number, color: number): DecorDef => ({ sheet: "nature", col, row, w: 1, h: 1, kind: "walkover", color });
+
+export const DECOR = {
+  // Trees: trunks block, tops are walk-behind.
+  treeRound: tree2(0, 0, 0x6aa84f),
+  pine: tree2(2, 0, 0x3f7a3a),
+  deadTree: tree2(4, 0, 0x7a5a3a),
+  oak: tree2(6, 0, 0x4f8a3a),
+  snowPine: tree2(8, 0, 0xe8eef8),
+  snowPineBare: tree2(10, 0, 0xdfe6f2),
+  snowRound: tree2(12, 0, 0xf2f6ff),
+  blossom: tree2(14, 0, 0xf2a8b8),
+  treeLime: tree2(16, 0, 0x9cc64a),
+  treeOlive: tree2(18, 0, 0x8aa83a),
+  bigBlossom: tree3(0, 18, 0xf2a8b8),
+  bigOak: tree3(3, 18, 0x5f9a3f),
+  bigSnowTree: tree3(6, 18, 0xf2f6ff),
+  bigAutumn: tree3(9, 18, 0xf0a050),
+  pineGrove: grove(0, 2, 0x3f7a3a),
+  bushGrove: grove(4, 2, 0x8ab840),
+  snowGrove: grove(8, 2, 0xf2f6ff),
+  blossomGrove: grove(12, 2, 0xf2a8b8),
+  limeGrove: grove(16, 2, 0x9cc64a),
+  oliveGrove: grove(20, 2, 0x8aa83a),
+  deadGrove: grove(0, 5, 0x7a5a3a),
+  snowPineGrove: grove(4, 5, 0xe8eef8),
+  // Rocks.
+  rockBrown: { sheet: "nature", col: 15, row: 10, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 0, cols: 2, rows: 2 }, color: 0xb07850 },
+  rockBrownBig: { sheet: "nature", col: 17, row: 10, w: 4, h: 3, kind: "solid", solid: { col: 0, row: 1, cols: 4, rows: 2 }, canopy: 1, color: 0xb07850 },
+  rockBrownTall: { sheet: "nature", col: 21, row: 10, w: 2, h: 3, kind: "solid", solid: { col: 0, row: 1, cols: 2, rows: 2 }, canopy: 1, color: 0xb07850 },
+  rockGrey: { sheet: "nature", col: 15, row: 14, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 0, cols: 2, rows: 2 }, color: 0x7f8a78 },
+  rockGreyBig: { sheet: "nature", col: 17, row: 14, w: 4, h: 3, kind: "solid", solid: { col: 0, row: 1, cols: 4, rows: 2 }, canopy: 1, color: 0x7f8a78 },
+  rockGreyTall: { sheet: "nature", col: 21, row: 14, w: 2, h: 3, kind: "solid", solid: { col: 0, row: 1, cols: 2, rows: 2 }, canopy: 1, color: 0x7f8a78 },
+  stump: { sheet: "nature", col: 0, row: 8, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 1, cols: 2, rows: 1 }, color: 0x8a5a3a },
+  // Ground detail (walk over).
+  bush: plant(0, 10, 0x8ab840),
+  bushRound: plant(1, 10, 0x8ab840),
+  tuft: plant(3, 10, 0x8ab840),
+  fern: plant(8, 10, 0x6aa84f),
+  sunflower: plant(0, 11, 0xf0c040),
+  sunflowerTall: plant(1, 11, 0xf0c040),
+  clover: plant(2, 11, 0x6aa84f),
+  poppy: plant(3, 11, 0xe05040),
+  daisy: plant(6, 11, 0xf2f2e0),
+  reeds: plant(7, 11, 0x8ab840),
+  pebbles: plant(15, 18, 0xc8a878),
+  stones: plant(17, 13, 0xb07850),
+  greyStones: plant(17, 17, 0x7f8a78),
+  // Camp and village props.
+  tent: { sheet: "camp", col: 4, row: 0, w: 2, h: 3, kind: "solid", solid: { col: 0, row: 1, cols: 2, rows: 2 }, canopy: 1, color: 0xc89058 },
+  campfire: {
+    sheet: "camp", col: 10, row: 3, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 0, cols: 2, rows: 2 },
+    light: { color: 0xff9040, radius: 96, flame: true }, color: 0x8a8a8a,
+  },
+  spiritFire: {
+    sheet: "camp", col: 10, row: 3, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 0, cols: 2, rows: 2 },
+    light: { color: 0x6ab8ff, radius: 96, flame: true }, color: 0x6a7a9a,
+  },
+  logs: { sheet: "camp", col: 0, row: 7, w: 2, h: 1, kind: "solid", solid: { col: 0, row: 0, cols: 2, rows: 1 }, color: 0xb07840 },
+  flowerPlant: { sheet: "plant", col: 0, row: 0, w: 1, h: 1, kind: "walkover", anim: "na-plant", color: 0xf2f2e0 },
+  flag: { sheet: "flag", col: 0, row: 0, w: 1, h: 1, kind: "walkover", anim: "na-flag", color: 0xe04040 },
+  // Breakables.
+  pot: { sheet: "camp", col: 6, row: 3, w: 1, h: 1, kind: "breakable", solid: { col: 0, row: 0, cols: 1, rows: 1 }, breakable: { hp: 1, shards: "vase" }, color: 0x7a8a6a },
+  jar: { sheet: "camp", col: 5, row: 3, w: 1, h: 1, kind: "breakable", solid: { col: 0, row: 0, cols: 1, rows: 1 }, breakable: { hp: 1, shards: "vase" }, color: 0xa86a3a },
+  crate: { sheet: "dungeon", col: 3, row: 1, w: 1, h: 1, kind: "breakable", solid: { col: 0, row: 0, cols: 1, rows: 1 }, breakable: { hp: 2, shards: "wood" }, color: 0xa87a4a },
+  barrel: { sheet: "elements", col: 0, row: 0, w: 1, h: 1, kind: "breakable", solid: { col: 0, row: 0, cols: 1, rows: 1 }, breakable: { hp: 2, shards: "wood" }, color: 0xb06a3a },
+} as const satisfies Record<string, DecorDef>;
+
+export type DecorId = keyof typeof DECOR;
+
+/** An object placed on a map; (col, row) is its top-left tile. */
+export interface PlacedObject {
+  readonly id: DecorId;
+  readonly col: number;
+  readonly row: number;
+}
+
+export type CritterKind = "chicken" | "cat" | "frog" | "fish";
+
+/** A critter's home tile; it wanders near it (fish stay in water). */
+export interface PlacedCritter {
+  readonly kind: CritterKind;
+  readonly col: number;
+  readonly row: number;
+}

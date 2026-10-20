@@ -1,11 +1,13 @@
-import { describe, expect, it } from "vitest";
-import { TEST_MAP, type MapDef } from "../src/data/maps.ts";
+import { beforeEach, describe, expect, it } from "vitest";
+import { DECOR } from "../src/data/decor.ts";
+import { TEST_MAP, WORLD_TEST_MAP, type MapDef } from "../src/data/maps.ts";
+import { blockingTiles, coveredTiles } from "../src/logic/objects.ts";
 import { GAME_HEIGHT, GAME_WIDTH } from "../src/game/config.ts";
 import { inRect, triggerRect, type TileRect } from "../src/logic/encounter.ts";
 import { parseLayout, type ParsedLayout, type TilePos } from "../src/logic/layout.ts";
 
 const T = 16;
-const MAPS: readonly MapDef[] = [TEST_MAP];
+const MAPS: readonly MapDef[] = [TEST_MAP, WORLD_TEST_MAP];
 
 const key = (p: TilePos): string => `${p.col},${p.row}`;
 const tileOf = (x: number, y: number): TilePos => ({ col: Math.floor(x / T), row: Math.floor(y / T) });
@@ -14,8 +16,11 @@ function isDoor(l: ParsedLayout, c: number, r: number): boolean {
   return l.doorRects.some((d) => c * T >= d.x && c * T < d.x + d.width && r * T >= d.y && r * T < d.y + d.height);
 }
 
+/** Tiles blocked by objects: layout props and every placed object (breakables count, as if never broken). */
+let objectBlocked = new Set<string>();
+
 function isPropTile(l: ParsedLayout, c: number, r: number): boolean {
-  return l.props.some((p) => p.rect.x === c * T && p.rect.y === r * T);
+  return objectBlocked.has(`${c},${r}`) || l.props.some((p) => p.rect.x === c * T && p.rect.y === r * T);
 }
 
 /** Tiles reachable on foot from `start`. Gates/door open or closed as asked. */
@@ -53,6 +58,38 @@ function firstOpenTile(l: ParsedLayout, rect: TileRect): TilePos | null {
 
 describe.each(MAPS.map((m) => [m.layout.id, m] as const))("map %s", (_id, map) => {
   const l = parseLayout(map.layout.rows, T);
+  const blocked = new Set((map.objects ?? []).flatMap((o) => blockingTiles(DECOR[o.id], o)).map(key));
+  beforeEach(() => {
+    objectBlocked = blocked;
+  });
+
+  it("objects lie inside the map; their blocking tiles sit on plain open floor (no wall, water, gate, door, spawn or start)", () => {
+    const gateSet = new Set(l.gates.map(key));
+    const special = new Set([...l.enemySpawns.map((s) => tileOf(s.x, s.y)), tileOf(l.playerSpawn.x, l.playerSpawn.y)].map(key));
+    const seen = new Set<string>();
+    for (const o of map.objects ?? []) {
+      const def = DECOR[o.id];
+      for (const t of coveredTiles(def, o)) {
+        expect(t.col >= 0 && t.row >= 0 && t.col < l.cols && t.row < l.rows, `${o.id} at ${key(o)} inside`).toBe(true);
+      }
+      for (const t of blockingTiles(def, o)) {
+        const where = `${o.id} at ${key(o)} blocks ${key(t)}`;
+        expect(l.wall[t.row]?.[t.col], where).toBe(false);
+        expect(l.low[t.row]?.[t.col], where).toBe(false);
+        expect(isDoor(l, t.col, t.row) || gateSet.has(key(t)) || special.has(key(t)), where).toBe(false);
+        expect(seen.has(key(t)), `${where}: overlaps another object`).toBe(false);
+        seen.add(key(t));
+      }
+    }
+  });
+
+  it("critters start where they can live (open ground; water for fish)", () => {
+    for (const c of map.critters ?? []) {
+      const where = `${c.kind} at ${key(c)}`;
+      if (c.kind === "fish") expect(l.low[c.row]?.[c.col], where).toBe(true);
+      else expect(l.wall[c.row]?.[c.col] === false && !l.low[c.row]?.[c.col] && !blocked.has(key(c)), where).toBe(true);
+    }
+  });
 
   it("is larger than one screen in both directions (the camera must scroll)", () => {
     expect(l.cols * T).toBeGreaterThan(GAME_WIDTH);

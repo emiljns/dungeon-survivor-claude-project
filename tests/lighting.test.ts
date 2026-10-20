@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { biomeFor } from "../src/data/biomes.ts";
 import { ALL_LAYOUTS } from "../src/data/rooms.ts";
 import { THEMES } from "../src/data/themes.ts";
 import { parseLayout } from "../src/logic/layout.ts";
@@ -75,9 +76,10 @@ describe("flicker and darkness", () => {
     expect(clampDarkness(Number.NaN)).toBe(0);
   });
 
-  it("every theme's ambient darkness keeps threats readable (≤ 0.7)", () => {
+  it("every theme's ambient darkness keeps threats readable (≤ 0.7); dungeons are dark, outdoor levels follow the day", () => {
     for (const theme of Object.values(THEMES)) {
-      expect(theme.light.darkness, theme.id).toBeGreaterThan(0.3);
+      if (biomeFor(theme.id)) expect(theme.light.darkness, theme.id).toBeGreaterThanOrEqual(0);
+      else expect(theme.light.darkness, theme.id).toBeGreaterThan(0.3);
       expect(theme.light.darkness, theme.id).toBeLessThanOrEqual(0.7);
       expect(theme.light.playerRadius, theme.id).toBeGreaterThanOrEqual(110);
     }

@@ -104,18 +104,19 @@ collision boxes, room layouts and combat behaviour stay unchanged.
     waves and ambushes with telegraphs and a minimum spawn distance.
 -   [x] Flow-field pathfinding for enemies; enemies only attack near the
     screen.
--   [ ] Test map (`?testmap`) reviewed by the user. *(Built and
-    self-tested; waiting for the user's review.)*
+-   [x] Test map (`?testmap`) reviewed by the user.
     **Acceptance:** the test map plays with every engine feature; the
     existing game still runs unchanged; tests and build pass.
 
 ## Milestone 9 --- World kit
 
--   [ ] Decoration catalogue and placed objects (solid, walk-over,
+-   [x] Decoration catalogue and placed objects (solid, walk-over,
     breakable, light sources with colour).
--   [ ] Animated scenery, ambient creatures, ambient particles.
--   [ ] Outdoor tilesets (village, forest, river, snow).
--   [ ] Test map reviewed. **Acceptance:** a living outdoor test area
+-   [x] Animated scenery, ambient creatures, ambient particles.
+-   [x] Outdoor tilesets (village, forest, river, snow).
+-   [ ] Test map (`?testmap=world&theme=…`) reviewed by the user.
+    *(Built and self-tested; waiting for the user's review.)*
+    **Acceptance:** a living outdoor test area
     with readable threats and unchanged performance.
 
 ## Milestone 10 --- Economy

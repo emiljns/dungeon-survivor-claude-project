@@ -7,6 +7,7 @@
 //   T  wall with a torch (solid like '#'; lights the floor next to it)
 //   ~  water: a low obstacle (blocks walking and pathfinding, not bullets)
 //   G  encounter gate: floor while open, solid while its encounter is active
+//   =  bridge: floor, drawn as wooden planks (over water)
 
 import type { Rect } from "./collision.ts";
 import type { Vec2 } from "./vector.ts";
@@ -39,6 +40,8 @@ export interface ParsedLayout {
   readonly lowRects: readonly Rect[];
   /** Encounter gate tiles (each belongs to the encounter whose area contains it). */
   readonly gates: readonly TilePos[];
+  /** bridge[row][col] — plank floor (walkable; purely visual). */
+  readonly bridge: readonly (readonly boolean[])[];
 }
 
 export interface TilePos {
@@ -47,7 +50,7 @@ export interface TilePos {
 }
 
 const PROPS: Readonly<Record<string, PropKind>> = { c: "crate", b: "barrel" };
-const KNOWN = new Set(["#", ".", "P", "E", "D", "T", "~", "G", ...Object.keys(PROPS)]);
+const KNOWN = new Set(["#", ".", "P", "E", "D", "T", "~", "G", "=", ...Object.keys(PROPS)]);
 
 export function parseLayout(rows: readonly string[], tile: number): ParsedLayout {
   const cols = rows[0]?.length ?? 0;
@@ -56,6 +59,7 @@ export function parseLayout(rows: readonly string[], tile: number): ParsedLayout
   const wall: boolean[][] = [];
   const door: boolean[][] = [];
   const low: boolean[][] = [];
+  const bridge: boolean[][] = [];
   const gates: TilePos[] = [];
   const props: Prop[] = [];
   let playerSpawn: Vec2 | null = null;
@@ -68,8 +72,10 @@ export function parseLayout(rows: readonly string[], tile: number): ParsedLayout
     const wallRow: boolean[] = [];
     const doorRow: boolean[] = [];
     const lowRow: boolean[] = [];
+    const bridgeRow: boolean[] = [];
     [...line].forEach((ch, c) => {
       lowRow.push(ch === "~");
+      bridgeRow.push(ch === "=");
       if (ch === "G") gates.push({ col: c, row: r });
       if (!KNOWN.has(ch)) throw new Error(`Unknown layout symbol "${ch}" at ${c},${r}`);
       wallRow.push(ch === "#" || ch === "T");
@@ -86,6 +92,7 @@ export function parseLayout(rows: readonly string[], tile: number): ParsedLayout
     wall.push(wallRow);
     door.push(doorRow);
     low.push(lowRow);
+    bridge.push(bridgeRow);
   });
 
   if (!playerSpawn) throw new Error("Layout has no player spawn (P)");
@@ -102,6 +109,7 @@ export function parseLayout(rows: readonly string[], tile: number): ParsedLayout
     low,
     lowRects: mergeTiles(low, tile),
     gates,
+    bridge,
   };
 }
 

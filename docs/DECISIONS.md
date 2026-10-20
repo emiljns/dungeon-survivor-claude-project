@@ -594,6 +594,70 @@
 -   **Placeholder water** is drawn as simple blue tiles; Milestone 9
     replaces it with pack art.
 
+## Milestone 9 — world kit (2026-10-20)
+
+-   **New pack sheets** (copied into `public/assets/ninja/`, each in the
+    manifest): outdoor floors, nature, water, relief (cliffs), camp,
+    water ripples, a plant, a flag, four critters, leaf and snow
+    particles, and vase/wood shards. TilesetFloor.png is 417 px tall;
+    its stray last row is cropped to 416 px so it divides into tiles
+    (noted in `CREDITS.md`).
+-   **Outdoor themes**: village, forest, river and snow, each with
+    pack ground (a plain tile plus tuft variants picked by a stable tile
+    hash), a cliff set and a water-shore set (`src/data/biomes.ts`).
+    The dungeon themes keep the brick look. Light follows the day:
+    darkness 0 (village), 0.10 (forest), 0.16 (river, warm tint), 0.34
+    (snow, dusk), with a lighter vignette. The darkness pass is skipped
+    entirely in full daylight. The lighting test now allows daylight for
+    outdoor themes only; the dungeon themes must still be dark.
+-   **Cliffs and raised ground.** Collision is unchanged (one tile per
+    wall cell). A wall above open ground shows a two-tile cliff: the base
+    on the ground layer and the lip on the foreground layer. The inside
+    of a wall mass is raised ground in a darker tint.
+-   **Trees on raised ground.** Found in review: tinted raised ground
+    looked like more floor. Trees from the biome's list are now scattered
+    deterministically (tile hash, with a few pixels of jitter) over the
+    inside of wall masses, never within a tile of open ground. This is
+    cosmetic set dressing on walls, not procedural layout: maps stay
+    hand-authored.
+-   **Water** uses the pack's shore pieces (corners, edges, narrow
+    channels), picked from the four neighbours. Inside corners use the
+    plain centre, a small simplification. **Bridges** are a new `=`
+    layout symbol: plain walkable floor drawn as planks, with the banks
+    running underneath. The grass-shore set only matches the yellow
+    grass (village and river); the forest's darker grass would show a
+    seam, which does not matter because the forest level has no water.
+-   **Decoration catalogue** (`src/data/decor.ts`): about 50 objects.
+    Each has pack tiles, a size, a kind (solid, walk-over or breakable),
+    blocking tiles, walk-behind canopy rows, and optionally a coloured
+    light or a looping animation. Maps place them by top-left tile.
+    Static objects are baked into the two map textures (decoration
+    slightly darker than actors); breakables and animated objects stay
+    live sprites. Solid objects block walking, paths, sight and bullets
+    on their blocking tiles only (tree trunks, not canopies).
+-   **Breakables.** On v2 maps, pots, jars, crates and barrels (and the
+    layout's `c`/`b` props) take 1–2 hits, then shatter into pack
+    shards. They block enemy bullets, sight and paths while intact.
+    Player shots treat them as targets rather than walls, so the hit can
+    be counted. Coin drops come in Milestone 10. The v1 rooms keep their
+    solid props, so the current game is unchanged.
+-   **Coloured lights**: torches and objects can carry their own colour
+    and radius (an orange campfire, a blue spirit fire).
+-   **Critters** (chicken, cat, frog, fish) wander near home and flee
+    the player. They have no body, no health bar and no collisions with
+    bullets; fish stay in water. **Particles** (leaves, snow, and
+    fireflies and motes for later levels) are a fixed screen-space pool
+    with a little parallax. Animated scenery and critters only update
+    near the camera.
+-   **Silhouettes** now cover tree canopies as well as wall tops.
+-   **Test map**: `?testmap=world&theme=forest|village|river|snow`.
+    Map tests now include placed objects. Blocking tiles must sit on
+    plain floor (never on a gate, door, spawn or the start), objects must
+    not overlap, critters must start where they can live, and every
+    trigger, spawn and the exit must stay reachable with every object in
+    place, breakables included. A mutation check (a rock across the
+    corridor) made the reachability test fail as intended.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose
