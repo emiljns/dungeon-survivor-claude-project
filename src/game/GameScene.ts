@@ -800,6 +800,8 @@ export class GameScene extends Phaser.Scene {
 
   private closeShop(): void {
     this.shop = null;
+    // openShop halted the player, which disables its body: turn it back on.
+    this.player.body.enable = true;
     this.physics.resume();
     // Drop key presses made while the shop was open (e.g. the E that closed it).
     this.input.keyboard?.resetKeys();

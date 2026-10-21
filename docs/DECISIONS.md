@@ -765,6 +765,12 @@
     from the shooter's centre (walls along that segment were already
     checked), so point-blank shots hit. This was in v1 too, but rare.
     The v1 regression still ends with the same score.
+-   **Bug fix (reported by the user):** after leaving a shop the player
+    could not move. Opening a shop halts the player, which disables its
+    physics body, and closing the shop never re-enabled it (the upgrade
+    panel did). My earlier browser check only looked at the game phase,
+    not at movement. Closing now re-enables the body; leaving with Esc,
+    with E, and after a purchase were each checked by holding D.
 -   **Economy pacing:** a full scripted winning run of the current five
     levels earns 181 coins, roughly the Kunai plus the Magic Shuriken.
     Prices get tuned in Milestone 12.
