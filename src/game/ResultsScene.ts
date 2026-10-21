@@ -17,6 +17,10 @@ export interface RunResult {
   readonly newBestScore: boolean;
   /** False when local storage was unavailable (the run still counts for this session). */
   readonly saved: boolean;
+  /** Coins picked up this run, coins banked from it, and the bank afterwards. */
+  readonly coinsEarned: number;
+  readonly coinsKept: number;
+  readonly bank: number;
 }
 
 function isRunResult(d: unknown): d is RunResult {
@@ -53,12 +57,12 @@ export class ResultsScene extends Phaser.Scene {
     const r = data;
     const win = r.outcome === "victory";
     const cx = GAME_WIDTH / 2;
-    // Title sits inside the 250px panel (panel top = GAME_HEIGHT/2 - 125 = 51).
-    const top = 74;
+    // Title sits inside the 286px panel (panel top = GAME_HEIGHT/2 - 143 = 33).
+    const top = 56;
     const accent = win ? "#7dff9b" : PALETTE.danger;
 
     this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x05070d, 0.78).setOrigin(0);
-    this.add.rectangle(cx, GAME_HEIGHT / 2, 360, 250, 0x111626).setStrokeStyle(2, win ? 0x7dff9b : 0xff5d73);
+    this.add.rectangle(cx, GAME_HEIGHT / 2, 360, 286, 0x111626).setStrokeStyle(2, win ? 0x7dff9b : 0xff5d73);
     this.add
       .text(cx, top, win ? "VICTORY" : "GAME OVER", { fontFamily: FONT_FAMILY, fontSize: "28px", color: accent, fontStyle: "bold" })
       .setOrigin(0.5);
@@ -77,6 +81,8 @@ export class ResultsScene extends Phaser.Scene {
       ["ENEMIES DEFEATED", String(r.enemiesDefeated)],
       ["ROOMS CLEARED", String(r.roomsCleared)],
       ["BEST SCORE", `${r.best.bestScore}${r.saved ? "" : "  (not saved)"}`],
+      ["COINS EARNED / KEPT", `${r.coinsEarned} / ${r.coinsKept}${win ? "" : "  (half)"}`],
+      ["SAVED COINS", `${r.bank}${r.saved ? "" : "  (not saved)"}`],
     ];
     rows.forEach(([label, value], i) => {
       const y = top + 54 + i * 18;
@@ -92,7 +98,7 @@ export class ResultsScene extends Phaser.Scene {
     }
 
     this.add
-      .text(cx, GAME_HEIGHT / 2 + 108, "[R] / Click  Retry     [M]  Menu", { fontFamily: FONT_FAMILY, fontSize: "11px", color: PALETTE.accent })
+      .text(cx, GAME_HEIGHT / 2 + 126, "[R] / Click  Retry     [M]  Menu", { fontFamily: FONT_FAMILY, fontSize: "11px", color: PALETTE.accent })
       .setOrigin(0.5);
 
     // Short delay so a held fire button or key does not skip the screen.

@@ -81,6 +81,11 @@ export class Player {
     };
   }
 
+  /** Restores all health (the merchant's tea). */
+  healFull(): void {
+    this.healthState = { ...this.healthState, current: this.healthState.max };
+  }
+
   dashReadiness(now: number): number {
     return dashReadiness(this.dash, now, Tuning.dash);
   }

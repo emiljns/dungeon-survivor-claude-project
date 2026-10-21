@@ -44,3 +44,19 @@ export function stepProjectile(
   if (lifeMs <= 0) return { kind: "expired", ...to };
   return { kind: "flying", state: { ...p, ...to, lifeMs } };
 }
+
+/**
+ * Turns a velocity toward `target` by at most `maxTurnRad`, keeping its speed
+ * (homing shots curve; they never stop or speed up).
+ */
+export function steerToward(vx: number, vy: number, from: { x: number; y: number }, target: { x: number; y: number }, maxTurnRad: number): { vx: number; vy: number } {
+  const speed = Math.hypot(vx, vy);
+  if (speed === 0 || maxTurnRad <= 0) return { vx, vy };
+  const current = Math.atan2(vy, vx);
+  const wanted = Math.atan2(target.y - from.y, target.x - from.x);
+  let diff = wanted - current;
+  while (diff > Math.PI) diff -= 2 * Math.PI;
+  while (diff < -Math.PI) diff += 2 * Math.PI;
+  const turn = Math.max(-maxTurnRad, Math.min(maxTurnRad, diff));
+  return { vx: Math.cos(current + turn) * speed, vy: Math.sin(current + turn) * speed };
+}

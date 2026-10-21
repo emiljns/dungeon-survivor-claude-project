@@ -2,7 +2,7 @@
 // room layouts (see src/logic/layout.ts), plus encounter areas defined here.
 
 import type { EncounterDef } from "../logic/encounter.ts";
-import type { PlacedCritter, PlacedObject } from "./decor.ts";
+import type { PlacedCritter, PlacedNpc, PlacedObject } from "./decor.ts";
 import { LEVELS, type EnemySpec, type LevelDefinition } from "./levels.ts";
 import type { RoomLayout } from "./rooms.ts";
 import { THEMES } from "./themes.ts";
@@ -17,6 +17,8 @@ export interface MapDef {
   readonly objects?: readonly PlacedObject[];
   /** Ambient animals and their home tiles. */
   readonly critters?: readonly PlacedCritter[];
+  /** Shopkeeper (village) or travelling merchant (arrival areas). */
+  readonly npcs?: readonly PlacedNpc[];
 }
 
 const c: EnemySpec = { kind: "chaser", elite: false };
@@ -135,6 +137,7 @@ export function testMapLevel(opts: TestMapOptions): LevelDefinition {
         encounters: map.encounters,
         objects: map.objects ?? [],
         critters: map.critters ?? [],
+        npcs: map.npcs ?? [],
       },
     ],
   };

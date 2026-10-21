@@ -699,6 +699,76 @@
     slippery-ice twist belongs to Milestone 11), fences, waterfalls and
     lily pads. Gates still use the red bars.
 
+## Milestone 10 — economy (2026-10-21)
+
+-   **Coins.**
+    -   Enemies drop coins on death: chaser 2, ranged 3, tank 5, boss
+        30, and elites double.
+    -   Breakables drop coins too: pots 1–2, crates and barrels 2–3.
+    -   Each coin is a pickup that bursts out, settles, and flies to the
+        player within 44 px.
+    -   When an area or room is cleared, every coin left on the ground
+        flies in, so none are lost to a door or gate.
+    -   Pocket coins are part of the run state and show in the HUD next
+        to the carried weapon.
+-   **Banking.** Victory banks all pocket coins. Death banks half,
+    rounded down. Quitting from pause also banks half and, as before, does
+    not record the score. The results screen shows the coins earned and
+    kept, and the bank.
+-   **Save v2** (`ninja-survivor:save:v2`) holds the best score, the
+    best level, saved coins and unlocks.
+    -   Every field is validated: unknown weapons are dropped, and the
+        starter weapon is always owned.
+    -   A missing or invalid v2 save migrates the v1 best-score key (the
+        v1 key is only read, never deleted).
+    -   Blocked storage loads a fresh save and never throws.
+    -   A purchase that cannot be saved says so and is not kept.
+-   **Weapons** (`src/data/weapons.ts`) scale the upgraded stats, so
+    every upgrade helps every weapon:
+    -   **Shuriken:** the v1 gun exactly.
+    -   **Kunai:** fast and narrow, pierces 1 enemy.
+    -   **Big Shuriken:** slow and heavy, radius 5, pierces 3.
+    -   **Magic Shuriken:** turns up to 2.6 rad/s toward the nearest
+        enemy within 170 px.
+
+    Piercing needs stable target IDs, so the projectile system now takes
+    an optional ID list and skips targets a bullet has already hit. All
+    player shots are shuriken-family sprites (blue, white, purple), never
+    like the enemies' fireballs.
+-   **Shops** use one panel: a portrait, the balance and up to six items
+    (keys 1–6 or a click; Esc or E leaves). The room freezes while the
+    panel is open.
+    -   **Village shop** (old man): permanent unlocks for saved coins
+        (Kunai 60, Magic 100, Big 150).
+    -   **Travelling merchant** (pocket coins):
+        -   a full heal for 20;
+        -   three run upgrades, which differ by level and cost 15 +
+            10 × the current level;
+        -   every unlocked weapon at run prices (25, 35 or 50). Buying
+            one replaces the carried weapon for the rest of the run.
+
+        Every run starts with the shuriken again.
+-   **Where the shops are.** The shopkeeper is on the village test map.
+    Merchants are in the forest, river and snow arrival areas, and in
+    every v1 level's entry hall, so the economy works in the current
+    five-level run.
+-   **Menu shop.** Until the Home Village prologue (Milestone 11) exists,
+    the village shop also opens from the title menu (`S`). It is the
+    same panel and the same rules. This is temporary and goes away once
+    the village is the way to start a run.
+-   **NPCs** block walking but not bullets. The prompt shows within
+    24 px, and E talks before it opens doors.
+-   **Point-blank shots (bug fix found in the regression run).** A ranged
+    enemy pressed against the player could not be hit. Bullets spawn at
+    the muzzle, 9 px out, which was already past the enemy, and the
+    muzzle step only checked walls. A new bullet's first step now sweeps
+    from the shooter's centre (walls along that segment were already
+    checked), so point-blank shots hit. This was in v1 too, but rare.
+    The v1 regression still ends with the same score.
+-   **Economy pacing:** a full scripted winning run of the current five
+    levels earns 181 coins, roughly the Kunai plus the Magic Shuriken.
+    Prices get tuned in Milestone 12.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose

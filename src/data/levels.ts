@@ -3,7 +3,7 @@
 // levels with different enemy sets, themes and difficulty.
 
 import type { EncounterDef } from "../logic/encounter.ts";
-import type { PlacedCritter, PlacedObject } from "./decor.ts";
+import type { PlacedCritter, PlacedNpc, PlacedObject } from "./decor.ts";
 import type { Difficulty, EnemyKind } from "../logic/enemyStats.ts";
 import { ARENA, CROSSROADS, ENTRY_HALL, FURNACE, GALLERY, PILLAR_HALL, STOREROOM, type RoomLayout } from "./rooms.ts";
 import { THEMES, type Theme } from "./themes.ts";
@@ -28,6 +28,8 @@ export interface LevelRoom {
   /** v2 maps: placed decoration and ambient animals. */
   readonly objects?: readonly PlacedObject[];
   readonly critters?: readonly PlacedCritter[];
+  /** Shopkeeper or travelling merchant standing in this room. */
+  readonly npcs?: readonly PlacedNpc[];
 }
 
 export interface LevelDefinition {
@@ -43,7 +45,8 @@ const t: EnemySpec = { kind: "tank", elite: false };
 const r: EnemySpec = { kind: "ranged", elite: false };
 const elite = (kind: EnemyKind): EnemySpec => ({ kind, elite: true });
 const boss: EnemySpec = { kind: "boss", elite: false };
-const start: LevelRoom = { layout: ENTRY_HALL, enemies: [], reward: false };
+/** Each level's arrival room; the travelling merchant waits beside the start. */
+const start: LevelRoom = { layout: ENTRY_HALL, enemies: [], reward: false, npcs: [{ kind: "merchant", col: 24, row: 11 }] };
 /**
  * A combat room. `reward` marks the level's upgrade opportunities: the room
  * before the final room, plus the elite room on levels 1–4 (9 upgrades a run).

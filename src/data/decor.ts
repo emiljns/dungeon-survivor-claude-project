@@ -171,6 +171,15 @@ export interface ResolvedObject {
 
 export type CritterKind = "chicken" | "cat" | "frog" | "fish";
 
+/** Friendly characters: the village shop (saved coins) and the travelling merchant (pocket coins). */
+export type NpcKind = "shopkeeper" | "merchant";
+
+export interface PlacedNpc {
+  readonly kind: NpcKind;
+  readonly col: number;
+  readonly row: number;
+}
+
 /** A critter's home tile; it wanders near it (fish stay in water). */
 export interface PlacedCritter {
   readonly kind: CritterKind;

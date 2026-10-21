@@ -97,6 +97,7 @@ export const WORLD_MAPS: Readonly<Record<"forest" | "village" | "river" | "snow"
       {kind: "frog", col: 44, row: 20},
       {kind: "cat", col: 8, row: 23},
     ],
+    npcs: [{ kind: "merchant", col: 9, row: 18 }],
   },
   /** Home Village look (peaceful, no combat): houses along crossing dirt lanes, a pond with fish, chickens, a campfire, and the way out east. */
   village: {
@@ -201,6 +202,7 @@ export const WORLD_MAPS: Readonly<Record<"forest" | "village" | "river" | "snow"
       {kind: "fish", col: 15, row: 25},
       {kind: "frog", col: 18, row: 27},
     ],
+    npcs: [{ kind: "shopkeeper", col: 26, row: 15 }],
   },
   /** River look: a camp meadow, a path, a glade with cover (two waves), then a river with a plank bridge ambush, fish and a blue spirit fire, and the exit east. */
   river: {
@@ -328,6 +330,7 @@ export const WORLD_MAPS: Readonly<Record<"forest" | "village" | "river" | "snow"
       {kind: "fish", col: 48, row: 32},
       {kind: "fish", col: 60, row: 32},
     ],
+    npcs: [{ kind: "merchant", col: 11, row: 10 }],
   },
   /** Snowy Mountain look (no animals): a start hollow with an igloo and a blue spirit fire, a narrow pass, and a frozen-lake plateau with a shrine, igloos and a statue (two waves), then the exit. */
   snow: {
@@ -407,5 +410,6 @@ export const WORLD_MAPS: Readonly<Record<"forest" | "village" | "river" | "snow"
       {id: "crate", col: 45, row: 23},
     ],
     critters: [],
+    npcs: [{ kind: "merchant", col: 11, row: 32 }],
   },
 };

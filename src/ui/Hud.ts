@@ -15,6 +15,10 @@ export interface HudInfo {
   readonly runTimeMs: number;
   /** True while fighting in a room whose clear grants an upgrade. */
   readonly rewardOnClear: boolean;
+  /** Pocket coins this run. */
+  readonly coins: number;
+  /** Name of the carried weapon. */
+  readonly weapon: string;
 }
 
 /** Screen-space HUD. scrollFactor 0 keeps it fixed if the camera moves. */
@@ -24,6 +28,8 @@ export class Hud {
   private readonly status: Phaser.GameObjects.Text;
   private readonly scoreText: Phaser.GameObjects.Text;
   private readonly hint: Phaser.GameObjects.Text;
+  private readonly coinText: Phaser.GameObjects.Text;
+  private readonly weaponText: Phaser.GameObjects.Text;
   private shownHealth = "";
   private shownDash = -1;
   private shownBoss = -1;
@@ -44,6 +50,10 @@ export class Hud {
     this.status = fixed(scene.add.text(GAME_WIDTH - 6, 15, "", { ...label, fontSize: "9px" }).setOrigin(1, 0));
     // Top-left, not top-centre: several rooms have their door at the top centre.
     this.scoreText = fixed(scene.add.text(HudLayout.scoreX, 3, "", { ...label, color: PALETTE.accent }));
+    // Second line, under score/time: pocket coins and the carried weapon.
+    fixed(scene.add.circle(HudLayout.scoreX + 4, 20, 3.5, 0xffd166).setStrokeStyle(1, 0x8a5a10));
+    this.coinText = fixed(scene.add.text(HudLayout.scoreX + 11, 15, "", { ...label, fontSize: "9px", color: PALETTE.accent }));
+    this.weaponText = fixed(scene.add.text(HudLayout.scoreX + 52, 15, "", { ...label, fontSize: "9px", color: PALETTE.textDim }));
     this.hint = fixed(
       scene.add.text(GAME_WIDTH - 6, 26, "UPGRADE ON CLEAR", { ...label, fontSize: "8px", color: PALETTE.accent }).setOrigin(1, 0),
     );
@@ -61,6 +71,8 @@ export class Hud {
     // setText is a no-op when the string is unchanged, so this is cheap per frame.
     this.scoreText.setText(`SCORE ${String(info.score).padStart(6, "0")}   ${formatTime(info.runTimeMs)}`);
     this.hint.setVisible(info.rewardOnClear);
+    this.coinText.setText(String(info.coins));
+    this.weaponText.setText(info.weapon.toUpperCase());
   }
 
   /** Large centred message that fades out. */

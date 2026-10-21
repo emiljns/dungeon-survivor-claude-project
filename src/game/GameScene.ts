@@ -35,7 +35,6 @@ import {
   computeStats,
   rollUpgradeChoices,
   type BaseStats,
-  type PlayerStats,
   type UpgradeId,
   type UpgradeLevels,
 } from "../logic/upgrades.ts";
@@ -57,14 +56,20 @@ import { parseShowcase, showcaseLevel, type ShowcaseOptions } from "../data/show
 import { artMode, playFx, sheetKey, type ArtMode } from "../rendering/Art.ts";
 import { ensureLightTextures } from "../rendering/LightTextures.ts";
 import { bakeTileLayer, ensurePlaceholderTextures, Tex } from "../rendering/PlaceholderArt.ts";
-import { browserStorage, loadBest, mergeBest, saveBest } from "../systems/HighScoreStore.ts";
+import { browserStorage } from "../systems/HighScoreStore.ts";
 import { ProjectileSystem, type BulletSpec } from "../systems/ProjectileSystem.ts";
 import { Hud } from "../ui/Hud.ts";
+import { ShopPanel } from "../ui/ShopPanel.ts";
+import { WEAPONS, weaponStats, type WeaponId, type WeaponStats } from "../data/weapons.ts";
+import { breakableCoins, coinsKept, enemyCoins, HEAL_PRICE, merchantStock, villageStock, type ShopItemId } from "../logic/economy.ts";
+import { buyUnlock, loadSave, recordRun, writeSave } from "../systems/SaveStore.ts";
+import { Coins } from "../systems/Coins.ts";
+import { Npcs } from "../systems/Npcs.ts";
 import { UpgradePanel } from "../ui/UpgradePanel.ts";
 import { Depth, FONT_FAMILY, PALETTE, TILE, Tuning } from "./config.ts";
 import type { RunResult } from "./ResultsScene.ts";
 
-type Phase = "playing" | "reward" | "exiting" | "gameOver" | "victory";
+type Phase = "playing" | "reward" | "shop" | "exiting" | "gameOver" | "victory";
 
 /** One encounter area of a v2 map at runtime. */
 interface EncounterRuntime {
@@ -102,15 +107,32 @@ const BASE_STATS: BaseStats = {
 
 // Speed, lifetime, radius and damage are gameplay and identical in both art
 // modes; only the look (texture, animation, trail colour) differs.
-const playerBulletSpec = (stats: PlayerStats, art: ArtMode): BulletSpec => ({
-  speed: stats.bulletSpeed,
-  lifeMs: Tuning.gun.bulletLifeMs,
-  radius: Tuning.gun.bulletRadius,
-  damage: stats.damage,
-  trailColor: art === "ninja" ? 0xc9d4ff : 0xffd166,
-  impactColor: 0xc9d4ff,
-  ...(art === "ninja" ? { texture: sheetKey("shuriken"), anim: "na-shuriken-spin" } : { texture: Tex.bullet }),
-});
+const PLAYER_SHOT_LOOK: Readonly<Record<WeaponId, { texture: string; anim?: string; faceDirection?: { offset: number }; trail: number }>> = {
+  shuriken: { texture: sheetKey("shuriken"), anim: "na-shuriken-spin", trail: 0xc9d4ff },
+  kunai: { texture: sheetKey("kunai"), faceDirection: { offset: 0 }, trail: 0xe8f0ff },
+  bigShuriken: { texture: sheetKey("bigShuriken"), anim: "na-big-shuriken-spin", trail: 0xc9d4ff },
+  magicShuriken: { texture: sheetKey("magicShuriken"), anim: "na-magic-shuriken-spin", trail: 0xb68cff },
+};
+
+// Gameplay values come from the weapon stats and are identical in both art
+// modes; only the look (texture, animation, trail colour) differs. Player
+// shots are blue/white/purple shuriken, never like the enemies' fireballs.
+const playerBulletSpec = (stats: WeaponStats, weapon: WeaponId, art: ArtMode): BulletSpec => {
+  const look = PLAYER_SHOT_LOOK[weapon];
+  return {
+    speed: stats.bulletSpeed,
+    lifeMs: Tuning.gun.bulletLifeMs,
+    radius: stats.bulletRadius,
+    damage: stats.damage,
+    pierce: stats.pierce,
+    homing: stats.homing,
+    trailColor: art === "ninja" ? look.trail : 0xffd166,
+    impactColor: 0xc9d4ff,
+    ...(art === "ninja"
+      ? { texture: look.texture, ...(look.anim ? { anim: look.anim } : {}), ...(look.faceDirection ? { faceDirection: look.faceDirection } : {}) }
+      : { texture: Tex.bullet, scale: stats.bulletRadius / Tuning.gun.bulletRadius }),
+  };
+};
 
 const enemyBulletSpec = (attack: EnemyAttack, art: ArtMode): BulletSpec => {
   const boss = attack.pattern === "radial";
@@ -167,7 +189,14 @@ export class GameScene extends Phaser.Scene {
   private leaving = false;
   // Run-wide values, carried in RunState between rooms.
   private upgrades!: UpgradeLevels;
-  private stats!: PlayerStats;
+  private stats!: WeaponStats;
+  // Economy (Milestone 10): pocket coins, the carried weapon, pickups, shops.
+  private coins = 0;
+  private coinsEarned = 0;
+  private weapon: WeaponId = "shuriken";
+  private coinPickups!: Coins;
+  private npcs: Npcs | null = null;
+  private shop: ShopPanel | null = null;
   private score = 0;
   private enemiesDefeated = 0;
   private runTimeMs = 0;
@@ -213,7 +242,12 @@ export class GameScene extends Phaser.Scene {
     this.run = sanitizeRunState(data, ROOMS_PER_LEVEL, Tuning.player.maxHealth);
     this.showcase = parseShowcase(data);
     this.upgrades = this.run.upgrades;
-    this.stats = computeStats(BASE_STATS, this.upgrades);
+    this.coins = this.run.coins;
+    this.coinsEarned = this.run.coinsEarned;
+    this.weapon = this.run.weapon;
+    this.stats = weaponStats(computeStats(BASE_STATS, this.upgrades), this.weapon);
+    this.npcs = null;
+    this.shop = null;
     this.score = this.run.score;
     this.enemiesDefeated = this.run.enemiesDefeated;
     this.runTimeMs = this.run.runTimeMs;
@@ -343,6 +377,15 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.player.sprite, this.gateBodies);
     this.physics.add.collider(this.enemyGroup, this.gateBodies);
     this.physics.add.collider(this.enemyGroup, this.enemyGroup);
+    this.coinPickups = new Coins(this, this.art, () => {
+      this.coins++;
+      this.coinsEarned++;
+    });
+    if (levelRoom.npcs?.length) {
+      this.npcs = new Npcs(this, levelRoom.npcs, this.art);
+      this.physics.add.collider(this.player.sprite, this.npcs.bodies);
+      this.physics.add.collider(this.enemyGroup, this.npcs.bodies);
+    }
     if (this.tallWalls) {
       this.world = new WorldObjects(this, objects, this.rippleTiles(), this.art);
       this.physics.add.collider(this.player.sprite, this.world.bodies);
@@ -451,7 +494,7 @@ export class GameScene extends Phaser.Scene {
 
     if (pointer.leftButtonDown() && this.gun.tryFire(now)) {
       const n = this.stats.projectiles;
-      const spec = playerBulletSpec(this.stats, this.art);
+      const spec = playerBulletSpec(this.stats, this.weapon, this.art);
       for (const dir of spreadDirections(this.player.aim, n, this.stats.spreadRad * (n - 1))) {
         this.playerShots.fire(this.player.position, dir, 9, spec);
       }
@@ -483,12 +526,19 @@ export class GameScene extends Phaser.Scene {
       [...targets.map((e) => e.hitRect), ...breakables],
       (index, damage) => {
         const hit = targets[index];
-        if (hit) this.onEnemyShot(hit, damage, now);
-        else if (this.world?.hit(index - targets.length, damage)) {
+        if (hit) {
+          this.onEnemyShot(hit, damage, now);
+          return;
+        }
+        const broke = this.world?.hit(index - targets.length, damage);
+        if (broke) {
+          this.coinPickups.drop(broke.at, breakableCoins(broke.shards, Math.random));
           this.refreshSolids();
           this.flowDirty = true;
         }
       },
+      // Stable ids let piercing shots skip what they already hit; homing curves toward enemies.
+      { ids: [...targets, ...breakables], homing: targets.map((e) => e.position) },
     );
     if (this.phase !== "playing") return;
 
@@ -500,7 +550,12 @@ export class GameScene extends Phaser.Scene {
     // Read every frame: JustDown's flag persists until read, so an E pressed
     // elsewhere must not trigger an exit later when reaching the door.
     const interactPressed = Phaser.Input.Keyboard.JustDown(k.interact);
-    const door = this.nearbyOpenDoor();
+    const npc = this.npcs?.nearby(this.player.position) ?? null;
+    if (npc && interactPressed) {
+      this.openShop(npc.kind);
+      return;
+    }
+    const door = npc ? null : this.nearbyOpenDoor();
     this.doorPrompt.setVisible(door !== null);
     if (door) {
       const c = { x: door.x + door.width / 2, y: door.y + door.height / 2 };
@@ -511,6 +566,7 @@ export class GameScene extends Phaser.Scene {
       if (interactPressed) this.exitRoom();
     }
 
+    this.coinPickups.update(this.player.position, dt);
     const view = this.cameras.main.worldView;
     this.world?.update(now, view);
     this.critters?.update(now, dt, this.player.position, view);
@@ -613,6 +669,7 @@ export class GameScene extends Phaser.Scene {
         this.setGates();
         // The last area's clear is announced by the room clear instead.
         if (!canExit(this.room)) this.hud.banner("AREA CLEAR", "The gates open", "#7dff9b");
+        this.coinPickups.attract();
         if (enc.def.reward) this.offerUpgrade();
         if (this.phase !== "playing") return;
       }
@@ -687,7 +744,99 @@ export class GameScene extends Phaser.Scene {
       enemiesDefeated: this.enemiesDefeated,
       runTimeMs: this.runTimeMs,
       upgrades: this.upgrades,
+      coins: this.coins,
+      coinsEarned: this.coinsEarned,
+      weapon: this.weapon,
     };
+  }
+
+  /** Recomputes stats after an upgrade or weapon change (upgrades apply to every weapon). */
+  private refreshStats(): void {
+    this.stats = weaponStats(computeStats(BASE_STATS, this.upgrades), this.weapon);
+    this.player.applyStats(this.stats);
+    this.gun = new FireCooldown(this.stats.fireIntervalMs);
+  }
+
+  // ---- shops -------------------------------------------------------------
+
+  /** Opens the village shop (saved coins) or the travelling merchant (pocket coins); the room freezes meanwhile. */
+  private openShop(kind: "shopkeeper" | "merchant"): void {
+    if (this.shop || this.phase !== "playing") return;
+    this.phase = "shop";
+    this.player.halt();
+    this.npcs?.hidePrompt();
+    this.physics.pause();
+    const village = kind === "shopkeeper";
+    this.shop = new ShopPanel(
+      this,
+      village
+        ? {
+            title: "VILLAGE SHOP",
+            greeting: "Weapons, yours to keep. Paid with saved coins.",
+            face: "shopkeeperFace",
+            currency: "SAVED",
+            state: () => {
+              const save = loadSave(browserStorage());
+              return { coins: save.coins, items: villageStock(save.unlocks) };
+            },
+            buy: (id) => this.buyUnlock(id),
+            onClose: () => this.closeShop(),
+          }
+        : {
+            title: "TRAVELLING MERCHANT",
+            greeting: "Wares for this journey. Pocket coins only.",
+            face: "merchantFace",
+            currency: "POCKET",
+            state: () => ({
+              coins: this.coins,
+              items: merchantStock(loadSave(browserStorage()).unlocks, this.weapon, this.upgrades, this.player.health, this.run.levelIndex),
+            }),
+            buy: (id) => this.buyFromMerchant(id),
+            onClose: () => this.closeShop(),
+          },
+      this.art,
+    );
+  }
+
+  private closeShop(): void {
+    this.shop = null;
+    this.physics.resume();
+    // Drop key presses made while the shop was open (e.g. the E that closed it).
+    this.input.keyboard?.resetKeys();
+    this.phase = "playing";
+    this.updateHud();
+  }
+
+  private buyUnlock(id: ShopItemId): string {
+    if (!id.startsWith("weapon:")) return "";
+    const weapon = id.slice("weapon:".length) as WeaponId;
+    const storage = browserStorage();
+    const save = loadSave(storage);
+    const result = buyUnlock(save, weapon, WEAPONS[weapon].unlockPrice);
+    if (!result.ok) return save.unlocks.includes(weapon) ? "You already own it." : "Not enough saved coins.";
+    if (!writeSave(storage, result.save)) return "Could not save: purchase not kept.";
+    return `${WEAPONS[weapon].name} unlocked! Buy it from the merchant on a run.`;
+  }
+
+  private buyFromMerchant(id: ShopItemId): string {
+    const item = merchantStock(loadSave(browserStorage()).unlocks, this.weapon, this.upgrades, this.player.health, this.run.levelIndex).find(
+      (i) => i.id === id,
+    );
+    if (!item || !item.available) return item?.note ? `${item.name}: ${item.note.toLowerCase()}.` : "";
+    if (this.coins < item.price) return "Not enough coins.";
+    this.coins -= item.price;
+    if (id === "heal") {
+      this.player.healFull();
+      return `Healed! (-${HEAL_PRICE})`;
+    }
+    if (id.startsWith("upgrade:")) {
+      this.upgrades = applyUpgrade(this.upgrades, id.slice("upgrade:".length) as UpgradeId);
+      this.refreshStats();
+      return `${item.name} bought.`;
+    }
+    this.weapon = id.slice("weapon:".length) as WeaponId;
+    this.refreshStats();
+    return `Now carrying the ${item.name}.`;
   }
 
   private pauseGame(): void {
@@ -724,6 +873,8 @@ export class GameScene extends Phaser.Scene {
       score: this.score,
       runTimeMs: this.runTimeMs,
       rewardOnClear: this.levelRoom.reward && !canExit(this.room),
+      coins: this.coins,
+      weapon: WEAPONS[this.weapon].name,
     });
   }
 
@@ -768,12 +919,14 @@ export class GameScene extends Phaser.Scene {
     if (!result.died) return;
     this.enemies = this.enemies.filter((e) => e !== enemy);
     this.enemiesDefeated++;
+    this.coinPickups.drop(enemy.position, enemyCoins(enemy.stats.kind, enemy.stats.elite));
     const points = enemyScore(enemy.stats.kind, enemy.stats.elite, this.level.number);
     this.addScore(points, enemy.position);
     this.room = enemyDefeated(this.room);
     if (!canExit(this.room)) return;
 
     this.addScore(roomClearScore(this.level.number, this.isFinalRoom), null);
+    this.coinPickups.attract(); // the room is safe: leftover coins fly in
     this.refreshDoors();
     // Refresh now: the upgrade panel / victory stop update() before its own HUD refresh.
     this.updateHud();
@@ -828,9 +981,7 @@ export class GameScene extends Phaser.Scene {
     this.panel = null;
     playFx(this, "na-magic-spark", "magicSpark", this.player.position.x, this.player.position.y - 4, Depth.effects);
     this.upgrades = applyUpgrade(this.upgrades, id);
-    this.stats = computeStats(BASE_STATS, this.upgrades);
-    this.player.applyStats(this.stats);
-    this.gun = new FireCooldown(this.stats.fireIntervalMs);
+    this.refreshStats();
     this.player.body.enable = true;
     this.physics.resume();
     // Drop key presses made while the panel was open (e.g. a "1" or Space).
@@ -953,9 +1104,13 @@ export class GameScene extends Phaser.Scene {
   /** Records the best score (never throws on storage errors) and shows results. */
   private finishRun(outcome: RunResult["outcome"], roomsCleared: number, delayMs: number): void {
     const storage = browserStorage();
-    const merged = mergeBest(loadBest(storage), this.score, this.level.number);
-    const saved = saveBest(storage, merged.record);
+    const kept = coinsKept(this.coins, outcome);
+    const merged = recordRun(loadSave(storage), this.score, this.level.number, kept);
+    const saved = writeSave(storage, merged.save);
     const result: RunResult = {
+      coinsEarned: this.coinsEarned,
+      coinsKept: kept,
+      bank: merged.save.coins,
       outcome,
       score: this.score,
       levelReached: this.level.number,
@@ -963,11 +1118,22 @@ export class GameScene extends Phaser.Scene {
       runTimeMs: this.runTimeMs,
       enemiesDefeated: this.enemiesDefeated,
       roomsCleared,
-      best: merged.record,
+      best: { bestScore: merged.save.bestScore, bestLevel: merged.save.bestLevel },
       newBestScore: merged.newBestScore,
       saved,
     };
     this.time.delayedCall(delayMs, () => this.scene.launch("results", result));
+  }
+
+  /**
+   * Quitting from pause counts as a death for coins: half of the pocket coins
+   * are banked. The score is not recorded (as before). Never throws.
+   */
+  abandonRun(): void {
+    if (this.phase === "gameOver" || this.phase === "victory") return;
+    const storage = browserStorage();
+    writeSave(storage, recordRun(loadSave(storage), 0, 0, coinsKept(this.coins, "quit")).save);
+    this.coins = 0;
   }
 
   /** Dev-only diagnostics used to verify that restarts/transitions leave nothing behind. */
@@ -997,6 +1163,12 @@ export class GameScene extends Phaser.Scene {
       enemiesActive: this.enemyGroup.countActive(true),
       playerBullets: this.playerShots.count,
       enemyBullets: this.enemyShots.count,
+      coins: this.coins,
+      coinsEarned: this.coinsEarned,
+      coinPickups: this.coinPickups.count,
+      weapon: this.weapon,
+      npcs: this.npcs?.count ?? 0,
+      shopOpen: this.shop ? 1 : 0,
       solidRects: this.solidRects.length,
       breakables: this.world?.count ?? 0,
       animatedActive: this.world?.activeAnimated ?? 0,

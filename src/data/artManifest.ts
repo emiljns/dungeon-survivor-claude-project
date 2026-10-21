@@ -62,6 +62,15 @@ export const SHEETS = {
   leaf: { key: "na-leaf", file: "fx-leaf.png", frameWidth: 12, frameHeight: 7, source: "FX/Particle/Leaf.png" },
   snowFlake: { key: "na-snow-flake", file: "fx-snow.png", frameWidth: 8, frameHeight: 8, source: "FX/Particle/Snow.png" },
   vaseShards: { key: "na-vase-shards", file: "fx-vase-shards.png", frameWidth: 14, frameHeight: 14, source: "FX/Particle/Vase.png" },
+  // Economy and weapons (Milestone 10).
+  coin: { key: "na-coin", file: "item-coin.png", frameWidth: 10, frameHeight: 10, source: "Items/Treasure/Coin2.png" },
+  kunai: { key: "na-kunai", file: "proj-kunai.png", frameWidth: 14, frameHeight: 5, source: "FX/Projectile/Kunai.png" },
+  bigShuriken: { key: "na-big-shuriken", file: "proj-big-shuriken.png", frameWidth: 23, frameHeight: 23, source: "FX/Projectile/BigShuriken.png" },
+  magicShuriken: { key: "na-magic-shuriken", file: "proj-shuriken-magic.png", frameWidth: 16, frameHeight: 16, source: "FX/Projectile/ShurikenMagic.png" },
+  shopkeeper: { key: "na-shopkeeper", file: "npc-old-man.png", frameWidth: 16, frameHeight: 16, source: "Actor/Character/OldMan/SpriteSheet.png" },
+  merchant: { key: "na-merchant", file: "npc-master.png", frameWidth: 16, frameHeight: 16, source: "Actor/Character/Master/SpriteSheet.png" },
+  shopkeeperFace: { key: "na-shopkeeper-face", file: "face-old-man.png", frameWidth: 38, frameHeight: 38, source: "Actor/Character/OldMan/Faceset.png" },
+  merchantFace: { key: "na-merchant-face", file: "face-master.png", frameWidth: 38, frameHeight: 38, source: "Actor/Character/Master/Faceset.png" },
   woodShards: { key: "na-wood-shards", file: "fx-wood-shards.png", frameWidth: 16, frameHeight: 16, source: "FX/Particle/Wood.png" },
 } as const satisfies Record<string, SheetAsset>;
 
@@ -104,6 +113,14 @@ export const SHEET_SIZES: Readonly<Record<SheetId, readonly [number, number]>> =
   snowFlake: [56, 8],
   vaseShards: [84, 14],
   woodShards: [96, 16],
+  coin: [40, 10],
+  kunai: [14, 5],
+  bigShuriken: [46, 23],
+  magicShuriken: [32, 16],
+  shopkeeper: [64, 112],
+  merchant: [64, 112],
+  shopkeeperFace: [38, 38],
+  merchantFace: [38, 38],
 };
 
 /** Frame index of the 16px tile at (col, row) in a sheet. */
@@ -157,6 +174,9 @@ export const ANIMS: readonly AnimDef[] = [
   { key: "na-ripples", sheet: "ripples", frames: range(4), frameRate: 5, repeat: -1 },
   { key: "na-plant", sheet: "plant", frames: range(4), frameRate: 4, repeat: -1 },
   { key: "na-flag", sheet: "flag", frames: range(4), frameRate: 8, repeat: -1 },
+  { key: "na-coin-spin", sheet: "coin", frames: range(4), frameRate: 10, repeat: -1 },
+  { key: "na-big-shuriken-spin", sheet: "bigShuriken", frames: range(2), frameRate: 14, repeat: -1 },
+  { key: "na-magic-shuriken-spin", sheet: "magicShuriken", frames: range(2), frameRate: 18, repeat: -1 },
   // Critters: frame 0 stands, frame 1 steps (side view facing left; flipped for right).
   ...(["chicken", "cat", "frog", "fish"] as const).map((sheet) => ({ key: `na-${sheet}-move`, sheet, frames: [0, 1], frameRate: 6, repeat: -1 })),
 ];

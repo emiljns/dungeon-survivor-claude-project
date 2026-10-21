@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import { newRun } from "../logic/progression.ts";
-import { browserStorage, loadBest } from "../systems/HighScoreStore.ts";
+import { browserStorage } from "../systems/HighScoreStore.ts";
+import { loadSave } from "../systems/SaveStore.ts";
 import { FONT_FAMILY, GAME_HEIGHT, GAME_WIDTH, PALETTE, Tuning } from "./config.ts";
 
 export class MenuScene extends Phaser.Scene {
@@ -20,15 +21,16 @@ export class MenuScene extends Phaser.Scene {
       .text(
         cx,
         196,
-        ["WASD       Move", "Mouse      Aim", "Hold LMB   Shoot", "Space      Dash", "E          Exit door", "Esc / P    Pause"].join("\n"),
+        ["WASD       Move", "Mouse      Aim", "Hold LMB   Shoot", "Space      Dash", "E          Talk / exit door", "Esc / P    Pause"].join("\n"),
         { ...small, lineSpacing: 3 },
       )
       .setOrigin(0.5);
 
-    // Missing, malformed or blocked storage all read as "no best yet".
-    const best = loadBest(browserStorage());
+    // Missing, malformed or blocked storage all read as a fresh save (v1 best scores migrate).
+    const best = loadSave(browserStorage());
+    const record = best.bestScore > 0 ? `BEST ${best.bestScore}  ·  LEVEL ${best.bestLevel}` : "NO BEST SCORE YET";
     this.add
-      .text(cx, 122, best.bestScore > 0 ? `BEST ${best.bestScore}  ·  LEVEL ${best.bestLevel}` : "NO BEST SCORE YET", {
+      .text(cx, 122, `${record}   ·   SAVED COINS ${best.coins}`, {
         fontFamily: FONT_FAMILY,
         fontSize: "11px",
         color: PALETTE.accent,
@@ -56,5 +58,12 @@ export class MenuScene extends Phaser.Scene {
     };
     this.input.once("pointerdown", start);
     this.input.keyboard?.once("keydown-ENTER", start);
+    // Until the Home Village prologue exists, the village shop opens from here.
+    this.add.text(cx, GAME_HEIGHT - 40, "[S] Village shop", { ...small, color: PALETTE.textDim }).setOrigin(0.5);
+    this.input.keyboard?.once("keydown-S", () => {
+      if (started) return;
+      started = true;
+      this.scene.start("shop");
+    });
   }
 }

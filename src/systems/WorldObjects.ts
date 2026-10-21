@@ -87,21 +87,21 @@ export class WorldObjects {
     return this.breakables.length;
   }
 
-  /** Applies a hit to breakable `index` (into solidRects). Returns true if it broke. */
-  hit(index: number, damage: number): boolean {
+  /** Applies a hit to breakable `index` (into solidRects). Returns what broke, or null. */
+  hit(index: number, damage: number): { readonly at: { x: number; y: number }; readonly shards: "vase" | "wood" } | null {
     const b = this.breakables[index];
-    if (!b) return false;
+    if (!b) return null;
     b.hp -= damage;
     if (b.hp > 0) {
       b.sprite.setTintFill(0xffffff);
       this.scene.time.delayedCall(50, () => b.sprite.active && b.sprite.clearTint());
-      return false;
+      return null;
     }
     this.breakables = this.breakables.filter((x) => x !== b);
     this.shatter(b);
     this.bodies.remove(b.body, true, true);
     b.sprite.destroy();
-    return true;
+    return { at: { x: b.rect.x + TILE / 2, y: b.rect.y + TILE / 2 }, shards: b.def.breakable?.shards ?? "wood" };
   }
 
   /** A few shards fly out and fade (one-off, only when something breaks). */

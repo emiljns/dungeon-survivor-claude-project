@@ -66,9 +66,11 @@ original pack path, plus the per-level floor and wall choices.
 | Mouse | Aim |
 | Hold left mouse | Shoot |
 | Space | Dash (brief invulnerability; meter under HP) |
-| E | Use an open door |
+| E | Talk to the merchant / shopkeeper, or use an open door |
 | Esc / P | Pause / resume (M on the pause screen quits to the menu) |
 | 1 / 2 / 3 or click | Pick an upgrade |
+| 1–6 or click, Esc / E | Buy in a shop, leave the shop |
+| S (title menu) | Open the village shop |
 | R / click, M | Retry or menu on the results screen |
 
 ## How a run works
@@ -93,10 +95,21 @@ original pack path, plus the per-level floor and wall choices.
     speed, move speed, max HP, and an extra bullet.
 -   **Score:** enemies (worth more on deeper levels), plus room and level
     clears and a victory bonus.
+-   **Coins:** enemies and breakable pots and crates drop coins, which
+    fly to you when you're close (and all at once when an area is
+    cleared). Victory banks every coin you carry; death or quitting banks
+    half.
+-   **Shops:** the travelling merchant in each level's first room sells
+    a full heal, run upgrades and your unlocked weapons, for pocket
+    coins. The village shop (title menu `S`, or the shopkeeper on the
+    village test map) unlocks weapons forever for saved coins: the Kunai
+    (fast, pierces one), the Magic Shuriken (homing) and the Big Shuriken
+    (heavy, pierces three). Every run starts with the basic shuriken.
 -   **Results:** shows score, highest level, time, enemies defeated,
-    rooms cleared and best score. The best score and level are saved in
-    the browser's local storage. If storage is blocked, the game still
-    works and says "(not saved)".
+    rooms cleared, best score, and coins earned, kept and saved. The save
+    (best score, coins, unlocks) lives in the browser's local storage; an
+    old v1 best score is carried over. If storage is blocked, the game
+    still works and says "(not saved)".
 
 ## Tuning
 

@@ -1,6 +1,8 @@
 // Run progression through five ordered levels of hand-authored rooms, plus the
 // run-wide state (score, upgrades, timer) carried across room transitions.
 
+import { isWeaponId, STARTER_WEAPON, type WeaponId } from "../data/weapons.ts";
+import { MAX_COINS } from "./economy.ts";
 import { NO_UPGRADES, sanitizeUpgrades, STAT_LIMITS, type UpgradeLevels } from "./upgrades.ts";
 
 /** Data passed to the game scene on every (re)start and room transition. */
@@ -15,6 +17,12 @@ export interface RunState {
   /** Time spent actually playing (excludes pauses and upgrade panels). */
   readonly runTimeMs: number;
   readonly upgrades: UpgradeLevels;
+  /** Pocket coins: spent at the merchant, banked (all or half) when the run ends. */
+  readonly coins: number;
+  /** Every coin picked up this run (for the results screen). */
+  readonly coinsEarned: number;
+  /** The weapon carried this run (every run starts with the shuriken). */
+  readonly weapon: WeaponId;
 }
 
 export type RunAdvance =
@@ -32,6 +40,9 @@ export function newRun(maxHealth: number): RunState {
     enemiesDefeated: 0,
     runTimeMs: 0,
     upgrades: NO_UPGRADES,
+    coins: 0,
+    coinsEarned: 0,
+    weapon: STARTER_WEAPON,
   };
 }
 
@@ -75,6 +86,9 @@ export function sanitizeRunState(data: unknown, roomsPerLevel: readonly number[]
     enemiesDefeated: nonNegInt(d.enemiesDefeated, 0),
     runTimeMs: time,
     upgrades,
+    coins: Math.min(MAX_COINS, nonNegInt(d.coins, 0)),
+    coinsEarned: Math.min(MAX_COINS, nonNegInt(d.coinsEarned, 0)),
+    weapon: isWeaponId(d.weapon) ? d.weapon : STARTER_WEAPON,
   };
 }
 

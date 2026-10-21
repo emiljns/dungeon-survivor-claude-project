@@ -3,6 +3,7 @@ import { DECOR } from "../src/data/decor.ts";
 import { biomeFor, resolveObject } from "../src/data/biomes.ts";
 import { TEST_MAP, type MapDef } from "../src/data/maps.ts";
 import { WORLD_MAPS } from "../src/data/worldMaps.ts";
+import { LEVELS } from "../src/data/levels.ts";
 import { blockingTiles, coveredTiles } from "../src/logic/objects.ts";
 import { GAME_HEIGHT, GAME_WIDTH } from "../src/game/config.ts";
 import { inRect, triggerRect, type TileRect } from "../src/logic/encounter.ts";
@@ -87,6 +88,17 @@ describe.each(MAPS.map((m) => [m.layout.id, m] as const))("map %s", (_id, map) =
     }
   });
 
+  it("NPCs stand on open floor clear of objects, spawns and the start, and can be reached on foot", () => {
+    const reach = flood(l, tileOf(l.playerSpawn.x, l.playerSpawn.y), { gatesClosed: false, doorOpen: true });
+    const special = new Set([...l.enemySpawns.map((s) => tileOf(s.x, s.y)), tileOf(l.playerSpawn.x, l.playerSpawn.y)].map(key));
+    for (const n of map.npcs ?? []) {
+      const where = `${n.kind} at ${key(n)}`;
+      expect(l.wall[n.row]?.[n.col] === false && !l.low[n.row]?.[n.col] && !blocked.has(key(n)) && !special.has(key(n)), where).toBe(true);
+      const neighbours = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dc, dr]) => `${n.col + (dc ?? 0)},${n.row + (dr ?? 0)}`);
+      expect(neighbours.some((k) => reach.has(k)), `${where} reachable`).toBe(true);
+    }
+  });
+
   it("critters start where they can live (open ground; water for fish), and only animals of the biome are placed", () => {
     const biome = biomeFor(map.theme ?? "");
     for (const c of map.critters ?? []) {
@@ -162,5 +174,25 @@ describe.each(MAPS.map((m) => [m.layout.id, m] as const))("map %s", (_id, map) =
 
   it("water (where a map has it) blocks walking but is not a wall (bullets fly over it)", () => {
     for (let r = 0; r < l.rows; r++) for (let c = 0; c < l.cols; c++) if (l.low[r]?.[c]) expect(l.wall[r]?.[c]).toBe(false);
+  });
+});
+
+describe("shops on maps and levels", () => {
+  it("the village map has the shopkeeper; every other world map has a travelling merchant", () => {
+    expect(WORLD_MAPS.village.npcs?.map((n) => n.kind)).toEqual(["shopkeeper"]);
+    for (const key of ["forest", "river", "snow"] as const) expect(WORLD_MAPS[key].npcs?.map((n) => n.kind), key).toEqual(["merchant"]);
+  });
+
+  it("every level's arrival room has the merchant on open floor beside the start", () => {
+    for (const level of LEVELS) {
+      const room = level.rooms[0];
+      expect(room?.npcs?.map((n) => n.kind), level.name).toEqual(["merchant"]);
+      if (!room?.npcs?.[0]) continue;
+      const l = parseLayout(room.layout.rows, T);
+      const n = room.npcs[0];
+      expect(l.wall[n.row]?.[n.col], level.name).toBe(false);
+      expect(l.props.some((p) => p.rect.x === n.col * T && p.rect.y === n.row * T), level.name).toBe(false);
+      expect(Math.hypot(n.col * T - l.playerSpawn.x, n.row * T - l.playerSpawn.y), level.name).toBeGreaterThan(T);
+    }
   });
 });

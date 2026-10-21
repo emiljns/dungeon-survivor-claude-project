@@ -5,6 +5,7 @@ import { GameScene } from "./game/GameScene.ts";
 import { MenuScene } from "./game/MenuScene.ts";
 import { PauseScene } from "./game/PauseScene.ts";
 import { ResultsScene } from "./game/ResultsScene.ts";
+import { ShopScene } from "./game/ShopScene.ts";
 
 const parent = document.querySelector<HTMLDivElement>("#app");
 if (!parent) throw new Error("Missing #app mount element");
@@ -25,7 +26,7 @@ const game = new Phaser.Game({
   },
   // Boot runs first (loads sprite art when requested). Later scenes render on
   // top: Pause and Results overlay the game.
-  scene: [BootScene, MenuScene, GameScene, PauseScene, ResultsScene],
+  scene: [BootScene, MenuScene, GameScene, PauseScene, ResultsScene, ShopScene],
 });
 
 // Dev builds expose the game for manual diagnostics (e.g. GameScene.debugSnapshot()).

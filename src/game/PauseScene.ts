@@ -72,7 +72,10 @@ export class PauseScene extends Phaser.Scene {
   private quitToMenu(): void {
     if (this.done) return;
     this.done = true;
-    // Quitting abandons the run: it is not recorded as a best score.
+    // Quitting abandons the run: it is not recorded as a best score, and like
+    // a death it banks only half of the pocket coins.
+    const game = this.scene.get("game") as unknown as { abandonRun?: () => void };
+    game.abandonRun?.();
     this.scene.stop("game");
     this.scene.start("menu");
   }

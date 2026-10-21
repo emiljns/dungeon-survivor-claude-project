@@ -114,18 +114,19 @@ collision boxes, room layouts and combat behaviour stay unchanged.
     breakable, light sources with colour).
 -   [x] Animated scenery, ambient creatures, ambient particles.
 -   [x] Outdoor tilesets (village, forest, river, snow).
--   [ ] Test map (`?testmap=world&theme=…`) reviewed by the user.
-    *(Built and self-tested; waiting for the user's review.)*
+-   [x] Test maps (`?testmap=world&theme=…`, one per biome) reviewed by the user.
     **Acceptance:** a living outdoor test area
     with readable threats and unchanged performance.
 
 ## Milestone 10 --- Economy
 
--   [ ] Coins (enemy and breakable drops, magnet pickup), pocket coins.
--   [ ] Save v2: saved coins and unlocks (validated, failure-tolerant,
+-   [x] Coins (enemy and breakable drops, magnet pickup), pocket coins.
+-   [x] Save v2: saved coins and unlocks (validated, failure-tolerant,
     migrating the v1 best score).
--   [ ] Shuriken weapons; village shop (unlocks); travelling merchant.
--   [ ] Death keeps half the pocket coins, victory keeps all.
+-   [x] Shuriken weapons; village shop (unlocks); travelling merchant.
+-   [x] Death keeps half the pocket coins, victory keeps all.
+-   [ ] Economy reviewed by the user. *(Built and self-tested; waiting
+    for the user's review.)*
     **Acceptance:** coins, shop and weapons work and persist correctly.
 
 ## Milestone 11 --- Levels
