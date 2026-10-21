@@ -8,4 +8,4 @@ import type { EnemyKind } from "../logic/enemyStats.ts";
 export const PLAYER_BODY = 10;
 
 /** Enemy body size before elite scaling (chasers use a circle of this diameter). */
-export const ENEMY_BODY: Readonly<Record<EnemyKind, number>> = { chaser: 12, tank: 16, ranged: 12, boss: 28 };
+export const ENEMY_BODY: Readonly<Record<EnemyKind, number>> = { chaser: 12, tank: 16, ranged: 12, boss: 28, miniboss: 22 };

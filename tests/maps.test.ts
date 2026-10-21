@@ -5,6 +5,7 @@ import { TEST_MAP, type MapDef } from "../src/data/maps.ts";
 import { WORLD_MAPS } from "../src/data/worldMaps.ts";
 import { LEVELS } from "../src/data/levels.ts";
 import { HOME_VILLAGE } from "../src/data/village.ts";
+import { BAMBOO_FOREST } from "../src/data/forestLevel.ts";
 import { parseVillage, villageLevel } from "../src/data/maps.ts";
 import { Tuning } from "../src/game/config.ts";
 import { solidObjectGrid } from "../src/logic/objects.ts";
@@ -14,7 +15,7 @@ import { inRect, triggerRect, type TileRect } from "../src/logic/encounter.ts";
 import { parseLayout, type ParsedLayout, type TilePos } from "../src/logic/layout.ts";
 
 const T = 16;
-const MAPS: readonly MapDef[] = [TEST_MAP, ...Object.values(WORLD_MAPS), HOME_VILLAGE];
+const MAPS: readonly MapDef[] = [TEST_MAP, ...Object.values(WORLD_MAPS), HOME_VILLAGE, BAMBOO_FOREST];
 
 const key = (p: TilePos): string => `${p.col},${p.row}`;
 const tileOf = (x: number, y: number): TilePos => ({ col: Math.floor(x / T), row: Math.floor(y / T) });
@@ -260,5 +261,16 @@ describe("Home Village prologue", () => {
     expect(parseVillage({ village: true })).toBe(true);
     expect(parseVillage({ village: "yes" })).toBe(false);
     expect(parseVillage(null)).toBe(false);
+  });
+});
+
+describe("Bamboo Forest", () => {
+  const l = parseLayout(BAMBOO_FOREST.layout.rows, T);
+  it("is a large map: at least four screens of area", () => {
+    expect((l.cols * T * l.rows * T) / (GAME_WIDTH * GAME_HEIGHT)).toBeGreaterThanOrEqual(4);
+  });
+  it("is full of bamboo, and its closed gates are brambles", () => {
+    expect((BAMBOO_FOREST.objects ?? []).filter((o) => o.id === "bamboo").length).toBeGreaterThan(5);
+    expect(biomeFor("forest")?.gate).toBeDefined();
   });
 });

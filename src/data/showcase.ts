@@ -4,6 +4,7 @@
 
 import { LEVELS, type LevelDefinition } from "./levels.ts";
 import { STOREROOM } from "./rooms.ts";
+import { THEMES } from "./themes.ts";
 
 export interface ShowcaseOptions {
   readonly theme: string;
@@ -19,10 +20,16 @@ export function parseShowcase(data: unknown): ShowcaseOptions | null {
   return { theme: typeof theme === "string" ? theme : "ruins", boss: boss === true };
 }
 
-/** A one-room level using the theme and difficulty of the level with that theme (default: level 1). */
+/**
+ * A one-room level with the chosen theme (default: the dungeon ruins) and the
+ * difficulty and enemy looks of the level using that theme, if any.
+ */
 export function showcaseLevel(opts: ShowcaseOptions): LevelDefinition {
-  const base = LEVELS.find((l) => l.theme.id === opts.theme) ?? LEVELS[0];
-  if (!base) throw new Error("No levels defined");
+  const theme = Object.values(THEMES).find((t) => t.id === opts.theme) ?? THEMES.ruins;
+  const level = LEVELS.find((l) => l.theme.id === theme.id);
+  const first = LEVELS[0];
+  if (!first) throw new Error("No levels defined");
+  const base: LevelDefinition = level ?? { number: 1, name: "Dungeon Ruins", theme, difficulty: first.difficulty, rooms: [] };
   const chaser = { kind: "chaser", elite: false } as const;
   return {
     ...base,

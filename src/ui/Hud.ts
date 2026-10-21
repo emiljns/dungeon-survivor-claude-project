@@ -35,6 +35,7 @@ export class Hud {
   private shownBoss = -1;
   private bossBar: Phaser.GameObjects.Graphics | null = null;
   private bossLabel: Phaser.GameObjects.Text | null = null;
+  private bannerObjs: Phaser.GameObjects.Text[] = [];
 
   constructor(private readonly scene: Phaser.Scene, roomLabel: string) {
     const label = { fontFamily: FONT_FAMILY, fontSize: "10px", color: PALETTE.text, fontStyle: "bold" };
@@ -77,6 +78,11 @@ export class Hud {
 
   /** Large centred message that fades out. */
   banner(title: string, subtitle: string, color: string = PALETTE.text, big = false): void {
+    // A new banner replaces the one still showing, so two never overlap.
+    for (const o of this.bannerObjs) {
+      this.scene.tweens.killTweensOf(o);
+      o.destroy();
+    }
     const cx = GAME_WIDTH / 2;
     const objs = [
       this.scene.add
@@ -87,6 +93,7 @@ export class Hud {
         .setOrigin(0.5),
     ];
     for (const o of objs) o.setScrollFactor(0).setDepth(Depth.hud).setStroke("#05070d", 4);
+    this.bannerObjs = objs;
     this.scene.tweens.add({
       targets: objs,
       alpha: 0,
@@ -98,7 +105,12 @@ export class Hud {
 
   /** Shows the large boss bar at the bottom of the screen. */
   showBoss(name: string): void {
-    if (this.bossBar) return;
+    if (this.bossBar) {
+      // A later boss on the same map (the final boss after the mini-boss).
+      this.bossLabel?.setText(name);
+      this.shownBoss = -1;
+      return;
+    }
     this.bossLabel = this.scene.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT - 26, name, { fontFamily: FONT_FAMILY, fontSize: "9px", color: "#e0c3ff", fontStyle: "bold" })
       .setOrigin(0.5)

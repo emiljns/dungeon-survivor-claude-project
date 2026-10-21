@@ -81,6 +81,9 @@ export const DECOR = {
   rockGrey: { sheet: "nature", col: 15, row: 14, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 0, cols: 2, rows: 2 }, color: 0x7f8a78 },
   rockGreyBig: { sheet: "nature", col: 17, row: 14, w: 4, h: 3, kind: "solid", solid: { col: 0, row: 1, cols: 4, rows: 2 }, canopy: 1, color: 0x7f8a78 },
   rockGreyTall: { sheet: "nature", col: 21, row: 14, w: 2, h: 3, kind: "solid", solid: { col: 0, row: 1, cols: 2, rows: 2 }, canopy: 1, color: 0x7f8a78 },
+  bamboo: { sheet: "nature", col: 11, row: 8, w: 1, h: 2, kind: "solid", solid: { col: 0, row: 1, cols: 1, rows: 1 }, canopy: 1, color: 0x8ac040 },
+  shrub: { sheet: "nature", col: 10, row: 8, w: 1, h: 1, kind: "solid", solid: { col: 0, row: 0, cols: 1, rows: 1 }, color: 0x6aa84f },
+  hay: { sheet: "nature", col: 9, row: 8, w: 1, h: 1, kind: "solid", solid: { col: 0, row: 0, cols: 1, rows: 1 }, color: 0xe0a050 },
   stump: { sheet: "nature", col: 0, row: 8, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 1, cols: 2, rows: 1 }, color: 0x8a5a3a },
   // Ground detail (walk over).
   bush: plant(0, 10, 0x8ab840),

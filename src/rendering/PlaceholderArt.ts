@@ -30,6 +30,7 @@ export const ENEMY_TEXTURE: Readonly<Record<EnemyKind, string>> = {
   tank: Tex.tank,
   ranged: Tex.ranged,
   boss: Tex.boss,
+  miniboss: Tex.boss,
 };
 
 const OUTLINE = 0x0a0d16;

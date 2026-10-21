@@ -4,7 +4,7 @@
 import type { EnemyKind } from "./enemyStats.ts";
 
 export const SCORE = {
-  enemy: { chaser: 100, tank: 250, ranged: 150, boss: 5000 } satisfies Record<EnemyKind, number>,
+  enemy: { chaser: 100, tank: 250, ranged: 150, boss: 5000, miniboss: 1500 } satisfies Record<EnemyKind, number>,
   eliteMultiplier: 3,
   roomClear: 200,
   levelClear: 1000,

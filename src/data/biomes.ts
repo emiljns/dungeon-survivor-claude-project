@@ -40,6 +40,8 @@ export interface BiomeArt {
   readonly slots: Readonly<Record<SlotId, readonly DecorId[]>>;
   /** Animals that live here (none on the snowy mountain: too cold). */
   readonly critters: readonly CritterKind[];
+  /** What a closed encounter gate looks like here (one tile per gate tile). */
+  readonly gate: TileRef & { readonly tint: number };
 }
 
 const at = (sheet: SheetId, col: number, row: number): TileRef => ({ sheet, col, row });
@@ -57,6 +59,9 @@ const SNOW_SHORE = { col: 13, row: 0 } as const;
 const YELLOW_PATH = { col: 0, row: 7 } as const;
 const GREEN_PATH = { col: 11, row: 7 } as const;
 const SNOW_PATH = { col: 0, row: 14 } as const;
+// Closed gates: thorny brambles (a spiky bush tinted dry brown) or a snow drift.
+const BRAMBLE = { sheet: "nature", col: 9, row: 10, tint: 0xa07858 } as const;
+const SNOW_DRIFT = { sheet: "nature", col: 10, row: 12, tint: 0xe8f0ff } as const;
 
 export const BIOMES: Readonly<Record<string, BiomeArt>> = {
   // Morning in the home village: warm grass, blossom, dirt lanes, animals.
@@ -73,11 +78,13 @@ export const BIOMES: Readonly<Record<string, BiomeArt>> = {
       $pebble: ["pebbles", "stones"],
     },
     critters: ["chicken", "cat", "frog", "fish"],
+    gate: BRAMBLE,
   },
   // Afternoon under a dense, dark canopy: pines, big oaks, ferns, grey rock.
   forest: {
     ground: greenGrass, detailChance: 0.3, plateauTint: 0x6f8a62, cliff: GREY_CLIFF, water: GRASS_SHORE, path: GREEN_PATH,
-    particles: "leaves", wallTrees: ["bigOak", "pine", "pine", "oak", "pineGrove", "deadTree"], wallTreeDensity: 0.85, wallTreeTint: 0x98a890,
+    // The Bamboo Forest: raised ground is a bamboo thicket with the odd pine and oak.
+    particles: "leaves", wallTrees: ["bamboo", "bamboo", "bamboo", "pine", "bamboo", "oak", "bigOak"], wallTreeDensity: 0.85, wallTreeTint: 0x98a890,
     slots: {
       $tree: ["pine", "oak", "pine", "deadTree"],
       $bigTree: ["bigOak", "bigAutumn"],
@@ -88,6 +95,7 @@ export const BIOMES: Readonly<Record<string, BiomeArt>> = {
       $pebble: ["greyStones", "pebbles"],
     },
     critters: ["frog", "cat"],
+    gate: BRAMBLE,
   },
   // Golden hour by the water: olive trees, reeds, sun-warmed stone.
   river: {
@@ -103,6 +111,7 @@ export const BIOMES: Readonly<Record<string, BiomeArt>> = {
       $pebble: ["pebbles", "stones"],
     },
     critters: ["frog", "fish"],
+    gate: BRAMBLE,
   },
   // Dusk on the mountain: snow, snowy pines, igloos, no animals.
   snow: {
@@ -118,6 +127,7 @@ export const BIOMES: Readonly<Record<string, BiomeArt>> = {
       $pebble: ["greyStones", "snowball"],
     },
     critters: [],
+    gate: SNOW_DRIFT,
   },
 };
 

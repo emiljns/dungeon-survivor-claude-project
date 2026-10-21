@@ -7,7 +7,7 @@ import { canUpgrade, UPGRADES, type UpgradeId, type UpgradeLevels } from "./upgr
 import type { Vec2 } from "./vector.ts";
 
 /** Coins an enemy drops; tougher enemies drop more, elites double. */
-export const ENEMY_COINS: Readonly<Record<EnemyKind, number>> = { chaser: 2, ranged: 3, tank: 5, boss: 30 };
+export const ENEMY_COINS: Readonly<Record<EnemyKind, number>> = { chaser: 2, ranged: 3, tank: 5, boss: 30, miniboss: 12 };
 
 export function enemyCoins(kind: EnemyKind, elite: boolean): number {
   return ENEMY_COINS[kind] * (elite ? 2 : 1);

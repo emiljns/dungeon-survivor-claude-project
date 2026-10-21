@@ -1,7 +1,8 @@
 // Enemy stat types plus difficulty/elite scaling. Base values live in
 // src/data/enemies.ts; these functions keep scaled values in safe bounds.
 
-export type EnemyKind = "chaser" | "tank" | "ranged" | "boss";
+/** "miniboss": a scaled-down boss (same radial pattern, fewer bullets, less health). */
+export type EnemyKind = "chaser" | "tank" | "ranged" | "boss" | "miniboss";
 export type AttackPattern = "aimed" | "radial";
 
 export interface EnemyAttack {
@@ -44,20 +45,20 @@ export const LIMITS = {
 
 const clamp = (v: number, lo: number, hi: number): number => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo);
 
-/** Applies a level's difficulty multipliers; bosses only scale health. */
+/** Applies a level's difficulty multipliers; bosses and mini-bosses only scale health. */
 export function scaleForDifficulty(stats: EnemyStats, d: Difficulty): EnemyStats {
   const hpMul = clamp(d.healthMul, LIMITS.healthMul.min, LIMITS.healthMul.max);
   const spMul = clamp(d.speedMul, LIMITS.speedMul.min, LIMITS.speedMul.max);
   return {
     ...stats,
     maxHealth: Math.round(clamp(stats.maxHealth * hpMul, LIMITS.maxHealth.min, LIMITS.maxHealth.max)),
-    speed: stats.kind === "boss" ? stats.speed : clamp(stats.speed * spMul, LIMITS.speed.min, LIMITS.speed.max),
+    speed: stats.kind === "boss" || stats.kind === "miniboss" ? stats.speed : clamp(stats.speed * spMul, LIMITS.speed.min, LIMITS.speed.max),
   };
 }
 
 /** Elite variant used for each level's final room: tougher, bigger, faster attacks. */
 export function makeElite(stats: EnemyStats): EnemyStats {
-  if (stats.elite || stats.kind === "boss") return stats;
+  if (stats.elite || stats.kind === "boss" || stats.kind === "miniboss") return stats;
   return {
     ...stats,
     elite: true,

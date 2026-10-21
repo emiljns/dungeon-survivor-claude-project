@@ -1,5 +1,6 @@
 import * as Phaser from "phaser";
-import { ENEMY_SHEET, idleFrame, walkAnimKey, type Direction } from "../data/artManifest.ts";
+import { idleFrame, walkAnimKey, type Direction } from "../data/artManifest.ts";
+import type { EnemyLook } from "../data/bestiary.ts";
 import { ENEMY_BODY } from "../data/hitboxes.ts";
 import { Depth, TILE } from "../game/config.ts";
 import {
@@ -57,6 +58,8 @@ export class Enemy {
   /** Sprite-art mode: directional walk animations (boss: floating idle loop). */
   private readonly animated: boolean;
   private facing: Direction = "down";
+  /** Bosses and mini-bosses: float on an idle loop, enrage, never pushed. */
+  private readonly isBoss: boolean;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -66,12 +69,15 @@ export class Enemy {
     readonly stats: EnemyStats,
     /** Room simulation time at spawn (pause-safe; not Phaser's wall-clock `time.now`). */
     now: number,
+    /** The level's art for this kind (sheet, and the idle loop for bosses). */
+    private readonly look: EnemyLook,
   ) {
     this.healthState = createHealth(stats.maxHealth);
     this.animated = artMode(scene) === "ninja";
-    this.sprite = scene.physics.add.sprite(x, y, this.textureFor(stats.kind), this.animated && stats.kind !== "boss" ? idleFrame("down") : undefined);
+    this.isBoss = stats.kind === "boss" || stats.kind === "miniboss";
+    this.sprite = scene.physics.add.sprite(x, y, this.textureFor(stats.kind), this.animated && !this.isBoss ? idleFrame("down") : undefined);
     this.sprite.setDepth(Depth.actors);
-    if (this.animated && stats.kind === "boss") this.sprite.play("na-boss-idle");
+    if (this.animated && this.isBoss && look.idleAnim) this.sprite.play(look.idleAnim);
     group.add(this.sprite);
     // Body slightly smaller than the art; it scales with the sprite (elites).
     const size = BODY_SIZE[stats.kind];
@@ -79,7 +85,7 @@ export class Enemy {
     if (stats.kind === "chaser") this.body.setCircle(size / 2, offset, offset);
     else this.body.setSize(size, size);
     // Tanks and the boss shrug off being shoved by other enemies.
-    if (stats.kind === "tank" || stats.kind === "boss") this.body.pushable = false;
+    if (stats.kind === "tank" || this.isBoss) this.body.pushable = false;
 
     // Cached blob shadow sized to the body (32px-wide texture).
     const shadowW = size * stats.scale * 1.3;
@@ -171,7 +177,7 @@ export class Enemy {
   private attack(ctx: EnemyContext): void {
     const base = this.stats.attack;
     if (!base || !this.attackCycle) return;
-    const attack = this.stats.kind === "boss" ? bossAttackFor(base, healthFraction(this.healthState)) : base;
+    const attack = this.isBoss ? bossAttackFor(base, healthFraction(this.healthState)) : base;
     const canSee = ctx.onScreen(this.position) && ctx.hasLineOfSight(this.position, ctx.player);
     const step = stepAttack(this.attackCycle, ctx.now, attack, canSee);
     this.attackCycle = step.state;
@@ -214,14 +220,14 @@ export class Enemy {
 
   private textureFor(kind: EnemyStats["kind"]): string {
     if (!this.animated) return ENEMY_TEXTURE[kind];
-    return kind === "boss" ? sheetKey("bossIdle") : sheetKey(ENEMY_SHEET[kind]);
+    return sheetKey(this.look.sheet);
   }
 
   /** Walks facing its movement direction; holds the facing frame when standing still. */
   private animate(dir: Vec2, moving: boolean): void {
-    if (this.stats.kind === "boss") return; // the boss floats on its idle loop
+    if (this.isBoss) return; // bosses float on their idle loop
     this.facing = facingFromVector(dir, this.facing);
-    const sheet = ENEMY_SHEET[this.stats.kind];
+    const sheet = this.look.sheet;
     if (moving) this.sprite.play(walkAnimKey(sheet, this.facing), true);
     else {
       this.sprite.anims.stop();
@@ -231,9 +237,9 @@ export class Enemy {
 
   private die(): void {
     // Smoke puff for regular enemies, an explosion for elites and the boss.
-    const big = this.stats.elite || this.stats.kind === "boss";
+    const big = this.stats.elite || this.isBoss;
     playFx(this.scene, big ? "na-explosion" : "na-smoke", big ? "explosion" : "smoke", this.sprite.x, this.sprite.y, Depth.effects, {
-      scale: this.stats.kind === "boss" ? 1.6 : big ? 1.1 : 0.75,
+      scale: this.isBoss ? 1.6 : big ? 1.1 : 0.75,
     });
     this.body.setVelocity(0, 0);
     this.body.enable = false;
@@ -244,7 +250,7 @@ export class Enemy {
       targets: this.sprite,
       scale: this.stats.scale * 1.8,
       alpha: 0,
-      duration: this.stats.kind === "boss" ? 600 : 220,
+      duration: this.isBoss ? 600 : 220,
       onComplete: () => this.sprite.destroy(),
     });
   }
@@ -255,8 +261,8 @@ export class Enemy {
   }
 
   private drawBar(): void {
-    // The boss uses the large HUD bar instead.
-    if (this.stats.kind === "boss") return;
+    // Bosses use the large HUD bar instead.
+    if (this.isBoss) return;
     const w = this.barWidth;
     this.bar.clear();
     this.bar.fillStyle(this.stats.elite ? 0xffd166 : 0x0a0d16).fillRect(0, 0, w, 3);

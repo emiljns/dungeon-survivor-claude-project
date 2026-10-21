@@ -804,6 +804,62 @@
 -   **Until the new levels exist**, the gate leads into the current v1
     level 1 (Dungeon Ruins). The Bamboo Forest replaces it next.
 
+## Milestone 11 — Bamboo Forest, level 1 (2026-10-21)
+
+-   **Level 1 is now one continuous map** (`src/data/forestLevel.ts`,
+    120×64 tiles, about 8.7 screens), replacing the four Dungeon Ruins
+    rooms. A `mapLevel()` helper turns any v2 map into a one-room level
+    whose exit opens once every encounter is cleared.
+-   **The layout:**
+    1.  a safe arrival clearing with the merchant;
+    2.  a cramped winding path;
+    3.  the round Mushroom Ring (two waves);
+    4.  the Bamboo Thicket (an ambush in the middle, with an upgrade);
+    5.  the mini-boss glade (an upgrade);
+    6.  a long path to the Giant Bamboo's round arena (two rock
+        pillars, reinforcement waves); the exit is at its south edge.
+
+    That is two upgrades, as v1 level 1 had, so a run still has 9.
+-   **Bestiary** (`src/data/bestiary.ts`): each level can dress the
+    behaviour families in its biome's monsters and name its own bosses.
+    -   The forest has red spiders (chaser), pandas (tank) and red
+        mushrooms (ranged). Red and white were picked because they read
+        on green; the green Bamboo monster would blend in.
+    -   Levels without a bestiary keep the v1 looks; the Hollow Warden
+        stays the level 5 boss.
+-   **Mini-boss** is a new enemy kind: the boss pattern scaled down (32
+    HP, 6-bullet radial bursts, enrage below half, hitbox 22, locked by
+    the hitbox test).
+    -   The orange **Young Giant Bamboo** fights with a wave of adds.
+    -   The green **Giant Bamboo** is a gentler first boss than the Hollow
+        Warden (60 HP, 8-bullet bursts) and comes with two reinforcement
+        waves.
+    -   The boss bar renames itself when the final boss follows the
+        mini-boss.
+-   **Forest look:** bamboo (a new 1×2 solid object) dominates the
+    raised ground. Closed gates outdoors are brambles (a snow drift in
+    the snow) with a thin red edge, instead of the dungeon's red bars.
+-   **Small fixes found in review:** a new banner now replaces one still
+    showing (two overlapped when the start banner was still up), and
+    map levels drop the "ROOM 1/1" counter.
+-   **Tests:**
+    -   v1 room levels and v2 map levels are checked separately.
+    -   Map levels must have a merchant, a mini-boss with adds midway and
+        the boss in the last encounter.
+    -   Their bestiary sheets must exist.
+    -   The boss must outclass its mini-boss.
+    -   A run must still have 9 upgrades.
+    -   The forest map passes every map validity check (enclosed,
+        reachable, sealed areas).
+-   **New full-run baseline** (scripted, invulnerable player, with a
+    pathfinding driver and no manual help): victory after 20 rooms (the
+    forest map plus 19 v1 rooms), score 58,432, 94 kills, 277 coins, and
+    stable listener counts.
+-   **Balance is for Milestone 12.** A scripted run with an
+    invulnerable player cleared the forest in about 3.5 minutes and
+    killed both bosses quickly. Real play, with damage taken, will be
+    slower.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose

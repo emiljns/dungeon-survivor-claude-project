@@ -130,9 +130,9 @@ collision boxes, room layouts and combat behaviour stay unchanged.
 
 ## Milestone 11 --- Levels
 
--   [x] Village prologue with an in-world tutorial. *(Built and
-    self-tested; waiting for the user's review.)*
--   [ ] Bamboo Forest (baseline).
+-   [x] Village prologue with an in-world tutorial (reviewed by the user).
+-   [x] Bamboo Forest (baseline). *(Built and self-tested; waiting for
+    the user's review.)*
 -   [ ] River (water channels).
 -   [ ] Snowy Mountain (ice).
 -   [ ] Abandoned Village (night, ambushes).

@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { BOSS_NAME, ENEMY_STATS } from "../data/enemies.ts";
+import { bossNameFor, isBossKind, lookFor, statsFor } from "../data/bestiary.ts";
 import { LEVELS, ROOMS_PER_LEVEL, type EnemySpec, type LevelDefinition, type LevelRoom } from "../data/levels.ts";
 import { Enemy, type EnemyContext } from "../entities/Enemy.ts";
 import { Player } from "../entities/Player.ts";
@@ -53,7 +53,7 @@ import { WorldObjects } from "../systems/WorldObjects.ts";
 import { FireCooldown } from "../logic/weapon.ts";
 import { torchLights, type TorchLight } from "../logic/lighting.ts";
 import { LightingSystem } from "../rendering/LightingSystem.ts";
-import { TILE_FRAMES } from "../data/artManifest.ts";
+import { TILE_FRAMES, frameAt } from "../data/artManifest.ts";
 import { parseShowcase, showcaseLevel, type ShowcaseOptions } from "../data/showcase.ts";
 import { artMode, playFx, sheetKey, type ArtMode } from "../rendering/Art.ts";
 import { ensureLightTextures } from "../rendering/LightTextures.ts";
@@ -227,6 +227,7 @@ export class GameScene extends Phaser.Scene {
   private flowDirty = true;
   private tallWalls = false;
   private silhouettes: Phaser.GameObjects.Image[] = [];
+  private gateSprites: Phaser.GameObjects.Image[] = [];
   // v2 world kit: placed objects, critters, ambient particles.
   /** v1 rooms: solid crate/barrel props. Maps turn them into breakables instead. */
   private staticProps: readonly Prop[] = [];
@@ -276,6 +277,7 @@ export class GameScene extends Phaser.Scene {
     this.flowDirty = true;
     this.tallWalls = false;
     this.silhouettes = [];
+    this.gateSprites = [];
     this.staticProps = [];
     this.objectRects = [];
     this.playerSolids = [];
@@ -434,7 +436,13 @@ export class GameScene extends Phaser.Scene {
 
     const roomCount = level.rooms.length;
     const roomNumber = this.run.roomIndex + 1;
-    this.hud = new Hud(this, this.village ? "HOME VILLAGE" : `L${level.number} ${level.name.toUpperCase()}  ROOM ${roomNumber}/${roomCount}`);
+    // v2 levels are one map: no room counter.
+    const label = this.village
+      ? "HOME VILLAGE"
+      : roomCount === 1 && levelRoom.encounters
+        ? `L${level.number} ${level.name.toUpperCase()}`
+        : `L${level.number} ${level.name.toUpperCase()}  ROOM ${roomNumber}/${roomCount}`;
+    this.hud = new Hud(this, label);
     if (this.village) this.doorPrompt.setText("[E] SET OUT");
     this.showEntryBanner();
     this.cameras.main.fadeIn(Tuning.room.transitionFadeMs, 5, 7, 13);
@@ -721,10 +729,24 @@ export class GameScene extends Phaser.Scene {
   private setGates(): void {
     this.gateBodies.clear(true, true);
     this.gateGfx.clear();
+    for (const s of this.gateSprites) s.destroy();
+    this.gateSprites = [];
+    const look = this.art === "ninja" ? biomeFor(this.level.theme.id)?.gate : undefined;
     for (const enc of this.encounters) {
       if (enc.state.phase !== "active") continue;
       for (const g of enc.gates) {
         this.gateBodies.add(this.add.zone(g.x + g.width / 2, g.y + g.height / 2, g.width, g.height));
+        if (look) {
+          // Outdoors: brambles (or a snow drift), with a red edge so a closed gate always reads.
+          this.gateSprites.push(
+            this.add
+              .image(g.x + TILE / 2, g.y + TILE / 2, sheetKey(look.sheet), frameAt(look.sheet, look.col, look.row))
+              .setTint(look.tint)
+              .setDepth(Depth.effects - 1),
+          );
+          this.gateGfx.lineStyle(1, 0xff5d73, 0.8).strokeRect(g.x + 0.5, g.y + 0.5, g.width - 1, g.height - 1);
+          continue;
+        }
         // Glowing bars, drawn above the darkness like all door state.
         this.gateGfx.fillStyle(0x2a1430, 0.85).fillRect(g.x, g.y, g.width, g.height);
         this.gateGfx.fillStyle(0xff5d73);
@@ -907,7 +929,7 @@ export class GameScene extends Phaser.Scene {
       this.hud.banner(`LEVEL ${level.number}`, level.name.toUpperCase(), level.theme.title, true);
     } else if (this.isFinalRoom) {
       const boss = this.levelRoom.enemies.some((e) => e.kind === "boss");
-      this.hud.banner("FINAL ROOM", boss ? `Defeat ${BOSS_NAME.toLowerCase()}` : "Defeat the elite", level.theme.title);
+      this.hud.banner("FINAL ROOM", boss ? `Defeat ${bossNameFor(level.bestiary, "boss").toLowerCase()}` : "Defeat the elite", level.theme.title);
     } else {
       this.hud.banner(`ROOM ${this.run.roomIndex + 1}`, this.levelRoom.layout.name);
     }
@@ -950,14 +972,15 @@ export class GameScene extends Phaser.Scene {
       // A wave that was telegraphed while the upgrade panel opened still arrives.
       if (this.phase !== "playing" && this.phase !== "reward") return;
       for (const { spec, at } of placements) {
-        const scaled = scaleForDifficulty(ENEMY_STATS[spec.kind], this.level.difficulty);
-        const enemy = new Enemy(this, this.enemyGroup, at.x, at.y, spec.elite ? makeElite(scaled) : scaled, this.simTime);
+        const bestiary = this.level.bestiary;
+        const scaled = scaleForDifficulty(statsFor(bestiary, spec.kind), this.level.difficulty);
+        const enemy = new Enemy(this, this.enemyGroup, at.x, at.y, spec.elite ? makeElite(scaled) : scaled, this.simTime, lookFor(bestiary, spec.kind));
         this.enemies.push(enemy);
         onSpawn?.(enemy);
-        if (spec.kind === "boss") {
+        if (isBossKind(spec.kind)) {
           this.boss = enemy;
-          this.hud.showBoss(BOSS_NAME);
-          this.cameras.main.shake(250, 0.004);
+          this.hud.showBoss(bossNameFor(bestiary, spec.kind));
+          this.cameras.main.shake(250, spec.kind === "boss" ? 0.004 : 0.0025);
         }
       }
     });

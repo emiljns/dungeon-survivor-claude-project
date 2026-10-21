@@ -62,6 +62,12 @@ export const SHEETS = {
   leaf: { key: "na-leaf", file: "fx-leaf.png", frameWidth: 12, frameHeight: 7, source: "FX/Particle/Leaf.png" },
   snowFlake: { key: "na-snow-flake", file: "fx-snow.png", frameWidth: 8, frameHeight: 8, source: "FX/Particle/Snow.png" },
   vaseShards: { key: "na-vase-shards", file: "fx-vase-shards.png", frameWidth: 14, frameHeight: 14, source: "FX/Particle/Vase.png" },
+  // Bamboo Forest bestiary (Milestone 11).
+  forestChaser: { key: "na-forest-spider", file: "enemy-forest-spider.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/SpiderRed/SpriteSheet.png" },
+  forestTank: { key: "na-forest-panda", file: "enemy-forest-panda.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/Panda/SpriteSheet.png" },
+  forestRanged: { key: "na-forest-mushroom", file: "enemy-forest-mushroom.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/Mushroom/mushroom.png" },
+  bossBamboo: { key: "na-boss-bamboo", file: "boss-giant-bamboo-idle.png", frameWidth: 62, frameHeight: 62, source: "Actor/Boss/GiantBamboo/Idle.png" },
+  minibossBamboo: { key: "na-miniboss-bamboo", file: "boss-giant-bamboo-orange-idle.png", frameWidth: 62, frameHeight: 62, source: "Actor/Boss/GiantBamboo2/Idle.png" },
   // Economy and weapons (Milestone 10).
   coin: { key: "na-coin", file: "item-coin.png", frameWidth: 10, frameHeight: 10, source: "Items/Treasure/Coin2.png" },
   kunai: { key: "na-kunai", file: "proj-kunai.png", frameWidth: 14, frameHeight: 5, source: "FX/Projectile/Kunai.png" },
@@ -113,6 +119,11 @@ export const SHEET_SIZES: Readonly<Record<SheetId, readonly [number, number]>> =
   snowFlake: [56, 8],
   vaseShards: [84, 14],
   woodShards: [96, 16],
+  forestChaser: [64, 64],
+  forestTank: [64, 64],
+  forestRanged: [64, 64],
+  bossBamboo: [372, 62],
+  minibossBamboo: [372, 62],
   coin: [40, 10],
   kunai: [14, 5],
   bigShuriken: [46, 23],
@@ -157,9 +168,17 @@ export const walkAnimKey = (sheet: SheetId, dir: Direction): string => `${SHEETS
 const range = (n: number): number[] => Array.from({ length: n }, (_, i) => i);
 
 export const ANIMS: readonly AnimDef[] = [
-  ...(["player", "chaser", "tank", "ranged"] as const).flatMap((sheet) =>
-    DIRECTIONS.map((dir) => ({ key: walkAnimKey(sheet, dir), sheet, frames: walkFrames(dir), frameRate: sheet === "tank" ? 6 : 9, repeat: -1 })),
+  ...(["player", "chaser", "tank", "ranged", "forestChaser", "forestTank", "forestRanged"] as const).flatMap((sheet) =>
+    DIRECTIONS.map((dir) => ({
+      key: walkAnimKey(sheet, dir),
+      sheet,
+      frames: walkFrames(dir),
+      frameRate: sheet === "tank" || sheet === "forestTank" ? 6 : 9,
+      repeat: -1,
+    })),
   ),
+  { key: "na-boss-bamboo-idle", sheet: "bossBamboo", frames: range(6), frameRate: 7, repeat: -1 },
+  { key: "na-miniboss-bamboo-idle", sheet: "minibossBamboo", frames: range(6), frameRate: 8, repeat: -1 },
   { key: "na-boss-idle", sheet: "bossIdle", frames: range(5), frameRate: 7, repeat: -1 },
   { key: "na-boss-hit", sheet: "bossHit", frames: range(3), frameRate: 14, repeat: 0 },
   { key: "na-shuriken-spin", sheet: "shuriken", frames: range(2), frameRate: 18, repeat: -1 },
@@ -181,7 +200,7 @@ export const ANIMS: readonly AnimDef[] = [
   ...(["chicken", "cat", "frog", "fish"] as const).map((sheet) => ({ key: `na-${sheet}-move`, sheet, frames: [0, 1], frameRate: 6, repeat: -1 })),
 ];
 
-export const ENEMY_SHEET: Readonly<Record<Exclude<EnemyKind, "boss">, SheetId>> = {
+export const ENEMY_SHEET: Readonly<Record<Exclude<EnemyKind, "boss" | "miniboss">, SheetId>> = {
   chaser: "chaser",
   tank: "tank",
   ranged: "ranged",

@@ -43,6 +43,17 @@ export const ENEMY_STATS: Readonly<Record<EnemyKind, EnemyStats>> = {
     preferredRange: null,
     elite: false,
   },
+  miniboss: {
+    kind: "miniboss",
+    // The boss pattern scaled down: about half the health, fewer bullets, slower bursts.
+    maxHealth: 32,
+    speed: 40,
+    contactDamage: 2,
+    scale: 0.8,
+    attack: { pattern: "radial", cooldownMs: 2600, windupMs: 700, bulletSpeed: 95, count: 6, spreadDeg: 0, damage: 1 },
+    preferredRange: null,
+    elite: false,
+  },
 };
 
-export const BOSS_NAME = "THE HOLLOW WARDEN";
+

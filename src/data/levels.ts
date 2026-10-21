@@ -3,6 +3,9 @@
 // levels with different enemy sets, themes and difficulty.
 
 import type { EncounterDef } from "../logic/encounter.ts";
+import { FOREST_BESTIARY, type Bestiary } from "./bestiary.ts";
+import { BAMBOO_FOREST } from "./forestLevel.ts";
+import type { MapDef } from "./maps.ts";
 import type { PlacedCritter, PlacedNpc, PlacedObject } from "./decor.ts";
 import type { Difficulty, EnemyKind } from "../logic/enemyStats.ts";
 import { ARENA, CROSSROADS, ENTRY_HALL, FURNACE, GALLERY, PILLAR_HALL, STOREROOM, type RoomLayout } from "./rooms.ts";
@@ -38,6 +41,8 @@ export interface LevelDefinition {
   readonly theme: Theme;
   readonly difficulty: Difficulty;
   readonly rooms: readonly LevelRoom[];
+  /** This level's enemy looks, mini-boss and boss (defaults when absent). */
+  readonly bestiary?: Bestiary;
 }
 
 const c: EnemySpec = { kind: "chaser", elite: false };
@@ -53,19 +58,35 @@ const start: LevelRoom = { layout: ENTRY_HALL, enemies: [], reward: false, npcs:
  */
 const room = (layout: RoomLayout, enemies: readonly EnemySpec[], reward = false): LevelRoom => ({ layout, enemies, reward });
 
-export const LEVELS: readonly LevelDefinition[] = [
-  {
-    number: 1,
-    name: "Dungeon Ruins",
-    theme: THEMES.ruins,
-    difficulty: { healthMul: 1, speedMul: 1 },
+/**
+ * A v2 level: a single room holding the whole map. Every wave of every
+ * encounter is listed in `enemies` (the room's clear count); nothing spawns
+ * at the start, and the exit opens once every encounter is cleared.
+ */
+function mapLevel(number: number, name: string, theme: Theme, difficulty: Difficulty, map: MapDef, bestiary: Bestiary): LevelDefinition {
+  return {
+    number,
+    name,
+    theme,
+    difficulty,
+    bestiary,
     rooms: [
-      start,
-      room(PILLAR_HALL, [c, c, c]),
-      room(STOREROOM, [c, c, c, c], true),
-      room(ARENA, [elite("chaser"), c, c], true),
+      {
+        layout: map.layout,
+        enemies: map.encounters.flatMap((e) => e.waves.flat()),
+        reward: false,
+        encounters: map.encounters,
+        objects: map.objects ?? [],
+        critters: map.critters ?? [],
+        npcs: map.npcs ?? [],
+      },
     ],
-  },
+  };
+}
+
+export const LEVELS: readonly LevelDefinition[] = [
+  // v2 level 1: one continuous hand-made map (src/data/forestLevel.ts).
+  mapLevel(1, "Bamboo Forest", THEMES.forest, { healthMul: 1, speedMul: 1 }, BAMBOO_FOREST, FOREST_BESTIARY),
   {
     number: 2,
     name: "Toxic Sewers",

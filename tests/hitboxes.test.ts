@@ -10,8 +10,8 @@ describe("hitboxes are unchanged by the art", () => {
     expect(PLAYER_BODY).toBe(10);
   });
 
-  it("enemy bodies match v1.0", () => {
-    expect(ENEMY_BODY).toEqual({ chaser: 12, tank: 16, ranged: 12, boss: 28 });
+  it("enemy bodies match v1.0, plus the v2 mini-boss (locked at 22)", () => {
+    expect(ENEMY_BODY).toEqual({ chaser: 12, tank: 16, ranged: 12, boss: 28, miniboss: 22 });
   });
 
   it("elite scaling (and therefore elite hitboxes) is unchanged", () => {
