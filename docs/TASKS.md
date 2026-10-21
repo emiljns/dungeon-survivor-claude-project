@@ -125,8 +125,7 @@ collision boxes, room layouts and combat behaviour stay unchanged.
     migrating the v1 best score).
 -   [x] Shuriken weapons; village shop (unlocks); travelling merchant.
 -   [x] Death keeps half the pocket coins, victory keeps all.
--   [ ] Economy reviewed by the user. *(Built and self-tested; waiting
-    for the user's review.)*
+-   [x] Economy reviewed by the user.
     **Acceptance:** coins, shop and weapons work and persist correctly.
 
 ## Milestone 11 --- Levels
