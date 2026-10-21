@@ -24,7 +24,7 @@ export function blockingTiles(def: DecorDef, at: Placed): TilePos[] {
   return out;
 }
 
-/** Marks the blocking tiles of static solid objects into a fresh grid. */
+/** Marks the blocking tiles of static solid objects and hurdles (no path crosses either) into a fresh grid. */
 export function solidObjectGrid(
   cols: number,
   rows: number,
@@ -32,7 +32,7 @@ export function solidObjectGrid(
 ): boolean[][] {
   const grid = Array.from({ length: rows }, () => Array<boolean>(cols).fill(false));
   for (const { def, at } of objects) {
-    if (def.kind !== "solid") continue;
+    if (def.kind !== "solid" && def.kind !== "hurdle") continue;
     for (const t of blockingTiles(def, at)) {
       const row = grid[t.row];
       if (row && t.col >= 0 && t.col < cols) row[t.col] = true;

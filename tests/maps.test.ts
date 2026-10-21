@@ -4,13 +4,17 @@ import { biomeFor, resolveObject } from "../src/data/biomes.ts";
 import { TEST_MAP, type MapDef } from "../src/data/maps.ts";
 import { WORLD_MAPS } from "../src/data/worldMaps.ts";
 import { LEVELS } from "../src/data/levels.ts";
+import { HOME_VILLAGE } from "../src/data/village.ts";
+import { parseVillage, villageLevel } from "../src/data/maps.ts";
+import { Tuning } from "../src/game/config.ts";
+import { solidObjectGrid } from "../src/logic/objects.ts";
 import { blockingTiles, coveredTiles } from "../src/logic/objects.ts";
 import { GAME_HEIGHT, GAME_WIDTH } from "../src/game/config.ts";
 import { inRect, triggerRect, type TileRect } from "../src/logic/encounter.ts";
 import { parseLayout, type ParsedLayout, type TilePos } from "../src/logic/layout.ts";
 
 const T = 16;
-const MAPS: readonly MapDef[] = [TEST_MAP, ...Object.values(WORLD_MAPS)];
+const MAPS: readonly MapDef[] = [TEST_MAP, ...Object.values(WORLD_MAPS), HOME_VILLAGE];
 
 const key = (p: TilePos): string => `${p.col},${p.row}`;
 const tileOf = (x: number, y: number): TilePos => ({ col: Math.floor(x / T), row: Math.floor(y / T) });
@@ -63,7 +67,8 @@ describe.each(MAPS.map((m) => [m.layout.id, m] as const))("map %s", (_id, map) =
   const l = parseLayout(map.layout.rows, T);
   // Objects as they will appear: generic slots resolved for the map's biome.
   const objects = (map.objects ?? []).map((o) => resolveObject(o, map.theme ?? "ruins"));
-  const blocked = new Set(objects.flatMap((o) => blockingTiles(DECOR[o.id], o)).map(key));
+  // Hurdles count as passable here: the player can always dash over them.
+  const blocked = new Set(objects.filter((o) => DECOR[o.id].kind !== "hurdle").flatMap((o) => blockingTiles(DECOR[o.id], o)).map(key));
   beforeEach(() => {
     objectBlocked = blocked;
   });
@@ -194,5 +199,66 @@ describe("shops on maps and levels", () => {
       expect(l.props.some((p) => p.rect.x === n.col * T && p.rect.y === n.row * T), level.name).toBe(false);
       expect(Math.hypot(n.col * T - l.playerSpawn.x, n.row * T - l.playerSpawn.y), level.name).toBeGreaterThan(T);
     }
+  });
+});
+
+describe("Home Village prologue", () => {
+  const l = parseLayout(HOME_VILLAGE.layout.rows, T);
+  const start = tileOf(l.playerSpawn.x, l.playerSpawn.y);
+  const objects = (HOME_VILLAGE.objects ?? []).map((o) => resolveObject(o, "village"));
+
+  it("is peaceful: no encounters, enemies, spawns or coins to collect", () => {
+    const level = villageLevel();
+    expect(level.number).toBe(0);
+    expect(level.theme.id).toBe("village");
+    expect(level.rooms[0]?.enemies).toEqual([]);
+    expect(l.enemySpawns).toEqual([]);
+    expect(objects.some((o) => DECOR[o.id].kind === "breakable")).toBe(false);
+  });
+
+  it("the gate is a few steps from where you start (repeat runs stay quick)", () => {
+    const door = l.doorRects[0];
+    expect(door).toBeDefined();
+    if (door) expect(Math.hypot(door.x - l.playerSpawn.x, door.y - l.playerSpawn.y) / T).toBeLessThan(10);
+  });
+
+  it("has the tutorial and the shop: signs, training dummies, low fences, the shopkeeper", () => {
+    const kinds = (HOME_VILLAGE.npcs ?? []).map((n) => n.kind);
+    expect(kinds).toContain("shopkeeper");
+    expect(kinds.filter((k) => k === "sign").length).toBeGreaterThanOrEqual(3);
+    for (const n of HOME_VILLAGE.npcs ?? []) if (n.kind === "sign") expect(n.text?.length ?? 0, key(n)).toBeGreaterThan(20);
+    expect(objects.filter((o) => DECOR[o.id].kind === "dummy").length).toBeGreaterThan(0);
+    expect(objects.filter((o) => DECOR[o.id].kind === "hurdle").length).toBeGreaterThan(0);
+  });
+
+  it("the end of the dash lane can only be reached by dashing over the fences", () => {
+    const end = (HOME_VILLAGE.npcs ?? []).find((n) => n.kind === "sign" && n.text?.startsWith("Nicely dashed"));
+    expect(end).toBeDefined();
+    if (!end) return;
+    const near = (reach: Set<string>): boolean => [[0, -1], [-1, 0], [1, 0]].some(([dc, dr]) => reach.has(`${end.col + (dc ?? 0)},${end.row + (dr ?? 0)}`));
+    objectBlocked = new Set(objects.flatMap((o) => blockingTiles(DECOR[o.id], o)).map(key)); // hurdles block walking
+    expect(near(flood(l, start, { gatesClosed: false, doorOpen: true }))).toBe(false);
+    objectBlocked = new Set(objects.filter((o) => DECOR[o.id].kind !== "hurdle").flatMap((o) => blockingTiles(DECOR[o.id], o)).map(key));
+    expect(near(flood(l, start, { gatesClosed: false, doorOpen: true }))).toBe(true);
+  });
+
+  it("a dash carries the player clear over a one-tile fence (plus the player's body)", () => {
+    const dashPx = (Tuning.dash.speed * Tuning.dash.durationMs) / 1000;
+    expect(dashPx).toBeGreaterThan(T + 10 + 8); // fence depth + body + margin
+  });
+
+  it("hurdles block paths (enemies never cross them), unlike walk-over decoration", () => {
+    const grid = solidObjectGrid(10, 10, [
+      { def: DECOR.fence, at: { col: 2, row: 2 } },
+      { def: DECOR.daisy, at: { col: 6, row: 6 } },
+    ]);
+    expect([grid[3]?.[2], grid[3]?.[3], grid[3]?.[4]]).toEqual([true, true, true]);
+    expect(grid[6]?.[6]).toBe(false);
+  });
+
+  it("scene data asks for the village only explicitly", () => {
+    expect(parseVillage({ village: true })).toBe(true);
+    expect(parseVillage({ village: "yes" })).toBe(false);
+    expect(parseVillage(null)).toBe(false);
   });
 });

@@ -114,8 +114,9 @@ export class ResultsScene extends Phaser.Scene {
   private retry(): void {
     if (this.done) return;
     this.done = true;
-    // Explicit fresh data: Phaser would otherwise reuse the last run's data.
-    this.scene.start("game", newRun(Tuning.player.maxHealth));
+    // Back to the Home Village (near its gate) for the next run. Explicit
+    // fresh data: Phaser would otherwise reuse the last run's data.
+    this.scene.start("game", { ...newRun(Tuning.player.maxHealth), village: true });
   }
 
   private menu(): void {

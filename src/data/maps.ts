@@ -7,6 +7,7 @@ import { LEVELS, type EnemySpec, type LevelDefinition } from "./levels.ts";
 import type { RoomLayout } from "./rooms.ts";
 import { THEMES } from "./themes.ts";
 import { WORLD_MAPS } from "./worldMaps.ts";
+import { HOME_VILLAGE } from "./village.ts";
 
 export interface MapDef {
   /** Theme id the map is made for (decides slot variants and critters). */
@@ -138,6 +139,37 @@ export function testMapLevel(opts: TestMapOptions): LevelDefinition {
         objects: map.objects ?? [],
         critters: map.critters ?? [],
         npcs: map.npcs ?? [],
+      },
+    ],
+  };
+}
+
+/** Validates untrusted scene data: true when the Home Village prologue was requested. */
+export function parseVillage(data: unknown): boolean {
+  return typeof data === "object" && data !== null && (data as { village?: unknown }).village === true;
+}
+
+/**
+ * The Home Village prologue as a one-room "level 0": peaceful (no
+ * encounters), morning light. Leaving through its gate starts level 1.
+ */
+export function villageLevel(): LevelDefinition {
+  const base = LEVELS[0];
+  if (!base) throw new Error("No levels defined");
+  return {
+    number: 0,
+    name: HOME_VILLAGE.layout.name,
+    theme: THEMES.village,
+    difficulty: base.difficulty,
+    rooms: [
+      {
+        layout: HOME_VILLAGE.layout,
+        enemies: [],
+        reward: false,
+        encounters: [],
+        objects: HOME_VILLAGE.objects ?? [],
+        critters: HOME_VILLAGE.critters ?? [],
+        npcs: HOME_VILLAGE.npcs ?? [],
       },
     ],
   };

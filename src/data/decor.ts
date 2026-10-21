@@ -5,14 +5,17 @@
 //   trunks, rocks, tents). Its top `canopy` rows are drawn above actors, so
 //   the player walks behind tree tops.
 // - walkover: drawn on the ground; no collision (grass, flowers, pebbles).
-// - breakable: solid until shot `hp` times, then shatters (pots, crates).
-//   Coins come in Milestone 10.
+// - breakable: solid until shot `hp` times, then shatters (pots, crates)
+//   and drops coins.
+// - dummy: a training dummy; takes shots and shows the damage, never breaks.
+// - hurdle: a low fence; blocks walking and enemies, but a dashing player
+//   leaps it and bullets fly over it.
 // Static solid and walkover objects are baked into the map textures once;
 // breakables, animated and lit objects stay live sprites.
 
 import type { SheetId } from "./artManifest.ts";
 
-export type DecorKind = "solid" | "walkover" | "breakable";
+export type DecorKind = "solid" | "walkover" | "breakable" | "dummy" | "hurdle";
 
 export interface DecorDef {
   readonly sheet: SheetId;
@@ -125,6 +128,9 @@ export const DECOR = {
   snowLump: plant(5, 12, 0xf2f6ff),
   snowTuft: plant(9, 13, 0xdfe6f2),
   snowball: plant(10, 13, 0xf2f6ff),
+  // Village tutorial.
+  trainingDummy: { sheet: "elements", col: 6, row: 3, w: 1, h: 2, kind: "dummy", solid: { col: 0, row: 1, cols: 1, rows: 1 }, canopy: 1, color: 0xc0603a },
+  fence: { sheet: "elements", col: 11, row: 2, w: 3, h: 2, kind: "hurdle", solid: { col: 0, row: 1, cols: 3, rows: 1 }, color: 0xb07040 },
   // Breakables.
   pot: { sheet: "camp", col: 6, row: 3, w: 1, h: 1, kind: "breakable", solid: { col: 0, row: 0, cols: 1, rows: 1 }, breakable: { hp: 1, shards: "vase" }, color: 0x7a8a6a },
   jar: { sheet: "camp", col: 5, row: 3, w: 1, h: 1, kind: "breakable", solid: { col: 0, row: 0, cols: 1, rows: 1 }, breakable: { hp: 1, shards: "vase" }, color: 0xa86a3a },
@@ -171,13 +177,18 @@ export interface ResolvedObject {
 
 export type CritterKind = "chicken" | "cat" | "frog" | "fish";
 
-/** Friendly characters: the village shop (saved coins) and the travelling merchant (pocket coins). */
-export type NpcKind = "shopkeeper" | "merchant";
+/**
+ * Things to talk to: the village shop (saved coins), the travelling
+ * merchant (pocket coins), and signs to read.
+ */
+export type NpcKind = "shopkeeper" | "merchant" | "sign";
 
 export interface PlacedNpc {
   readonly kind: NpcKind;
   readonly col: number;
   readonly row: number;
+  /** What a sign says (signs only). */
+  readonly text?: string;
 }
 
 /** A critter's home tile; it wanders near it (fish stay in water). */

@@ -39,7 +39,9 @@ import {
   type UpgradeLevels,
 } from "../logic/upgrades.ts";
 import type { Vec2 } from "../logic/vector.ts";
-import { parseTestMap, testMapLevel, type TestMapOptions } from "../data/maps.ts";
+import { parseTestMap, parseVillage, testMapLevel, villageLevel, type TestMapOptions } from "../data/maps.ts";
+import { DialogPanel } from "../ui/DialogPanel.ts";
+import type { Npc } from "../systems/Npcs.ts";
 import { biomeFor, crittersFor, resolveObject } from "../data/biomes.ts";
 import { DECOR, type DecorDef, type ResolvedObject } from "../data/decor.ts";
 import { solidObjectGrid } from "../logic/objects.ts";
@@ -69,6 +71,7 @@ import { UpgradePanel } from "../ui/UpgradePanel.ts";
 import { Depth, FONT_FAMILY, PALETTE, TILE, Tuning } from "./config.ts";
 import type { RunResult } from "./ResultsScene.ts";
 
+/** "shop" covers every modal talk: shops and signs. */
 type Phase = "playing" | "reward" | "shop" | "exiting" | "gameOver" | "victory";
 
 /** One encounter area of a v2 map at runtime. */
@@ -207,6 +210,9 @@ export class GameScene extends Phaser.Scene {
   private showcase: ShowcaseOptions | null = null;
   private doorSprites: Phaser.GameObjects.Image[] = [];
   private testmap: TestMapOptions | null = null;
+  /** The Home Village prologue: no timer, no score; its gate starts a run. */
+  private village = false;
+  private dialog: DialogPanel | null = null;
   // v2 maps (rooms with encounters): tall walls, gates and pathfinding.
   private encounters: EncounterRuntime[] = [];
   private gateBodies!: Phaser.Physics.Arcade.StaticGroup;
@@ -259,6 +265,8 @@ export class GameScene extends Phaser.Scene {
     this.lighting = null;
     this.doorSprites = [];
     this.testmap = parseTestMap(data);
+    this.village = parseVillage(data);
+    this.dialog = null;
     this.encounters = [];
     this.staticBlocked = [];
     this.flow = null;
@@ -284,7 +292,13 @@ export class GameScene extends Phaser.Scene {
     this.art = artMode(this);
     // The art test room (?artroom) is a one-room level; everything else is the normal run.
     // The test map (?testmap) is a one-room level too.
-    const level = this.showcase ? showcaseLevel(this.showcase) : this.testmap ? testMapLevel(this.testmap) : LEVELS[this.run.levelIndex];
+    const level = this.village
+      ? villageLevel()
+      : this.showcase
+        ? showcaseLevel(this.showcase)
+        : this.testmap
+          ? testMapLevel(this.testmap)
+          : LEVELS[this.run.levelIndex];
     const levelRoom = level?.rooms[this.run.roomIndex];
     if (!level || !levelRoom) throw new Error(`No room at level ${this.run.levelIndex}, room ${this.run.roomIndex}`);
     this.level = level;
@@ -333,6 +347,15 @@ export class GameScene extends Phaser.Scene {
       return [{ x: (o.col + def.solid.col) * TILE, y: (o.row + def.solid.row) * TILE, width: def.solid.cols * TILE, height: def.solid.rows * TILE }];
     });
     for (const r of this.objectRects) solids.add(this.add.zone(r.x + r.width / 2, r.y + r.height / 2, r.width, r.height));
+    // Low fences: they block walking (enemies always), but a dashing player
+    // leaps them; bullets fly over (they are not in solidRects).
+    const hurdles = this.physics.add.staticGroup();
+    for (const o of objects) {
+      const def: DecorDef = DECOR[o.id];
+      if (def.kind !== "hurdle" || !def.solid) continue;
+      const s = def.solid;
+      hurdles.add(this.add.zone((o.col + s.col + s.cols / 2) * TILE, (o.row + s.row + s.rows / 2) * TILE, s.cols * TILE, s.rows * TILE));
+    }
     for (const p of this.staticProps) {
       const cx = p.rect.x + TILE / 2;
       const cy = p.rect.y + TILE / 2;
@@ -377,6 +400,8 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.player.sprite, this.gateBodies);
     this.physics.add.collider(this.enemyGroup, this.gateBodies);
     this.physics.add.collider(this.enemyGroup, this.enemyGroup);
+    this.physics.add.collider(this.player.sprite, hurdles, undefined, () => !this.player.isDashing(this.simTime));
+    this.physics.add.collider(this.enemyGroup, hurdles);
     this.coinPickups = new Coins(this, this.art, () => {
       this.coins++;
       this.coinsEarned++;
@@ -409,7 +434,8 @@ export class GameScene extends Phaser.Scene {
 
     const roomCount = level.rooms.length;
     const roomNumber = this.run.roomIndex + 1;
-    this.hud = new Hud(this, `L${level.number} ${level.name.toUpperCase()}  ROOM ${roomNumber}/${roomCount}`);
+    this.hud = new Hud(this, this.village ? "HOME VILLAGE" : `L${level.number} ${level.name.toUpperCase()}  ROOM ${roomNumber}/${roomCount}`);
+    if (this.village) this.doorPrompt.setText("[E] SET OUT");
     this.showEntryBanner();
     this.cameras.main.fadeIn(Tuning.room.transitionFadeMs, 5, 7, 13);
 
@@ -475,7 +501,8 @@ export class GameScene extends Phaser.Scene {
 
     const dt = Math.min(delta, 50);
     this.simTime += dt;
-    this.runTimeMs += Math.min(delta, 250);
+    // The village never counts: the run timer starts at its gate.
+    if (!this.village) this.runTimeMs += Math.min(delta, 250);
     const now = this.simTime;
 
     // Convert the pointer to world space every frame: correct even when the
@@ -552,7 +579,7 @@ export class GameScene extends Phaser.Scene {
     const interactPressed = Phaser.Input.Keyboard.JustDown(k.interact);
     const npc = this.npcs?.nearby(this.player.position) ?? null;
     if (npc && interactPressed) {
-      this.openShop(npc.kind);
+      this.talkTo(npc);
       return;
     }
     const door = npc ? null : this.nearbyOpenDoor();
@@ -759,6 +786,24 @@ export class GameScene extends Phaser.Scene {
 
   // ---- shops -------------------------------------------------------------
 
+  private talkTo(npc: Npc): void {
+    if (npc.kind === "sign") this.readSign(npc.text);
+    else this.openShop(npc.kind);
+  }
+
+  /** Shows a sign's text; the room freezes meanwhile (like a shop). */
+  private readSign(text: string): void {
+    if (this.dialog || this.shop || this.phase !== "playing") return;
+    this.phase = "shop";
+    this.player.halt();
+    this.npcs?.hidePrompt();
+    this.physics.pause();
+    this.dialog = new DialogPanel(this, "SIGN", text, () => {
+      this.dialog = null;
+      this.closeShop();
+    });
+  }
+
   /** Opens the village shop (saved coins) or the travelling merchant (pocket coins); the room freezes meanwhile. */
   private openShop(kind: "shopkeeper" | "merchant"): void {
     if (this.shop || this.phase !== "playing") return;
@@ -852,7 +897,9 @@ export class GameScene extends Phaser.Scene {
 
   private showEntryBanner(): void {
     const level = this.level;
-    if (this.showcase) {
+    if (this.village) {
+      this.hud.banner("HOME VILLAGE", "A quiet morning. The gate is just east.", level.theme.title, true);
+    } else if (this.showcase) {
       this.hud.banner("ART TEST ROOM", level.name.toUpperCase(), level.theme.title, true);
     } else if (this.testmap) {
       this.hud.banner("TEST MAP", "Gates seal each area until it is clear", level.theme.title, true);
@@ -1051,6 +1098,16 @@ export class GameScene extends Phaser.Scene {
       this.scene.restart({ ...newRun(Tuning.player.maxHealth), testmap: this.testmap });
       return;
     }
+    if (this.village) {
+      // Through the gate: a fresh run starts at level 1 (score and timer from zero).
+      this.phase = "exiting";
+      this.leaving = true;
+      this.player.halt();
+      this.doorPrompt.setVisible(false);
+      this.cameras.main.fadeOut(Tuning.room.transitionFadeMs, 5, 7, 13);
+      this.time.delayedCall(Tuning.room.transitionFadeMs + 20, () => this.scene.restart(newRun(Tuning.player.maxHealth)));
+      return;
+    }
     const next = advanceRun(this.currentRun(), ROOMS_PER_LEVEL, this.player.health.current, this.stats.maxHealth);
     if (next.kind === "victory") {
       this.victory();
@@ -1171,6 +1228,9 @@ export class GameScene extends Phaser.Scene {
       weapon: this.weapon,
       npcs: this.npcs?.count ?? 0,
       shopOpen: this.shop ? 1 : 0,
+      dialogOpen: this.dialog ? 1 : 0,
+      village: this.village ? 1 : 0,
+      dummyHits: this.world?.dummyHits ?? 0,
       solidRects: this.solidRects.length,
       breakables: this.world?.count ?? 0,
       animatedActive: this.world?.activeAnimated ?? 0,

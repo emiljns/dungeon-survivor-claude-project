@@ -70,11 +70,14 @@ original pack path, plus the per-level floor and wall choices.
 | Esc / P | Pause / resume (M on the pause screen quits to the menu) |
 | 1 / 2 / 3 or click | Pick an upgrade |
 | 1–6 or click, Esc / E | Buy in a shop, leave the shop |
-| S (title menu) | Open the village shop |
 | R / click, M | Retry or menu on the results screen |
 
 ## How a run works
 
+-   **Home Village:** every run starts in a peaceful village. Signs,
+    training dummies and a dash lane teach the controls (optional), the
+    old shopkeeper sells weapon unlocks, and the gate a few steps east
+    (press E) starts the run. Time and score start at the gate.
 -   **Five levels in order:** Dungeon Ruins → Toxic Sewers → Ancient
     Temple → Forgotten Foundry → The Void. Each has its own palette,
     torch colour and difficulty.
@@ -101,8 +104,8 @@ original pack path, plus the per-level floor and wall choices.
     half.
 -   **Shops:** the travelling merchant in each level's first room sells
     a full heal, run upgrades and your unlocked weapons, for pocket
-    coins. The village shop (title menu `S`, or the shopkeeper on the
-    village test map) unlocks weapons forever for saved coins: the Kunai
+    coins. The village shop (the old shopkeeper in the Home Village)
+    unlocks weapons forever for saved coins: the Kunai
     (fast, pierces one), the Magic Shuriken (homing) and the Big Shuriken
     (heavy, pierces three). Every run starts with the basic shuriken.
 -   **Results:** shows score, highest level, time, enemies defeated,

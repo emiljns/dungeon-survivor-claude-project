@@ -16,9 +16,9 @@ type Layers = { base: Phaser.GameObjects.RenderTexture; top: Phaser.GameObjects.
 /** Decoration is drawn a touch darker than actors so threats stay readable. */
 const DECOR_TINT = 0xe6e6e6;
 
-/** Static objects are baked; breakables and animated objects stay live sprites. */
+/** Static objects are baked; breakables, dummies and animated objects stay live sprites. */
 export function isBaked(def: DecorDef): boolean {
-  return def.kind !== "breakable" && def.anim === undefined;
+  return def.kind !== "breakable" && def.kind !== "dummy" && def.anim === undefined;
 }
 
 /**

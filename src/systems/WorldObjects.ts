@@ -16,6 +16,8 @@ interface Breakable {
   readonly sprite: Phaser.GameObjects.Image;
   readonly body: Phaser.GameObjects.Zone;
   hp: number;
+  /** Training dummies take hits forever and show the damage instead of breaking. */
+  readonly dummy: boolean;
 }
 
 /** Live sprites are culled outside the camera view plus this margin. */
@@ -30,6 +32,7 @@ const CULL_EVERY_MS = 200;
 export class WorldObjects {
   private breakables: Breakable[] = [];
   private readonly animated: Phaser.GameObjects.Sprite[] = [];
+  private readonly tops: Phaser.GameObjects.Image[] = [];
   private lastCull = -Infinity;
   /** Static group for breakable bodies; the scene adds colliders to it. */
   readonly bodies: Phaser.Physics.Arcade.StaticGroup;
@@ -45,18 +48,25 @@ export class WorldObjects {
       const def: DecorDef = DECOR[o.id];
       const x = o.col * TILE + (def.w * TILE) / 2;
       const y = o.row * TILE + (def.h * TILE) / 2;
-      if (def.kind === "breakable") {
+      if (def.kind === "breakable" || def.kind === "dummy") {
         const tiles = blockingTiles(def, o);
         const first = tiles[0] ?? { col: o.col, row: o.row };
         const rect = { x: first.col * TILE, y: first.row * TILE, width: TILE, height: TILE };
         const sprite =
           art === "ninja"
-            ? scene.add.image(x, y, sheetKey(def.sheet), frameAt(def.sheet, def.col, def.row))
+            ? def.h > 1
+              ? scene.add.image(x, y, sheetKey(def.sheet), frameAt(def.sheet, def.col, def.row + def.h - 1))
+              : scene.add.image(x, y, sheetKey(def.sheet), frameAt(def.sheet, def.col, def.row))
             : scene.add.image(x, y, def.breakable?.shards === "wood" ? Tex.crate : Tex.barrel);
         sprite.setDepth(Depth.props);
+        // Two-tile objects (the dummy) show their top tile above the base one.
+        if (art === "ninja" && def.h > 1) {
+          sprite.setPosition(x, o.row * TILE + (def.h - 0.5) * TILE);
+          this.tops.push(scene.add.image(x, o.row * TILE + TILE / 2, sheetKey(def.sheet), frameAt(def.sheet, def.col, def.row)).setDepth(Depth.foreground));
+        }
         const body = scene.add.zone(rect.x + TILE / 2, rect.y + TILE / 2, TILE, TILE);
         this.bodies.add(body);
-        this.breakables.push({ def, rect, tiles, sprite, body, hp: def.breakable?.hp ?? 1 });
+        this.breakables.push({ def, rect, tiles, sprite, body, hp: def.breakable?.hp ?? 1, dummy: def.kind === "dummy" });
       } else if (def.anim && art === "ninja") {
         this.animated.push(scene.add.sprite(x, y, sheetKey(def.sheet)).setDepth(Depth.props).play({ key: def.anim, startFrame: (o.col + o.row) % 4 }));
       }
@@ -91,6 +101,10 @@ export class WorldObjects {
   hit(index: number, damage: number): { readonly at: { x: number; y: number }; readonly shards: "vase" | "wood" } | null {
     const b = this.breakables[index];
     if (!b) return null;
+    if (b.dummy) {
+      this.dummyHit(b, damage);
+      return null;
+    }
     b.hp -= damage;
     if (b.hp > 0) {
       b.sprite.setTintFill(0xffffff);
@@ -103,6 +117,28 @@ export class WorldObjects {
     b.sprite.destroy();
     return { at: { x: b.rect.x + TILE / 2, y: b.rect.y + TILE / 2 }, shards: b.def.breakable?.shards ?? "wood" };
   }
+
+  /** The dummy wobbles, flashes and shows the damage dealt. */
+  private dummyHit(b: Breakable, damage: number): void {
+    b.sprite.setTintFill(0xffffff);
+    this.scene.time.delayedCall(50, () => b.sprite.active && b.sprite.clearTint());
+    const cx = b.rect.x + TILE / 2;
+    const text = this.scene.add
+      .text(cx + (Math.random() - 0.5) * 10, b.rect.y - 14, String(Math.round(damage * 10) / 10), {
+        fontFamily: '"Courier New", monospace',
+        fontSize: "9px",
+        color: "#ffd166",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5)
+      .setStroke("#05070d", 3)
+      .setDepth(Depth.effects);
+    this.scene.tweens.add({ targets: text, y: text.y - 14, alpha: 0, duration: 600, onComplete: () => text.destroy() });
+    this.dummyHits++;
+  }
+
+  /** Total hits taken by training dummies (the tutorial counts them). */
+  dummyHits = 0;
 
   /** A few shards fly out and fade (one-off, only when something breaks). */
   private shatter(b: Breakable): void {

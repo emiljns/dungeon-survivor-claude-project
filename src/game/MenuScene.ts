@@ -15,7 +15,7 @@ export class MenuScene extends Phaser.Scene {
     this.add
       .text(cx, 64, "NINJA SURVIVOR", { fontFamily: FONT_FAMILY, fontSize: "32px", color: PALETTE.text, fontStyle: "bold" })
       .setOrigin(0.5);
-    this.add.text(cx, 96, "Five levels. One dungeon.", { ...small, fontSize: "12px" }).setOrigin(0.5);
+    this.add.text(cx, 96, "Leave the village. Cross the world. Face the Void.", { ...small, fontSize: "12px" }).setOrigin(0.5);
 
     this.add
       .text(
@@ -53,17 +53,12 @@ export class MenuScene extends Phaser.Scene {
     const start = (): void => {
       if (started) return;
       started = true;
-      // Explicit data: Phaser would otherwise reuse the last run's room/health.
-      this.scene.start("game", newRun(Tuning.player.maxHealth));
+      // Every run begins in the Home Village. Explicit data: Phaser would
+      // otherwise reuse the last run's room/health.
+      this.scene.start("game", { ...newRun(Tuning.player.maxHealth), village: true });
     };
     this.input.once("pointerdown", start);
     this.input.keyboard?.once("keydown-ENTER", start);
-    // Until the Home Village prologue exists, the village shop opens from here.
-    this.add.text(cx, GAME_HEIGHT - 40, "[S] Village shop", { ...small, color: PALETTE.textDim }).setOrigin(0.5);
-    this.input.keyboard?.once("keydown-S", () => {
-      if (started) return;
-      started = true;
-      this.scene.start("shop");
-    });
+
   }
 }
