@@ -43,7 +43,7 @@ URL flags:
 | `?artroom&theme=sewers` | Test room in another level's look (`ruins`, `sewers`, `temple`, `foundry`, `void`) |
 | `?artroom&boss` | Test room with the boss added |
 | `?testmap` | v2 engine test map: scrolling camera, tall walls, water, gated encounter areas with waves and an ambush |
-| `?testmap=world&theme=forest` | v2 world-kit test map: outdoor terrain, trees and rocks, breakable pots, critters, particles, a river with a bridge (`theme`: `forest`, `village`, `river`, `snow`) |
+| `?testmap=world&theme=forest` | v2 world-kit test maps, one per biome (`theme`: `village` peaceful with houses and lanes, `forest` dense with a hollow, `river` with a bridge ambush, `snow` with a frozen lake and no animals) |
 
 ## Art
 

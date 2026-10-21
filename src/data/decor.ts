@@ -106,6 +106,25 @@ export const DECOR = {
   logs: { sheet: "camp", col: 0, row: 7, w: 2, h: 1, kind: "solid", solid: { col: 0, row: 0, cols: 2, rows: 1 }, color: 0xb07840 },
   flowerPlant: { sheet: "plant", col: 0, row: 0, w: 1, h: 1, kind: "walkover", anim: "na-plant", color: 0xf2f2e0 },
   flag: { sheet: "flag", col: 0, row: 0, w: 1, h: 1, kind: "walkover", anim: "na-flag", color: 0xe04040 },
+  // Village buildings: the roof is walk-behind, the front wall blocks.
+  houseOrange: { sheet: "house", col: 0, row: 0, w: 4, h: 3, kind: "solid", solid: { col: 0, row: 2, cols: 4, rows: 1 }, canopy: 2, color: 0xe07a3a },
+  houseBeige: { sheet: "house", col: 4, row: 0, w: 4, h: 3, kind: "solid", solid: { col: 0, row: 2, cols: 4, rows: 1 }, canopy: 2, color: 0xd8c090 },
+  houseOrangeWide: { sheet: "house", col: 8, row: 0, w: 4, h: 3, kind: "solid", solid: { col: 0, row: 2, cols: 4, rows: 1 }, canopy: 2, color: 0xe07a3a },
+  hutWood: { sheet: "house", col: 0, row: 8, w: 3, h: 2, kind: "solid", solid: { col: 0, row: 1, cols: 3, rows: 1 }, canopy: 1, color: 0xa86a3a },
+  hutStraw: { sheet: "house", col: 3, row: 8, w: 3, h: 2, kind: "solid", solid: { col: 0, row: 1, cols: 3, rows: 1 }, canopy: 1, color: 0x9a6a3a },
+  // Snow: igloos, statues and pillars.
+  igloo: { sheet: "house", col: 0, row: 11, w: 3, h: 3, kind: "solid", solid: { col: 0, row: 2, cols: 3, rows: 1 }, canopy: 2, color: 0xf2f6ff },
+  iglooSmall: { sheet: "house", col: 4, row: 11, w: 2, h: 3, kind: "solid", solid: { col: 0, row: 2, cols: 2, rows: 1 }, canopy: 2, color: 0xf2f6ff },
+  iglooBrick: { sheet: "house", col: 6, row: 11, w: 3, h: 3, kind: "solid", solid: { col: 0, row: 2, cols: 3, rows: 1 }, canopy: 2, color: 0xe8f0ff },
+  lionStatue: { sheet: "house", col: 1, row: 15, w: 2, h: 3, kind: "solid", solid: { col: 0, row: 1, cols: 2, rows: 2 }, canopy: 1, color: 0xd8b880 },
+  lionStatueGrey: { sheet: "house", col: 1, row: 19, w: 2, h: 3, kind: "solid", solid: { col: 0, row: 1, cols: 2, rows: 2 }, canopy: 1, color: 0x7f8a78 },
+  snowPillar: { sheet: "house", col: 8, row: 17, w: 1, h: 2, kind: "solid", solid: { col: 0, row: 1, cols: 1, rows: 1 }, canopy: 1, color: 0xc89878 },
+  snowPillarGrey: { sheet: "house", col: 8, row: 21, w: 1, h: 2, kind: "solid", solid: { col: 0, row: 1, cols: 1, rows: 1 }, canopy: 1, color: 0x7f8a78 },
+  snowMound: { sheet: "nature", col: 2, row: 12, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 0, cols: 2, rows: 2 }, color: 0xf2f6ff },
+  tealBush: { sheet: "nature", col: 0, row: 12, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 0, cols: 2, rows: 2 }, color: 0x4a8a8a },
+  snowLump: plant(5, 12, 0xf2f6ff),
+  snowTuft: plant(9, 13, 0xdfe6f2),
+  snowball: plant(10, 13, 0xf2f6ff),
   // Breakables.
   pot: { sheet: "camp", col: 6, row: 3, w: 1, h: 1, kind: "breakable", solid: { col: 0, row: 0, cols: 1, rows: 1 }, breakable: { hp: 1, shards: "vase" }, color: 0x7a8a6a },
   jar: { sheet: "camp", col: 5, row: 3, w: 1, h: 1, kind: "breakable", solid: { col: 0, row: 0, cols: 1, rows: 1 }, breakable: { hp: 1, shards: "vase" }, color: 0xa86a3a },
@@ -115,8 +134,36 @@ export const DECOR = {
 
 export type DecorId = keyof typeof DECOR;
 
+/**
+ * Generic objects that each biome fills with its own variant (see
+ * BiomeArt.slots), so one placement reads as a pine in the forest and a
+ * snowy pine on the mountain. Every variant of a slot has the slot's shape.
+ */
+export const SLOT_SHAPES = {
+  $tree: { w: 2, h: 2, kind: "solid", solid: { col: 0, row: 1, cols: 2, rows: 1 }, canopy: 1 },
+  $bigTree: { w: 3, h: 3, kind: "solid", solid: { col: 1, row: 2, cols: 1, rows: 1 }, canopy: 2 },
+  $grove: { w: 4, h: 3, kind: "solid", solid: { col: 0, row: 2, cols: 4, rows: 1 }, canopy: 2 },
+  $rock: { w: 2, h: 2, kind: "solid", solid: { col: 0, row: 0, cols: 2, rows: 2 }, canopy: 0 },
+  $bush: { w: 1, h: 1, kind: "walkover", canopy: 0 },
+  $flower: { w: 1, h: 1, kind: "walkover", canopy: 0 },
+  $pebble: { w: 1, h: 1, kind: "walkover", canopy: 0 },
+} as const satisfies Record<string, Pick<DecorDef, "w" | "h" | "kind" | "solid" | "canopy">>;
+
+export type SlotId = keyof typeof SLOT_SHAPES;
+
+export function isSlot(id: DecorId | SlotId): id is SlotId {
+  return id.startsWith("$");
+}
+
 /** An object placed on a map; (col, row) is its top-left tile. */
 export interface PlacedObject {
+  readonly id: DecorId | SlotId;
+  readonly col: number;
+  readonly row: number;
+}
+
+/** A placed object after its slot (if any) is resolved for the biome. */
+export interface ResolvedObject {
   readonly id: DecorId;
   readonly col: number;
   readonly row: number;

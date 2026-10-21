@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DECOR } from "../src/data/decor.ts";
+import { BIOMES, crittersFor, resolveObject } from "../src/data/biomes.ts";
+import { DECOR, SLOT_SHAPES, type DecorDef, type SlotId } from "../src/data/decor.ts";
 import { CRITTER, newCritter, stepCritter, type CritterState } from "../src/logic/critter.ts";
 import { blockingTiles, coveredTiles, solidObjectGrid } from "../src/logic/objects.ts";
 import { PARTICLE_STYLES, stepParticle, wrap } from "../src/logic/particles.ts";
@@ -89,6 +90,40 @@ describe("placed objects", () => {
     expect(grid[2]?.[2] && grid[3]?.[3]).toBe(true);
     expect(grid[8]?.[8]).toBe(false);
     expect(grid[5]?.[5]).toBe(false);
+  });
+});
+
+describe("biome-aware objects", () => {
+  it("every biome fills every slot, and each variant has exactly the slot's shape", () => {
+    for (const [biomeId, biome] of Object.entries(BIOMES)) {
+      for (const [slot, shape] of Object.entries(SLOT_SHAPES) as [SlotId, (typeof SLOT_SHAPES)[SlotId]][]) {
+        const variants = biome.slots[slot];
+        expect(variants.length, `${biomeId} ${slot}`).toBeGreaterThan(0);
+        for (const id of variants) {
+          const d: DecorDef = DECOR[id];
+          const where = `${biomeId} ${slot} -> ${id}`;
+          expect([d.w, d.h, d.kind, d.canopy ?? 0], where).toEqual([shape.w, shape.h, shape.kind, shape.canopy]);
+          expect(d.solid, where).toEqual("solid" in shape ? shape.solid : undefined);
+        }
+      }
+    }
+  });
+
+  it("a slot resolves to the biome's own variant, stably per tile; concrete ids pass through", () => {
+    const tree = resolveObject({ id: "$tree", col: 4, row: 7 }, "snow");
+    expect(BIOMES.snow?.slots.$tree).toContain(tree.id);
+    expect(resolveObject({ id: "$tree", col: 4, row: 7 }, "snow")).toEqual(tree);
+    expect(BIOMES.forest?.slots.$tree).toContain(resolveObject({ id: "$tree", col: 4, row: 7 }, "forest").id);
+    expect(resolveObject({ id: "pot", col: 1, row: 2 }, "snow")).toEqual({ id: "pot", col: 1, row: 2 });
+    expect(BIOMES.forest?.slots.$rock).toContain(resolveObject({ id: "$rock", col: 0, row: 0 }, "ruins").id); // dungeon themes fall back
+  });
+
+  it("no animals on the snowy mountain; other biomes keep theirs", () => {
+    const placed = [{ kind: "chicken" as const, col: 1, row: 1 }, { kind: "cat" as const, col: 2, row: 1 }, { kind: "fish" as const, col: 3, row: 1 }];
+    expect(crittersFor("snow", placed)).toEqual([]);
+    expect(crittersFor("village", placed)).toHaveLength(3);
+    expect(crittersFor("river", placed).map((c) => c.kind)).toEqual(["fish"]);
+    expect(crittersFor("ruins", placed)).toHaveLength(3);
   });
 });
 

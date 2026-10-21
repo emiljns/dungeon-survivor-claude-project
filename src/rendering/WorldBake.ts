@@ -1,7 +1,7 @@
 import * as Phaser from "phaser";
 import { frameAt } from "../data/artManifest.ts";
 import type { BiomeArt, TileRef } from "../data/biomes.ts";
-import { DECOR, type DecorDef, type PlacedObject } from "../data/decor.ts";
+import { DECOR, type DecorDef, type ResolvedObject } from "../data/decor.ts";
 import type { Theme } from "../data/themes.ts";
 import { TILE } from "../game/config.ts";
 import { cliffColumn, groundVariant, tileHash, waterPiece } from "../logic/terrainArt.ts";
@@ -15,8 +15,6 @@ type Layers = { base: Phaser.GameObjects.RenderTexture; top: Phaser.GameObjects.
 
 /** Decoration is drawn a touch darker than actors so threats stay readable. */
 const DECOR_TINT = 0xe6e6e6;
-/** Trees on raised ground are background: darker still. */
-const WALL_TREE_TINT = 0xc8d0c0;
 
 /** Static objects are baked; breakables and animated objects stay live sprites. */
 export function isBaked(def: DecorDef): boolean {
@@ -30,21 +28,27 @@ export function isBaked(def: DecorDef): boolean {
  * every static object, its top `canopy` rows on the foreground layer.
  * Placeholder art: the generated tall walls plus flat object shapes.
  */
+/** The terrain layers of a parsed layout that the bake draws. */
+export interface TerrainGrids {
+  readonly wall: Grid;
+  readonly low: Grid;
+  readonly bridge: Grid;
+  readonly path: Grid;
+}
+
 export function bakeWorld(
   scene: Phaser.Scene,
-  wall: Grid,
-  low: Grid,
-  bridge: Grid,
+  grids: TerrainGrids,
   theme: Theme,
   biome: BiomeArt | undefined,
-  objects: readonly PlacedObject[],
+  objects: readonly ResolvedObject[],
   art: ArtMode,
   depths: { base: number; top: number },
 ): Layers {
   const layers =
     biome && art === "ninja"
-      ? bakeTerrain(scene, wall, low, bridge, biome, depths)
-      : bakeTallWalls(scene, wall, low, theme, [], art, depths);
+      ? bakeTerrain(scene, grids, biome, depths)
+      : bakeTallWalls(scene, grids.wall, grids.low, theme, [], art, depths);
   bakeObjects(scene, layers, objects, art);
   return layers;
 }
@@ -56,7 +60,8 @@ function drawTile(rt: Phaser.GameObjects.RenderTexture, t: TileRef, dc: number, 
 /** Plain vertical wooden planks in the water sheet. */
 const PLANK: TileRef = { sheet: "water", col: 5, row: 13 };
 
-function bakeTerrain(scene: Phaser.Scene, wall: Grid, low: Grid, bridge: Grid, biome: BiomeArt, depths: { base: number; top: number }): Layers {
+function bakeTerrain(scene: Phaser.Scene, grids: TerrainGrids, biome: BiomeArt, depths: { base: number; top: number }): Layers {
+  const { wall, low, bridge, path } = grids;
   const rows = wall.length;
   const cols = wall[0]?.length ?? 0;
   const base = scene.add.renderTexture(0, 0, cols * TILE, rows * TILE).setOrigin(0).setDepth(depths.base);
@@ -70,6 +75,8 @@ function bakeTerrain(scene: Phaser.Scene, wall: Grid, low: Grid, bridge: Grid, b
   const plain = biome.ground[0];
   if (!plain) throw new Error("Biome has no ground tile");
   const waterRef: TileRef = { sheet: "water", col: biome.water.col, row: biome.water.row };
+  const pathRef: TileRef = { sheet: "outdoorFloor", col: biome.path.col, row: biome.path.row };
+  const isPath = (c: number, r: number): boolean => (path[r]?.[c] ?? false) && !isWall(c, r);
   const cliffRef: TileRef = { sheet: "relief", col: biome.cliff.col, row: biome.cliff.row };
   const fx = scene.make.graphics({}, false);
   const topFx = scene.make.graphics({}, false);
@@ -90,6 +97,10 @@ function bakeTerrain(scene: Phaser.Scene, wall: Grid, low: Grid, bridge: Grid, b
             if (!isBridge(c + 1, r)) fx.fillRect(x + TILE - 2, y, 2, TILE);
             if (!isBridge(c, r + 1) && isWater(c, r + 1)) fx.fillStyle(0x000000, 0.25).fillRect(x, y + TILE, TILE, 3);
           }
+        } else if (isPath(c, r)) {
+          // Paths use the same 4x4 edge layout as water, edged with the biome ground.
+          const piece = waterPiece(isPath, c, r);
+          drawTile(base, pathRef, piece.col, piece.row, x, y);
         } else {
           const ground = biome.ground[groundVariant(c, r, biome.ground.length, biome.detailChance)] ?? plain;
           drawTile(base, ground, 0, 0, x, y);
@@ -122,7 +133,7 @@ function bakeTerrain(scene: Phaser.Scene, wall: Grid, low: Grid, bridge: Grid, b
 }
 
 /**
- * Trees on raised ground. A 2x2 tree goes on a spot whose 2x2 block and a
+ * Trees on raised ground. A tree goes on a spot whose footprint and a
  * one-tile ring around it are all wall, so trees never hang over paths. It is
  * drawn on the foreground layer, one tile up like the wall tops it sits on.
  */
@@ -135,30 +146,30 @@ function bakeWallTrees(top: Phaser.GameObjects.RenderTexture, wall: Grid, biome:
   for (let r = 0; r < rows - 1; r++) {
     for (let c = 0; c < cols - 1; c++) {
       if (tileHash(c, r, 11) >= biome.wallTreeDensity) continue;
-      let ok = true;
-      for (let dr = -1; dr <= 2 && ok; dr++) for (let dc = -1; dc <= 2 && ok; dc++) if (!isWall(c + dc, r + dr)) ok = false;
-      for (let dr = 0; dr <= 1 && ok; dr++) for (let dc = 0; dc <= 1 && ok; dc++) if (used[r + dr]?.[c + dc]) ok = false;
-      if (!ok) continue;
-      for (let dr = 0; dr <= 1; dr++) for (let dc = 0; dc <= 1; dc++) {
-        const row = used[r + dr];
-        if (row) row[c + dc] = true;
-      }
       const id = biome.wallTrees[Math.floor(tileHash(c, r, 12) * biome.wallTrees.length)] ?? biome.wallTrees[0];
       if (!id) continue;
       const def: DecorDef = DECOR[id];
+      let ok = true;
+      for (let dr = -1; dr <= def.h && ok; dr++) for (let dc = -1; dc <= def.w && ok; dc++) if (!isWall(c + dc, r + dr)) ok = false;
+      for (let dr = 0; dr < def.h && ok; dr++) for (let dc = 0; dc < def.w && ok; dc++) if (used[r + dr]?.[c + dc]) ok = false;
+      if (!ok) continue;
+      for (let dr = 0; dr < def.h; dr++) for (let dc = 0; dc < def.w; dc++) {
+        const row = used[r + dr];
+        if (row) row[c + dc] = true;
+      }
       // A few pixels of jitter so the trees do not line up on the tile grid.
       const jx = Math.round((tileHash(c, r, 13) - 0.5) * 8);
       const jy = Math.round((tileHash(c, r, 14) - 0.5) * 6);
       for (let dr = 0; dr < def.h; dr++) {
         for (let dc = 0; dc < def.w; dc++) {
-          top.drawFrame(sheetKey(def.sheet), frameAt(def.sheet, def.col + dc, def.row + dr), (c + dc) * TILE + jx, (r + dr - 1) * TILE + jy, 1, WALL_TREE_TINT);
+          top.drawFrame(sheetKey(def.sheet), frameAt(def.sheet, def.col + dc, def.row + dr), (c + dc) * TILE + jx, (r + dr - 1) * TILE + jy, 1, biome.wallTreeTint);
         }
       }
     }
   }
 }
 
-function bakeObjects(scene: Phaser.Scene, layers: Layers, objects: readonly PlacedObject[], art: ArtMode): void {
+function bakeObjects(scene: Phaser.Scene, layers: Layers, objects: readonly ResolvedObject[], art: ArtMode): void {
   // Lower objects drawn last, so they overlap the ones behind them.
   const sorted = [...objects].filter((o) => isBaked(DECOR[o.id])).sort((a, b) => a.row + DECOR[a.id].h - (b.row + DECOR[b.id].h));
   const shadow = scene.textures.exists(LightTex.shadow) ? scene.make.image({ key: LightTex.shadow }, false) : null;

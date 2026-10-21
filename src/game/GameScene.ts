@@ -41,8 +41,8 @@ import {
 } from "../logic/upgrades.ts";
 import type { Vec2 } from "../logic/vector.ts";
 import { parseTestMap, testMapLevel, type TestMapOptions } from "../data/maps.ts";
-import { biomeFor } from "../data/biomes.ts";
-import { DECOR, type DecorDef, type PlacedObject } from "../data/decor.ts";
+import { biomeFor, crittersFor, resolveObject } from "../data/biomes.ts";
+import { DECOR, type DecorDef, type ResolvedObject } from "../data/decor.ts";
 import { solidObjectGrid } from "../logic/objects.ts";
 import { tileHash } from "../logic/terrainArt.ts";
 import { AmbientParticles } from "../rendering/AmbientParticles.ts";
@@ -267,11 +267,12 @@ export class GameScene extends Phaser.Scene {
     // v2 maps get tall walls (walk-behind tops), outdoor terrain and placed
     // objects; the v1 rooms keep their flat look and solid props.
     this.tallWalls = levelRoom.encounters !== undefined;
-    const objects: PlacedObject[] = this.tallWalls
+    const objects: ResolvedObject[] = this.tallWalls
       ? [
-          ...(levelRoom.objects ?? []),
+          // Generic objects (slots) take this biome's variant.
+          ...(levelRoom.objects ?? []).map((o) => resolveObject(o, level.theme.id)),
           // On maps, layout crates and barrels are breakable.
-          ...this.layout.props.map((p): PlacedObject => ({
+          ...this.layout.props.map((p): ResolvedObject => ({
             id: p.kind === "crate" ? "crate" : "barrel",
             col: Math.floor(p.rect.x / TILE),
             row: Math.floor(p.rect.y / TILE),
@@ -280,7 +281,7 @@ export class GameScene extends Phaser.Scene {
       : [];
     this.staticProps = this.tallWalls ? [] : this.layout.props;
     if (this.tallWalls) {
-      bakeWorld(this, this.layout.wall, this.layout.low, this.layout.bridge, level.theme, biomeFor(level.theme.id), objects, this.art, {
+      bakeWorld(this, this.layout, level.theme, biomeFor(level.theme.id), objects, this.art, {
         base: Depth.tiles,
         top: Depth.foreground,
       });
@@ -393,8 +394,10 @@ export class GameScene extends Phaser.Scene {
         .filter((g) => inRect(g, def.area))
         .map((g) => ({ x: g.col * TILE, y: g.row * TILE, width: TILE, height: TILE })),
     }));
-    if (levelRoom.critters?.length) {
-      this.critters = new Critters(this, levelRoom.critters, this.art, 0, (kind, x, y) => {
+    // Only animals that live in this biome (none on the snowy mountain).
+    const critters = crittersFor(level.theme.id, levelRoom.critters ?? []);
+    if (critters.length > 0) {
+      this.critters = new Critters(this, critters, this.art, 0, (kind, x, y) => {
         const c = Math.floor(x / TILE);
         const r = Math.floor(y / TILE);
         if (kind === "fish") return this.layout.low[r]?.[c] === true;
@@ -518,7 +521,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Foreground tiles: wall tops (drawn a row up) and object canopies. */
-  private buildTopLayer(objects: readonly PlacedObject[]): void {
+  private buildTopLayer(objects: readonly ResolvedObject[]): void {
     const l = this.layout;
     this.topLayer = l.wall.map((row, r) => row.map((_, c) => this.tallWalls && l.wall[r + 1]?.[c] === true));
     for (const o of objects) {
@@ -551,7 +554,8 @@ export class GameScene extends Phaser.Scene {
 
   private buildStaticBlocked(): void {
     const l = this.layout;
-    const objectGrid = solidObjectGrid(l.cols, l.rows, (this.levelRoom.objects ?? []).map((o) => ({ def: DECOR[o.id], at: o })));
+    const objects = (this.levelRoom.objects ?? []).map((o) => resolveObject(o, this.level.theme.id));
+    const objectGrid = solidObjectGrid(l.cols, l.rows, objects.map((o) => ({ def: DECOR[o.id], at: o })));
     this.staticBlocked = l.wall.map((row, r) => row.map((w, c) => w || (l.low[r]?.[c] ?? false) || (objectGrid[r]?.[c] ?? false)));
     for (const p of this.staticProps) {
       const row = this.staticBlocked[Math.floor(p.rect.y / TILE)];
@@ -1012,7 +1016,7 @@ export class GameScene extends Phaser.Scene {
 }
 
 /** Light sources among placed objects (campfires, spirit fires). */
-function objectLights(objects: readonly PlacedObject[]): TorchLight[] {
+function objectLights(objects: readonly ResolvedObject[]): TorchLight[] {
   return objects.flatMap((o) => {
     const def: DecorDef = DECOR[o.id];
     if (!def.light) return [];

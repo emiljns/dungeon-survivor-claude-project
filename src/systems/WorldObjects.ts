@@ -1,6 +1,6 @@
 import * as Phaser from "phaser";
 import { frameAt } from "../data/artManifest.ts";
-import { DECOR, type DecorDef, type PlacedObject } from "../data/decor.ts";
+import { DECOR, type DecorDef, type ResolvedObject } from "../data/decor.ts";
 import { Depth, TILE } from "../game/config.ts";
 import type { Rect } from "../logic/collision.ts";
 import { blockingTiles } from "../logic/objects.ts";
@@ -36,7 +36,7 @@ export class WorldObjects {
 
   constructor(
     private readonly scene: Phaser.Scene,
-    objects: readonly PlacedObject[],
+    objects: readonly ResolvedObject[],
     rippleTiles: readonly TilePos[],
     private readonly art: ArtMode,
   ) {

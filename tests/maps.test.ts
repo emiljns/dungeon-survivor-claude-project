@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { DECOR } from "../src/data/decor.ts";
-import { TEST_MAP, WORLD_TEST_MAP, type MapDef } from "../src/data/maps.ts";
+import { biomeFor, resolveObject } from "../src/data/biomes.ts";
+import { TEST_MAP, type MapDef } from "../src/data/maps.ts";
+import { WORLD_MAPS } from "../src/data/worldMaps.ts";
 import { blockingTiles, coveredTiles } from "../src/logic/objects.ts";
 import { GAME_HEIGHT, GAME_WIDTH } from "../src/game/config.ts";
 import { inRect, triggerRect, type TileRect } from "../src/logic/encounter.ts";
 import { parseLayout, type ParsedLayout, type TilePos } from "../src/logic/layout.ts";
 
 const T = 16;
-const MAPS: readonly MapDef[] = [TEST_MAP, WORLD_TEST_MAP];
+const MAPS: readonly MapDef[] = [TEST_MAP, ...Object.values(WORLD_MAPS)];
 
 const key = (p: TilePos): string => `${p.col},${p.row}`;
 const tileOf = (x: number, y: number): TilePos => ({ col: Math.floor(x / T), row: Math.floor(y / T) });
@@ -58,7 +60,9 @@ function firstOpenTile(l: ParsedLayout, rect: TileRect): TilePos | null {
 
 describe.each(MAPS.map((m) => [m.layout.id, m] as const))("map %s", (_id, map) => {
   const l = parseLayout(map.layout.rows, T);
-  const blocked = new Set((map.objects ?? []).flatMap((o) => blockingTiles(DECOR[o.id], o)).map(key));
+  // Objects as they will appear: generic slots resolved for the map's biome.
+  const objects = (map.objects ?? []).map((o) => resolveObject(o, map.theme ?? "ruins"));
+  const blocked = new Set(objects.flatMap((o) => blockingTiles(DECOR[o.id], o)).map(key));
   beforeEach(() => {
     objectBlocked = blocked;
   });
@@ -67,7 +71,7 @@ describe.each(MAPS.map((m) => [m.layout.id, m] as const))("map %s", (_id, map) =
     const gateSet = new Set(l.gates.map(key));
     const special = new Set([...l.enemySpawns.map((s) => tileOf(s.x, s.y)), tileOf(l.playerSpawn.x, l.playerSpawn.y)].map(key));
     const seen = new Set<string>();
-    for (const o of map.objects ?? []) {
+    for (const o of objects) {
       const def = DECOR[o.id];
       for (const t of coveredTiles(def, o)) {
         expect(t.col >= 0 && t.row >= 0 && t.col < l.cols && t.row < l.rows, `${o.id} at ${key(o)} inside`).toBe(true);
@@ -83,8 +87,10 @@ describe.each(MAPS.map((m) => [m.layout.id, m] as const))("map %s", (_id, map) =
     }
   });
 
-  it("critters start where they can live (open ground; water for fish)", () => {
+  it("critters start where they can live (open ground; water for fish), and only animals of the biome are placed", () => {
+    const biome = biomeFor(map.theme ?? "");
     for (const c of map.critters ?? []) {
+      if (biome) expect(biome.critters, `${c.kind} does not live in ${map.theme}`).toContain(c.kind);
       const where = `${c.kind} at ${key(c)}`;
       if (c.kind === "fish") expect(l.low[c.row]?.[c.col], where).toBe(true);
       else expect(l.wall[c.row]?.[c.col] === false && !l.low[c.row]?.[c.col] && !blocked.has(key(c)), where).toBe(true);
@@ -105,8 +111,8 @@ describe.each(MAPS.map((m) => [m.layout.id, m] as const))("map %s", (_id, map) =
     }
   });
 
-  it("every gate belongs to exactly one encounter area", () => {
-    expect(l.gates.length).toBeGreaterThan(0);
+  it("every gate belongs to exactly one encounter area (maps with encounters have gates)", () => {
+    expect(l.gates.length > 0).toBe(map.encounters.length > 0);
     for (const gate of l.gates) {
       expect(map.encounters.filter((e) => inRect(gate, e.area)).length, key(gate)).toBe(1);
     }
@@ -154,9 +160,7 @@ describe.each(MAPS.map((m) => [m.layout.id, m] as const))("map %s", (_id, map) =
     }
   });
 
-  it("water exists, and blocks walking but is not a wall (bullets fly over it)", () => {
-    const waterTiles = l.low.flat().filter(Boolean).length;
-    expect(waterTiles).toBeGreaterThan(0);
+  it("water (where a map has it) blocks walking but is not a wall (bullets fly over it)", () => {
     for (let r = 0; r < l.rows; r++) for (let c = 0; c < l.cols; c++) if (l.low[r]?.[c]) expect(l.wall[r]?.[c]).toBe(false);
   });
 });
