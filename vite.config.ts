@@ -1,6 +1,9 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  // Relative URLs, so the built game works from any folder (e.g. a GitHub
+  // Pages project site at /<repo>/) as well as from a site root.
+  base: "./",
   server: { host: "127.0.0.1" },
   build: {
     outDir: "dist",
