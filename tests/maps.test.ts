@@ -9,6 +9,7 @@ import { BAMBOO_FOREST } from "../src/data/forestLevel.ts";
 import { RIVER } from "../src/data/riverLevel.ts";
 import { SNOWY_MOUNTAIN } from "../src/data/snowLevel.ts";
 import { ABANDONED_VILLAGE } from "../src/data/abandonedLevel.ts";
+import { THE_VOID } from "../src/data/voidLevel.ts";
 import { THEMES } from "../src/data/themes.ts";
 import { parseVillage, villageLevel } from "../src/data/maps.ts";
 import { Tuning } from "../src/game/config.ts";
@@ -16,10 +17,11 @@ import { solidObjectGrid } from "../src/logic/objects.ts";
 import { blockingTiles, coveredTiles } from "../src/logic/objects.ts";
 import { GAME_HEIGHT, GAME_WIDTH } from "../src/game/config.ts";
 import { inRect, triggerRect, type TileRect } from "../src/logic/encounter.ts";
+import { JUMP_GAP_TILES, WIDE_GAP_TILES } from "../src/logic/abyss.ts";
 import { parseLayout, type ParsedLayout, type TilePos } from "../src/logic/layout.ts";
 
 const T = 16;
-const MAPS: readonly MapDef[] = [TEST_MAP, ...Object.values(WORLD_MAPS), HOME_VILLAGE, BAMBOO_FOREST, RIVER, SNOWY_MOUNTAIN, ABANDONED_VILLAGE];
+const MAPS: readonly MapDef[] = [TEST_MAP, ...Object.values(WORLD_MAPS), HOME_VILLAGE, BAMBOO_FOREST, RIVER, SNOWY_MOUNTAIN, ABANDONED_VILLAGE, THE_VOID];
 
 const key = (p: TilePos): string => `${p.col},${p.row}`;
 const tileOf = (x: number, y: number): TilePos => ({ col: Math.floor(x / T), row: Math.floor(y / T) });
@@ -35,11 +37,28 @@ function isPropTile(l: ParsedLayout, c: number, r: number): boolean {
   return objectBlocked.has(`${c},${r}`) || l.props.some((p) => p.rect.x === c * T && p.rect.y === r * T);
 }
 
-/** Tiles reachable on foot from `start`. Gates/door open or closed as asked. */
+/**
+ * Moves from a tile: a step to an open neighbour, or a dash-jump straight
+ * over 1–2 abyss tiles to an open tile beyond (the Void).
+ */
+function moves(l: ParsedLayout, p: TilePos, open: (c: number, r: number) => boolean): TilePos[] {
+  const out: TilePos[] = [];
+  for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+    if (open(p.col + dc, p.row + dr)) out.push({ col: p.col + dc, row: p.row + dr });
+    for (let gap = 1; gap <= JUMP_GAP_TILES; gap++) {
+      if (!l.abyss[p.row + dr * gap]?.[p.col + dc * gap]) break;
+      const land = { col: p.col + dc * (gap + 1), row: p.row + dr * (gap + 1) };
+      if (open(land.col, land.row)) out.push(land);
+    }
+  }
+  return out;
+}
+
+/** Tiles reachable on foot (and by dash-jumps) from `start`. Gates/door open or closed as asked. */
 function flood(l: ParsedLayout, start: TilePos, opts: { gatesClosed: boolean; doorOpen: boolean }): Set<string> {
   const gateSet = new Set(l.gates.map(key));
   const open = (c: number, r: number): boolean => {
-    if (l.wall[r]?.[c] !== false || l.low[r]?.[c] || isPropTile(l, c, r)) return false;
+    if (l.wall[r]?.[c] !== false || l.low[r]?.[c] || l.abyss[r]?.[c] || isPropTile(l, c, r)) return false;
     if (isDoor(l, c, r)) return opts.doorOpen;
     if (opts.gatesClosed && gateSet.has(`${c},${r}`)) return false;
     return true;
@@ -49,9 +68,8 @@ function flood(l: ParsedLayout, start: TilePos, opts: { gatesClosed: boolean; do
   while (queue.length) {
     const p = queue.shift();
     if (!p) break;
-    for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-      const n = { col: p.col + dc, row: p.row + dr };
-      if (seen.has(key(n)) || !open(n.col, n.row)) continue;
+    for (const n of moves(l, p, open)) {
+      if (seen.has(key(n))) continue;
       seen.add(key(n));
       queue.push(n);
     }
@@ -62,7 +80,7 @@ function flood(l: ParsedLayout, start: TilePos, opts: { gatesClosed: boolean; do
 function firstOpenTile(l: ParsedLayout, rect: TileRect): TilePos | null {
   for (let r = rect.row; r < rect.row + rect.rows; r++) {
     for (let c = rect.col; c < rect.col + rect.cols; c++) {
-      if (l.wall[r]?.[c] === false && !l.low[r]?.[c] && !isPropTile(l, c, r)) return { col: c, row: r };
+      if (l.wall[r]?.[c] === false && !l.low[r]?.[c] && !l.abyss[r]?.[c] && !isPropTile(l, c, r)) return { col: c, row: r };
     }
   }
   return null;
@@ -182,6 +200,13 @@ describe.each(MAPS.map((m) => [m.layout.id, m] as const))("map %s", (_id, map) =
     }
   });
 
+  it("no gate lies where its fight starts (it would close on the player)", () => {
+    for (const e of map.encounters) {
+      const trig = triggerRect(e);
+      for (const g of l.gates.filter((p) => inRect(p, e.area))) expect(inRect(g, trig), `${e.id} gate ${key(g)}`).toBe(false);
+    }
+  });
+
   it("no fight can be skipped: every way between two of an area's gates crosses its trigger", () => {
     for (const e of map.encounters) {
       const trig = triggerRect(e);
@@ -208,16 +233,30 @@ describe.each(MAPS.map((m) => [m.layout.id, m] as const))("map %s", (_id, map) =
         while (queue.length) {
           const p = queue.shift();
           if (!p) break;
-          for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-            const n = { col: p.col + dc, row: p.row + dr };
-            if (seen.has(key(n)) || !inRect(n, e.area) || inTrig(n.col, n.row)) continue;
-            if (l.wall[n.row]?.[n.col] !== false || l.low[n.row]?.[n.col] || isPropTile(l, n.col, n.row)) continue;
+          const open = (c: number, r: number): boolean =>
+            inRect({ col: c, row: r }, e.area) && !inTrig(c, r) && l.wall[r]?.[c] === false && !l.low[r]?.[c] && !l.abyss[r]?.[c] && !isPropTile(l, c, r);
+          for (const n of moves(l, p, open)) {
+            if (seen.has(key(n))) continue;
             seen.add(key(n));
             queue.push(n);
           }
         }
         const leaked = gates.filter((g) => groupOf.get(key(g)) !== from && seen.has(key(g)));
         expect(leaked.map(key), `${e.id}: from gate ${key(start[0] ?? { col: -1, row: -1 })} you can walk round the trigger to`).toEqual([]);
+      }
+    }
+  });
+
+  it("abyss gaps are 1–2 tiles (a dash crosses) or 4+ (it cannot): never an ambiguous 3", () => {
+    for (let r = 0; r < l.rows; r++) {
+      for (let c = 0; c < l.cols; c++) {
+        if (l.abyss[r]?.[c] || l.wall[r]?.[c] !== false) continue;
+        for (const [dc, dr] of [[1, 0], [0, 1]] as const) {
+          let n = 0;
+          while (l.abyss[r + dr * (n + 1)]?.[c + dc * (n + 1)]) n++;
+          const far = { col: c + dc * (n + 1), row: r + dr * (n + 1) };
+          if (n > 0 && l.wall[far.row]?.[far.col] === false) expect(n, `gap from ${c},${r}`).not.toBe(WIDE_GAP_TILES - 1);
+        }
       }
     }
   });
@@ -444,5 +483,68 @@ describe("Abandoned Village", () => {
     expect(houses.length).toBeGreaterThanOrEqual(15);
     const graveyard = ABANDONED_VILLAGE.encounters.find((e) => e.id === "graveyard");
     expect(graveyard && objects.filter((o) => o.id.startsWith("grave") && inArea(o, graveyard.area)).length).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe("The Void", () => {
+  const l = parseLayout(THE_VOID.layout.rows, T);
+  const start = tileOf(l.playerSpawn.x, l.playerSpawn.y);
+  const door = l.doorRects[0];
+  const doorTile = door ? tileOf(door.x, door.y) : start;
+  beforeEach(() => {
+    objectBlocked = new Set((THE_VOID.objects ?? []).map((o) => resolveObject(o, "void")).flatMap((o) => blockingTiles(DECOR[o.id], o)).map(key));
+  });
+
+  it("is a large map: at least four screens of area", () => {
+    expect((l.cols * T * l.rows * T) / (GAME_WIDTH * GAME_HEIGHT)).toBeGreaterThanOrEqual(4);
+  });
+
+  it("you cannot finish it on foot: the way to the exit needs dash-jumps", () => {
+    expect(flood(l, start, { gatesClosed: false, doorOpen: true }).has(key(doorTile))).toBe(true);
+    const noJumps = { ...l, abyss: l.abyss.map((row) => row.map(() => false)), wall: l.wall.map((row, r) => row.map((w, c) => w || (l.abyss[r]?.[c] ?? false))) };
+    expect(flood(noJumps, start, { gatesClosed: false, doorOpen: true }).has(key(doorTile))).toBe(false);
+  });
+
+  it("the first gaps teach the jump: one tile, then two", () => {
+    const row = start.row;
+    const runs: number[] = [];
+    let c = start.col;
+    while (c < l.cols && runs.length < 2) {
+      if (l.abyss[row]?.[c]) {
+        let n = 0;
+        while (l.abyss[row]?.[c + n]) n++;
+        runs.push(n);
+        c += n;
+      } else c++;
+    }
+    expect(runs).toEqual([1, 2]);
+  });
+
+  it("every platform edge drops into the abyss: no floor touches a wall (except by the exit)", () => {
+    for (let r = 0; r < l.rows; r++) {
+      for (let c = 0; c < l.cols; c++) {
+        if (l.wall[r]?.[c] !== false || l.abyss[r]?.[c] || Math.abs(c - doorTile.col) + Math.abs(r - doorTile.row) <= 2) continue;
+        for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) expect(l.wall[r + dr]?.[c + dc], `floor ${c},${r} touches a wall`).toBe(false);
+      }
+    }
+  });
+
+  it("enemies can walk to every fight from their spawns (no melee enemy is stranded on an island)", () => {
+    const walk = { ...l, abyss: l.abyss.map((row) => row.map(() => false)), wall: l.wall.map((row, r) => row.map((w, c) => w || (l.abyss[r]?.[c] ?? false))) };
+    for (const e of THE_VOID.encounters) {
+      const trig = firstOpenTile(l, triggerRect(e));
+      expect(trig, e.id).not.toBeNull();
+      if (!trig) continue;
+      const reach = flood(walk, trig, { gatesClosed: true, doorOpen: false });
+      for (const s of l.enemySpawns.map((p) => tileOf(p.x, p.y)).filter((p) => inRect(p, e.area))) expect(reach.has(key(s)), `${e.id} spawn ${key(s)}`).toBe(true);
+    }
+  });
+
+  it("purple braziers light the start and every fight; spirit motes drift; nothing lives here", () => {
+    const braziers = (THE_VOID.objects ?? []).filter((o) => o.id === "voidBrazier");
+    expect(braziers.some((b) => Math.abs(b.col - start.col) + Math.abs(b.row - start.row) <= 10)).toBe(true);
+    for (const e of THE_VOID.encounters) expect(braziers.filter((b) => inRect(b, e.area)).length, e.id).toBeGreaterThanOrEqual(1);
+    expect(biomeFor("void")?.particles).toBe("motes");
+    expect(THE_VOID.critters ?? []).toHaveLength(0);
   });
 });

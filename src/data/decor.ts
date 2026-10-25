@@ -121,6 +121,10 @@ export const DECOR = {
     sheet: "camp", col: 10, row: 3, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 0, cols: 2, rows: 2 },
     light: { color: 0x6ab8ff, radius: 96, flame: true }, color: 0x6a7a9a,
   },
+  voidBrazier: {
+    sheet: "camp", col: 10, row: 3, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 0, cols: 2, rows: 2 },
+    light: { color: 0xb68cff, radius: 104, flame: true }, color: 0x6a4a9a,
+  },
   logs: { sheet: "camp", col: 0, row: 7, w: 2, h: 1, kind: "solid", solid: { col: 0, row: 0, cols: 2, rows: 1 }, color: 0xb07840 },
   flowerPlant: { sheet: "plant", col: 0, row: 0, w: 1, h: 1, kind: "walkover", anim: "na-plant", color: 0xf2f2e0 },
   flag: { sheet: "flag", col: 0, row: 0, w: 1, h: 1, kind: "walkover", anim: "na-flag", color: 0xe04040 },

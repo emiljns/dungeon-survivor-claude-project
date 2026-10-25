@@ -35,6 +35,7 @@ export interface TerrainGrids {
   readonly bridge: Grid;
   readonly path: Grid;
   readonly ice: Grid;
+  readonly abyss: Grid;
 }
 
 export function bakeWorld(
@@ -49,7 +50,7 @@ export function bakeWorld(
   const layers =
     biome && art === "ninja"
       ? bakeTerrain(scene, grids, biome, depths)
-      : bakeTallWalls(scene, grids.wall, grids.low, theme, [], art, depths);
+      : bakeTallWalls(scene, grids.wall, grids.low.map((row, r) => row.map((w, c) => w || (grids.abyss[r]?.[c] ?? false))), theme, [], art, depths);
   bakeObjects(scene, layers, objects, art);
   return layers;
 }
@@ -60,6 +61,9 @@ function drawTile(rt: Phaser.GameObjects.RenderTexture, t: TileRef, dc: number, 
 
 /** Ice: the glossy frozen block of the water sheet, edged by the same 4x4 layout as water. */
 const ICE: TileRef = { sheet: "water", col: 13, row: 0 };
+
+/** The abyss: the pack's pit block, edged by the same 4x4 layout as water. */
+const PIT: TileRef = { sheet: "hole", col: 0, row: 0 };
 
 /** Plain vertical wooden planks in the water sheet. */
 const PLANK: TileRef = { sheet: "water", col: 5, row: 13 };
@@ -82,6 +86,9 @@ function bakeTerrain(scene: Phaser.Scene, grids: TerrainGrids, biome: BiomeArt, 
   const pathRef: TileRef = { sheet: "outdoorFloor", col: biome.path.col, row: biome.path.row };
   const isPath = (c: number, r: number): boolean => (path[r]?.[c] ?? false) && !isWall(c, r);
   const isIce = (c: number, r: number): boolean => (grids.ice[r]?.[c] ?? false) && !isWall(c, r);
+  // In the Void the walls are more abyss: pits show an edge only against platforms.
+  const isPit = (c: number, r: number): boolean => (grids.abyss[r]?.[c] ?? false) || (biome.pitWalls === true && isWall(c, r));
+  const groundTint = biome.groundTint ?? 0xffffff;
   const cliffRef: TileRef = { sheet: "relief", col: biome.cliff.col, row: biome.cliff.row };
   const fx = scene.make.graphics({}, false);
   const topFx = scene.make.graphics({}, false);
@@ -90,6 +97,11 @@ function bakeTerrain(scene: Phaser.Scene, grids: TerrainGrids, biome: BiomeArt, 
     for (let c = 0; c < cols; c++) {
       const x = c * TILE;
       const y = r * TILE;
+      if (isPit(c, r)) {
+        const piece = waterPiece(isPit, c, r);
+        drawTile(base, PIT, piece.col, piece.row, x, y, biome.pitTint ?? 0xffffff);
+        continue;
+      }
       if (!isWall(c, r)) {
         if (isWater(c, r)) {
           const piece = waterPiece(isWater, c, r);
@@ -111,7 +123,7 @@ function bakeTerrain(scene: Phaser.Scene, grids: TerrainGrids, biome: BiomeArt, 
           drawTile(base, pathRef, piece.col, piece.row, x, y);
         } else {
           const ground = biome.ground[groundVariant(c, r, biome.ground.length, biome.detailChance)] ?? plain;
-          drawTile(base, ground, 0, 0, x, y);
+          drawTile(base, ground, 0, 0, x, y, groundTint);
         }
         continue;
       }

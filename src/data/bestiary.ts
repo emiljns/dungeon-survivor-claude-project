@@ -146,6 +146,34 @@ export const VILLAGE_BESTIARY: Bestiary = {
   },
 };
 
+/**
+ * The Void (level 5): blue wisps flicker in, red demon beasts charge, eyes
+ * stare across the gaps. The Demon Cyclops guards the shattered bridge; The
+ * Hollow Warden waits at the end of everything, stronger than in v1.
+ */
+export const VOID_BESTIARY: Bestiary = {
+  looks: { chaser: "voidChaser", tank: "voidTank", ranged: "ranged" },
+  miniboss: {
+    name: "DEMON CYCLOPS",
+    stats: {
+      ...ENEMY_STATS.miniboss,
+      maxHealth: 42,
+      attack: { pattern: "radial", cooldownMs: 2200, windupMs: 650, bulletSpeed: 105, count: 10, spreadDeg: 0, damage: 1 },
+    },
+    look: { sheet: "minibossCyclops", idleAnim: "na-miniboss-cyclops-idle" },
+  },
+  boss: {
+    name: HOLLOW_WARDEN.name,
+    // The last boss outclasses every other (128 HP and 14-bullet bursts on level 5).
+    stats: {
+      ...ENEMY_STATS.boss,
+      maxHealth: 80,
+      attack: { pattern: "radial", cooldownMs: 2000, windupMs: 650, bulletSpeed: 110, count: 14, spreadDeg: 0, damage: 1 },
+    },
+    look: HOLLOW_WARDEN.look,
+  },
+};
+
 export function isBossKind(kind: EnemyKind): boolean {
   return kind === "boss" || kind === "miniboss";
 }

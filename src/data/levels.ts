@@ -1,9 +1,11 @@
-// The five levels, played in order. Each level is a start room, combat rooms
-// and a final room with an elite (level 5: the boss). Layouts are reused across
-// levels with different enemy sets, themes and difficulty.
+// The five levels, played in order. Each is one continuous hand-made map
+// (src/data/*Level.ts) with encounter areas, a mini-boss and a final boss;
+// level 5 ends with The Hollow Warden. (The v1 room layouts in rooms.ts
+// remain for the debug showcase.)
 
 import type { EncounterDef } from "../logic/encounter.ts";
-import { FOREST_BESTIARY, RIVER_BESTIARY, SNOW_BESTIARY, VILLAGE_BESTIARY, type Bestiary } from "./bestiary.ts";
+import { FOREST_BESTIARY, RIVER_BESTIARY, SNOW_BESTIARY, VILLAGE_BESTIARY, VOID_BESTIARY, type Bestiary } from "./bestiary.ts";
+import { THE_VOID } from "./voidLevel.ts";
 import { ABANDONED_VILLAGE } from "./abandonedLevel.ts";
 import { BAMBOO_FOREST } from "./forestLevel.ts";
 import { RIVER } from "./riverLevel.ts";
@@ -11,7 +13,7 @@ import { SNOWY_MOUNTAIN } from "./snowLevel.ts";
 import type { MapDef } from "./maps.ts";
 import type { PlacedCritter, PlacedNpc, PlacedObject } from "./decor.ts";
 import type { Difficulty, EnemyKind } from "../logic/enemyStats.ts";
-import { ARENA, CROSSROADS, ENTRY_HALL, FURNACE, GALLERY, type RoomLayout } from "./rooms.ts";
+import type { RoomLayout } from "./rooms.ts";
 import { THEMES, type Theme } from "./themes.ts";
 
 export interface EnemySpec {
@@ -48,18 +50,6 @@ export interface LevelDefinition {
   readonly bestiary?: Bestiary;
 }
 
-const c: EnemySpec = { kind: "chaser", elite: false };
-const t: EnemySpec = { kind: "tank", elite: false };
-const r: EnemySpec = { kind: "ranged", elite: false };
-const boss: EnemySpec = { kind: "boss", elite: false };
-/** Each level's arrival room; the travelling merchant waits beside the start. */
-const start: LevelRoom = { layout: ENTRY_HALL, enemies: [], reward: false, npcs: [{ kind: "merchant", col: 24, row: 11 }] };
-/**
- * A combat room. `reward` marks the level's upgrade opportunities: the room
- * before the final room, plus the elite room on levels 1–4 (9 upgrades a run).
- */
-const room = (layout: RoomLayout, enemies: readonly EnemySpec[], reward = false): LevelRoom => ({ layout, enemies, reward });
-
 /**
  * A v2 level: a single room holding the whole map. Every wave of every
  * encounter is listed in `enemies` (the room's clear count); nothing spawns
@@ -92,19 +82,7 @@ export const LEVELS: readonly LevelDefinition[] = [
   mapLevel(2, "River", THEMES.river, { healthMul: 1.1, speedMul: 1.2 }, RIVER, RIVER_BESTIARY),
   mapLevel(3, "Snowy Mountain", THEMES.snow, { healthMul: 1.25, speedMul: 1.1 }, SNOWY_MOUNTAIN, SNOW_BESTIARY),
   mapLevel(4, "Abandoned Village", THEMES.abandoned, { healthMul: 1.4, speedMul: 1.15 }, ABANDONED_VILLAGE, VILLAGE_BESTIARY),
-  {
-    number: 5,
-    name: "The Void",
-    theme: THEMES.void,
-    difficulty: { healthMul: 1.6, speedMul: 1.2 },
-    rooms: [
-      start,
-      room(CROSSROADS, [t, t, r, r, c]),
-      room(FURNACE, [r, r, r, t, c, c]),
-      room(GALLERY, [t, r, r, r, c, c], true),
-      room(ARENA, [boss, c, c]),
-    ],
-  },
+  mapLevel(5, "The Void", THEMES.void, { healthMul: 1.6, speedMul: 1.2 }, THE_VOID, VOID_BESTIARY),
 ];
 
 export const ROOMS_PER_LEVEL: readonly number[] = LEVELS.map((l) => l.rooms.length);

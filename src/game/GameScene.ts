@@ -45,6 +45,7 @@ import type { Npc } from "../systems/Npcs.ts";
 import { biomeFor, crittersFor, resolveObject } from "../data/biomes.ts";
 import { DECOR, type DecorDef, type ResolvedObject } from "../data/decor.ts";
 import { solidObjectGrid } from "../logic/objects.ts";
+import { edgeHolds, respawnTile, shouldFall } from "../logic/abyss.ts";
 import { tileHash } from "../logic/terrainArt.ts";
 import { AmbientParticles } from "../rendering/AmbientParticles.ts";
 import { bakeWorld } from "../rendering/WorldBake.ts";
@@ -237,6 +238,9 @@ export class GameScene extends Phaser.Scene {
   private playerSolids: Rect[] = [];
   /** Tiles drawn on the foreground layer (wall tops and canopies): actors there get silhouettes. */
   private topLayer: boolean[][] = [];
+  private pits: Phaser.Physics.Arcade.StaticGroup | null = null;
+  /** Where a fall into the abyss brings the player back. */
+  private lastSafe: TilePos | null = null;
   private world: WorldObjects | null = null;
   private critters: Critters | null = null;
   private particles: AmbientParticles | null = null;
@@ -282,6 +286,8 @@ export class GameScene extends Phaser.Scene {
     this.objectRects = [];
     this.playerSolids = [];
     this.topLayer = [];
+    this.pits = null;
+    this.lastSafe = null;
     this.world = null;
     this.critters = null;
     this.particles = null;
@@ -372,6 +378,11 @@ export class GameScene extends Phaser.Scene {
     // Water and other low obstacles block walking only; bullets fly over them.
     const low = this.physics.add.staticGroup();
     for (const r of this.layout.lowRects) low.add(this.add.zone(r.x + r.width / 2, r.y + r.height / 2, r.width, r.height));
+    // The abyss: enemies never cross it. It holds the player back too, except
+    // while dashing or stepping off on purpose (logic/abyss.ts).
+    const pits = this.physics.add.staticGroup();
+    for (const r of this.layout.abyssRects) pits.add(this.add.zone(r.x + r.width / 2, r.y + r.height / 2, r.width, r.height));
+    this.pits = pits;
     // Encounter gates: bodies exist only while their encounter is active.
     this.gateBodies = this.physics.add.staticGroup();
     this.gateGfx = this.add.graphics().setDepth(Depth.effects);
@@ -399,6 +410,10 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.enemyGroup, this.doors);
     this.physics.add.collider(this.player.sprite, low);
     this.physics.add.collider(this.enemyGroup, low);
+    this.physics.add.collider(this.enemyGroup, this.pits);
+    this.physics.add.collider(this.player.sprite, this.pits, undefined, () =>
+      edgeHolds({ dashing: this.player.isDashing(this.simTime), knockedBack: this.player.isKnockedBack(this.simTime), walking: this.player.isWalking() }),
+    );
     this.physics.add.collider(this.player.sprite, this.gateBodies);
     this.physics.add.collider(this.enemyGroup, this.gateBodies);
     this.physics.add.collider(this.enemyGroup, this.enemyGroup);
@@ -525,6 +540,9 @@ export class GameScene extends Phaser.Scene {
       this.onIce(),
     );
 
+    this.checkAbyss(now);
+    if (this.phase !== "playing") return;
+
     const lean = cameraLean(this.player.position, aim);
     this.cameras.main.setFollowOffset(-lean.x, -lean.y);
 
@@ -615,7 +633,9 @@ export class GameScene extends Phaser.Scene {
   /** Foreground tiles: wall tops (drawn a row up) and object canopies. */
   private buildTopLayer(objects: readonly ResolvedObject[]): void {
     const l = this.layout;
-    this.topLayer = l.wall.map((row, r) => row.map((_, c) => this.tallWalls && l.wall[r + 1]?.[c] === true));
+    // Pit-style walls (the Void) have no tops to walk behind.
+    const pitWalls = this.art === "ninja" && biomeFor(this.level.theme.id)?.pitWalls === true;
+    this.topLayer = l.wall.map((row, r) => row.map((_, c) => this.tallWalls && !pitWalls && l.wall[r + 1]?.[c] === true));
     for (const o of objects) {
       const def: DecorDef = DECOR[o.id];
       for (let dr = 0; dr < (def.canopy ?? 0); dr++) {
@@ -625,6 +645,38 @@ export class GameScene extends Phaser.Scene {
         }
       }
     }
+  }
+
+  /** Falls into the abyss; otherwise remembers the last safe tile to come back to. */
+  private checkAbyss(now: number): void {
+    const l = this.layout;
+    const p = this.player.position;
+    const tile = { col: Math.floor(p.x / TILE), row: Math.floor(p.y / TILE) };
+    const dashing = this.player.isDashing(now);
+    const over = l.abyss[tile.row]?.[tile.col] === true;
+    if (!over) {
+      if (!dashing && l.wall[tile.row]?.[tile.col] === false) this.lastSafe = tile;
+      return;
+    }
+    if (!shouldFall(over, dashing)) return;
+    const dyn = this.dynamicSolids();
+    const safe = (c: number, r: number): boolean =>
+      this.staticBlocked[r]?.[c] === false && !dyn.some((d) => pointInRect({ x: c * TILE + TILE / 2, y: r * TILE + TILE / 2 }, d));
+    const spawn = { col: Math.floor(l.playerSpawn.x / TILE), row: Math.floor(l.playerSpawn.y / TILE) };
+    const back = respawnTile(this.lastSafe ?? spawn, safe, (c, r) => l.abyss[r]?.[c] === true) ?? spawn;
+    this.fallFx(p);
+    const result = this.player.fall({ x: (back.col + 0.5) * TILE, y: (back.row + 0.5) * TILE }, now);
+    this.lastSafe = back;
+    this.updateHud();
+    this.cameras.main.shake(140, 0.005);
+    if (result.died) this.gameOver();
+  }
+
+  /** The player's image shrinks and spins away into the pit. */
+  private fallFx(at: Vec2): void {
+    const s = this.player.sprite;
+    const ghost = this.add.image(at.x, at.y, s.texture.key, s.frame.name).setDepth(Depth.props).setFlipX(s.flipX);
+    this.tweens.add({ targets: ghost, scale: 0.15, alpha: 0, angle: 220, duration: 380, ease: "Quad.easeIn", onComplete: () => ghost.destroy() });
   }
 
   /** Is the player standing on ice? */
@@ -654,7 +706,9 @@ export class GameScene extends Phaser.Scene {
     const l = this.layout;
     const objects = (this.levelRoom.objects ?? []).map((o) => resolveObject(o, this.level.theme.id));
     const objectGrid = solidObjectGrid(l.cols, l.rows, objects.map((o) => ({ def: DECOR[o.id], at: o })));
-    this.staticBlocked = l.wall.map((row, r) => row.map((w, c) => w || (l.low[r]?.[c] ?? false) || (objectGrid[r]?.[c] ?? false)));
+    this.staticBlocked = l.wall.map((row, r) =>
+      row.map((w, c) => w || (l.low[r]?.[c] ?? false) || (l.abyss[r]?.[c] ?? false) || (objectGrid[r]?.[c] ?? false)),
+    );
     for (const p of this.staticProps) {
       const row = this.staticBlocked[Math.floor(p.rect.y / TILE)];
       if (row) row[Math.floor(p.rect.x / TILE)] = true;
@@ -738,7 +792,8 @@ export class GameScene extends Phaser.Scene {
     this.gateGfx.clear();
     for (const s of this.gateSprites) s.destroy();
     this.gateSprites = [];
-    const look = this.art === "ninja" ? biomeFor(this.level.theme.id)?.gate : undefined;
+    const biome = this.art === "ninja" ? biomeFor(this.level.theme.id) : undefined;
+    const look = biome?.gate;
     for (const enc of this.encounters) {
       if (enc.state.phase !== "active") continue;
       for (const g of enc.gates) {
@@ -756,7 +811,7 @@ export class GameScene extends Phaser.Scene {
         }
         // Glowing bars, drawn above the darkness like all door state.
         this.gateGfx.fillStyle(0x2a1430, 0.85).fillRect(g.x, g.y, g.width, g.height);
-        this.gateGfx.fillStyle(0xff5d73);
+        this.gateGfx.fillStyle(biome?.barColor ?? 0xff5d73);
         for (let i = 2; i < TILE; i += 5) this.gateGfx.fillRect(g.x + i, g.y + 1, 2, g.height - 2);
       }
     }

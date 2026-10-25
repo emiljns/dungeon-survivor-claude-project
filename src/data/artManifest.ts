@@ -87,6 +87,11 @@ export const SHEETS = {
   villageRanged: { key: "na-village-lantern", file: "enemy-village-lantern.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/LanternGreen/SpriteSheet.png" },
   minibossRacoon: { key: "na-miniboss-racoon", file: "boss-giant-racoon-idle.png", frameWidth: 60, frameHeight: 60, source: "Actor/Boss/GiantRacoon/Idle.png" },
   bossRedSamurai: { key: "na-boss-red-samurai", file: "boss-giant-red-samurai-idle.png", frameWidth: 96, frameHeight: 48, source: "Actor/Boss/GiantRedSamurai/Idle.png" },
+  // The Void (Milestone 11).
+  hole: { key: "na-hole", file: "tiles-hole.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Tilesets/TilesetHole.png" },
+  voidChaser: { key: "na-void-wisp", file: "enemy-void-wisp.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/Flam2/SpriteSheet.png" },
+  voidTank: { key: "na-void-beast", file: "enemy-void-beast.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/Beast/Beast.png" },
+  minibossCyclops: { key: "na-miniboss-cyclops", file: "boss-demon-cyclops-idle.png", frameWidth: 50, frameHeight: 50, source: "Actor/Boss/DemonCyclop2/Idle.png" },
   waterfallTop: { key: "na-waterfall-top", file: "anim-waterfall-top.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Animated/Waterfall/TopSheet16x16.png" },
   waterfallMiddle: { key: "na-waterfall-middle", file: "anim-waterfall-middle.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Animated/Waterfall/MiddleSheet16x16.png" },
   waterfallBottom: { key: "na-waterfall-bottom", file: "anim-waterfall-bottom.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Animated/Waterfall/BottomSheet16x16.png" },
@@ -163,6 +168,10 @@ export const SHEET_SIZES: Readonly<Record<SheetId, readonly [number, number]>> =
   villageRanged: [64, 64],
   minibossRacoon: [360, 60],
   bossRedSamurai: [576, 48],
+  hole: [176, 80],
+  voidChaser: [64, 64],
+  voidTank: [64, 64],
+  minibossCyclops: [250, 50],
   waterfallTop: [80, 16],
   waterfallMiddle: [80, 16],
   waterfallBottom: [48, 16],
@@ -211,12 +220,12 @@ export const walkAnimKey = (sheet: SheetId, dir: Direction): string => `${SHEETS
 const range = (n: number): number[] => Array.from({ length: n }, (_, i) => i);
 
 export const ANIMS: readonly AnimDef[] = [
-  ...(["player", "chaser", "tank", "ranged", "forestChaser", "forestTank", "forestRanged", "riverChaser", "riverTank", "riverRanged", "snowChaser", "snowTank", "snowRanged", "villageChaser", "villageTank", "villageRanged"] as const).flatMap((sheet) =>
+  ...(["player", "chaser", "tank", "ranged", "forestChaser", "forestTank", "forestRanged", "riverChaser", "riverTank", "riverRanged", "snowChaser", "snowTank", "snowRanged", "villageChaser", "villageTank", "villageRanged", "voidChaser", "voidTank"] as const).flatMap((sheet) =>
     DIRECTIONS.map((dir) => ({
       key: walkAnimKey(sheet, dir),
       sheet,
       frames: walkFrames(dir),
-      frameRate: sheet === "tank" || sheet === "forestTank" || sheet === "riverTank" || sheet === "snowTank" || sheet === "villageTank" ? 6 : 9,
+      frameRate: sheet === "tank" || sheet === "forestTank" || sheet === "riverTank" || sheet === "snowTank" || sheet === "villageTank" || sheet === "voidTank" ? 6 : 9,
       repeat: -1,
     })),
   ),
@@ -228,6 +237,7 @@ export const ANIMS: readonly AnimDef[] = [
   { key: "na-boss-samurai-idle", sheet: "bossSamurai", frames: range(6), frameRate: 7, repeat: -1 },
   { key: "na-miniboss-racoon-idle", sheet: "minibossRacoon", frames: range(6), frameRate: 8, repeat: -1 },
   { key: "na-boss-red-samurai-idle", sheet: "bossRedSamurai", frames: range(6), frameRate: 7, repeat: -1 },
+  { key: "na-miniboss-cyclops-idle", sheet: "minibossCyclops", frames: range(5), frameRate: 8, repeat: -1 },
   { key: "na-waterfall-top", sheet: "waterfallTop", frames: range(5), frameRate: 10, repeat: -1 },
   { key: "na-waterfall-middle", sheet: "waterfallMiddle", frames: range(5), frameRate: 10, repeat: -1 },
   { key: "na-waterfall-bottom", sheet: "waterfallBottom", frames: range(3), frameRate: 8, repeat: -1 },

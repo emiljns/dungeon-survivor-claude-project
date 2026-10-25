@@ -79,24 +79,28 @@ original pack path, plus the per-level floor and wall choices.
     old shopkeeper sells weapon unlocks, and the gate a few steps east
     (press E) starts the run. Time and score start at the gate.
 -   **Five levels in order:** Bamboo Forest → River → Snowy Mountain →
-    Abandoned Village → The Void. (v2 is replacing the dungeon levels
-    one at a time: the first four are large maps with encounter areas,
-    a mini-boss and a boss. On the River, water blocks walking but not
-    bullets, and bridges are the crossings; on the Snowy Mountain, you
-    slide on ice; the Abandoned Village is a night of lanterns and
-    street ambushes.) Each has its own palette,
-    torch colour and difficulty.
--   **Rooms:** each level has 4–5 rooms. A safe start room, then combat
-    rooms, then a final arena with an elite (Level 5: the boss, *The
-    Hollow Warden*).
--   **Doors:** a room's door stays locked until every enemy is dead.
-    Stand at it and press E.
--   **Enemies:**
-    -   Chasers (red) rush you.
-    -   Tanks (amber) are slow and hit for 2.
-    -   Ranged shooters (purple) keep their distance. They stop, flash
-        and draw an aim line before each shot, so watch for the line
-        and dash.
+    Abandoned Village → The Void. Each is one large hand-made map with
+    its own monsters, light, terrain and difficulty:
+    -   **Bamboo Forest:** the baseline.
+    -   **River:** water blocks walking but not bullets; bridges are the
+        crossings.
+    -   **Snowy Mountain:** you slide on ice.
+    -   **Abandoned Village:** night, lanterns and street ambushes.
+    -   **The Void:** broken platforms over the abyss. Step off and you
+        fall (1 HP, back to a safe spot); dash to cross a gap of 1–2
+        tiles.
+-   **Fights:** walking into a fight area (or across an ambush trigger)
+    seals its gates until its waves are beaten. Each level has a
+    mini-boss with a wave, and ends with its boss (level 5: *The Hollow
+    Warden*).
+-   **Exit:** the level's exit, past the boss, opens once every fight is
+    cleared. Stand at it and press E.
+-   **Enemies:** every level dresses three behaviours in its own
+    monsters:
+    -   chasers rush you;
+    -   tanks are slow and hit for 2;
+    -   ranged shooters keep their distance. They stop, flash and draw an
+        aim line before each shot, so watch for the line and dash.
 -   **Health** carries over between rooms and refills at each new level.
 -   **Upgrades:** rooms marked "UPGRADE ON CLEAR" offer three upgrades,
     9 per run, each capped. The options are damage, fire rate, bullet

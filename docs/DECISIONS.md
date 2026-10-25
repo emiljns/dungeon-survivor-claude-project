@@ -1053,6 +1053,84 @@
     springs the ambush at the middle column (3 enemies, both gates
     closed). Before, that route skipped it.
 
+## Milestone 11 — The Void, level 5 (2026-10-25)
+
+-   **Level 5 is now one continuous map** (`src/data/voidLevel.ts`,
+    120×64 tiles), replacing the last v1 rooms. **Every level is now a
+    hand-made v2 map.** The v1 room layouts stay only for the debug
+    showcase, and the unused room-building helpers left `levels.ts`.
+    Level 5 keeps health ×1.6 and speed ×1.2.
+-   **The abyss** (`src/logic/abyss.ts`, layout symbol `_`):
+    -   Enemies and their paths treat it like water; bullets fly over it.
+    -   **Falling:** standing (not dashing) with your centre over it
+        costs 1 HP. You come back on the nearest tile away from the
+        edge, briefly invulnerable, with movement paused for 450 ms.
+    -   **Knockback and shoves never push you in.** The edge holds the
+        player except while dashing or while walking by choice (a
+        movement key held, not reeling from a hit).
+    -   **Dash-jumps:** a dash covers 54 px. Intended gaps are 1–2
+        tiles, impassable ones at least 4. There are no 3-tile gaps,
+        since a precise dash could just clear one; a map test checks
+        every map for them.
+    -   **Found in browser testing:** at first, a held key after a fall
+        walked the player straight back off the edge they had respawned
+        on, and every fall cost 1 HP even while blinking (3 HP lost in
+        half a second). Now you come back away from the edge, falls
+        respect the post-hit invulnerability, and input pauses briefly.
+        Measured again: holding "up" into a pit for 1.5 s costs 2 HP,
+        and a separate later fall costs 1.
+    -   Measured: stepping off on purpose falls; a hit at an edge does
+        not push the player in; dashes cross the 1-tile and 2-tile gaps
+        with no damage.
+-   **Look:** broken platforms of purple-tinted dark cobble over the
+    pack's TilesetHole pits, edged with the water layout.
+    -   Walls are drawn as more abyss (no cliffs or wall tops), so the
+        world looks endless.
+    -   Every platform edge is real abyss (a 3-tile margin), so there
+        are no invisible walls; a test checks this.
+    -   Spirit motes drift (an existing particle type) and purple
+        braziers give light.
+    -   Closed gates are glowing cyan bars. A tinted bush read as a
+        plant, not a barrier.
+-   **The layout:**
+    1.  the arrival platform, with the merchant;
+    2.  a causeway that teaches the jump (a 1-tile gap, then a 2-tile
+        one);
+    3.  the Shattered Hall, full of holes (two waves);
+    4.  a broken bridge;
+    5.  the Demon Cyclops's platform (an upgrade);
+    6.  stepping stones;
+    7.  the Spirit Garden ambush (a band trigger);
+    8.  a drop to The Hollow Warden's sanctum, inside a broken ring of
+        pits; the exit is south.
+
+    The last level has one upgrade, so a run keeps 9.
+-   **Bestiary:**
+    -   Blue wisps (chaser), red demon beasts (tank) and the floating
+        eye (ranged, the v1 sheet).
+    -   **Demon Cyclops** mini-boss (the green variant, for contrast):
+        42 HP base, 10-bullet bursts.
+    -   **The Hollow Warden** is now the strongest boss: 128 HP and
+        14-bullet bursts on level 5 (v1: 120 HP, 10 bullets).
+-   **Map tests now understand dash-jumps.** Reachability, sealed areas
+    and "no fight can be skipped" allow jumps over 1–2 abyss tiles, so a
+    dash can never hop past a gate. Void-only tests:
+    -   you cannot finish on foot;
+    -   the first gaps are 1 then 2 tiles;
+    -   no platform touches a wall;
+    -   every enemy spawn can walk to its fight (no stranded melee
+        enemies);
+    -   braziers light the start and every fight.
+-   **Bug found by a new test:** the sanctum's area began two rows above
+    its gate, so the gate lay inside the fight's trigger zone and would
+    have closed on the player. The area now starts at the gate. A new
+    check on every map keeps gates out of their own trigger zones.
+-   **New full-run baseline** (scripted, invulnerable to hits but not to
+    falls; the driver now plans dash-jumps): victory through all five
+    maps, score 96,051, 152 kills, 503 coins, 7.2 minutes of run time.
+    In the Void the driver made 10 jumps and fell twice (its own
+    line-ups overshooting an edge; it recovered each time).
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose

@@ -40,8 +40,16 @@ export interface BiomeArt {
   readonly slots: Readonly<Record<SlotId, readonly DecorId[]>>;
   /** Animals that live here (none on the snowy mountain: too cold). */
   readonly critters: readonly CritterKind[];
-  /** What a closed encounter gate looks like here (one tile per gate tile). */
-  readonly gate: TileRef & { readonly tint: number };
+  /** What a closed encounter gate looks like here (one tile per gate tile); none: glowing bars. */
+  readonly gate?: TileRef & { readonly tint: number };
+  /** Colour of the glowing bars when there is no gate tile (default: danger red). */
+  readonly barColor?: number;
+  /** Multiplied into the ground tiles (default: untinted). */
+  readonly groundTint?: number;
+  /** The Void: walls are drawn as more abyss, with no cliffs or tops. */
+  readonly pitWalls?: boolean;
+  /** Multiplied into the abyss tiles. */
+  readonly pitTint?: number;
 }
 
 const at = (sheet: SheetId, col: number, row: number): TileRef => ({ sheet, col, row });
@@ -130,6 +138,26 @@ export const BIOMES: Readonly<Record<string, BiomeArt>> = {
     },
     critters: ["cat"],
     gate: GHOST_THORNS,
+  },
+  // The Void: broken stone platforms over the abyss, spirit motes, no life.
+  void: {
+    ground: [at("floors", 12, 13)], detailChance: 0, plateauTint: 0x3a2a5a, cliff: GREY_CLIFF, water: GRASS_SHORE, path: YELLOW_PATH,
+    particles: "motes", wallTrees: [], wallTreeDensity: 0, wallTreeTint: 0xffffff,
+    slots: {
+      $tree: ["deadTree"],
+      $bigTree: ["bigOak"],
+      $grove: ["deadGrove"],
+      $rock: ["rockGrey"],
+      $bush: ["tuft"],
+      $flower: ["tuft"],
+      $pebble: ["greyStones"],
+    },
+    critters: [],
+    // Closed gates are spirit barriers: glowing cyan bars.
+    barColor: 0x8ad8ff,
+    groundTint: 0xb0a0ff,
+    pitWalls: true,
+    pitTint: 0x9a80d8,
   },
   // Dusk on the mountain: snow, snowy pines, igloos, no animals.
   snow: {

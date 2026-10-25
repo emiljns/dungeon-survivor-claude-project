@@ -6,6 +6,7 @@ import type { Rect } from "../logic/collision.ts";
 import { dashReadiness, dashVelocity, IDLE_DASH, isDashing, tryStartDash, type DashState } from "../logic/dash.ts";
 import { applyDamage, createHealth, isDead, type DamageResult, type HealthState } from "../logic/health.ts";
 import { slideVelocity } from "../logic/ice.ts";
+import { FALL_FREEZE_MS } from "../logic/abyss.ts";
 import type { PlayerStats } from "../logic/upgrades.ts";
 import { directionTo, movementVelocity, type DirectionalInput, type Vec2 } from "../logic/vector.ts";
 import { facingFromVector } from "../logic/facing.ts";
@@ -24,6 +25,10 @@ export class Player {
   private aimDir: Vec2 = { x: 1, y: 0 };
   private moveSpeed: number;
   private lastUpdateAt = -1;
+  /** Movement keys held this frame (stepping off an edge on purpose). */
+  private walking = false;
+  /** Movement input is ignored until then (just back from a fall). */
+  private frozenUntil = 0;
   /** Sprite-art mode: a 4-direction animated ninja instead of the square + gun. */
   private readonly animated: boolean;
   private facing: Direction = "down";
@@ -102,7 +107,8 @@ export class Player {
     const dir = directionTo(this.position, aimWorld);
     if (dir.x !== 0 || dir.y !== 0) this.aimDir = dir;
 
-    const move = movementVelocity(input, this.moveSpeed);
+    const move = now < this.frozenUntil ? { x: 0, y: 0 } : movementVelocity(input, this.moveSpeed);
+    this.walking = move.x !== 0 || move.y !== 0;
     if (dashPressed) {
       const started = tryStartDash(this.dash, now, move, this.aimDir, Tuning.dash);
       if (started) {
@@ -150,6 +156,32 @@ export class Player {
       if (!this.dead) this.sprite.clearTint(); // keep the downed tint from die()
     });
     this.scene.cameras.main.shake(110, 0.006);
+    return result;
+  }
+
+  isWalking(): boolean {
+    return this.walking;
+  }
+
+  isKnockedBack(now: number): boolean {
+    return now < this.knockbackUntil;
+  }
+
+  /**
+   * Fell into the abyss: back to `to` and 1 HP lost, then briefly invulnerable
+   * (a second fall inside that window costs nothing) and frozen for a moment.
+   */
+  fall(to: Vec2, now: number): DamageResult {
+    const result = applyDamage(this.healthState, 1, now, Tuning.player.invulnerableMs);
+    this.healthState = result.state;
+    this.knockbackUntil = 0;
+    this.frozenUntil = now + FALL_FREEZE_MS;
+    this.body.reset(to.x, to.y);
+    this.shadow.setPosition(to.x, to.y + 7);
+    this.sprite.setTintFill(0xff4d5e);
+    this.scene.time.delayedCall(90, () => {
+      if (!this.dead) this.sprite.clearTint();
+    });
     return result;
   }
 

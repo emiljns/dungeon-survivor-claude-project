@@ -10,6 +10,8 @@
 //   =  bridge: floor, drawn as wooden planks (over water)
 //   :  path: floor, drawn as a dirt (or trodden snow) path
 //   i  ice: floor where the player slides (keeps momentum)
+//   _  abyss: a pit (blocks enemies and paths, not bullets; the player
+//      can dash across a narrow gap, and falls if they step in)
 
 import type { Rect } from "./collision.ts";
 import type { Vec2 } from "./vector.ts";
@@ -48,6 +50,10 @@ export interface ParsedLayout {
   readonly path: readonly (readonly boolean[])[];
   /** ice[row][col] — slippery floor (walkable; the player keeps momentum). */
   readonly ice: readonly (readonly boolean[])[];
+  /** abyss[row][col] — pits: enemies treat them as walls, the player can fall in. */
+  readonly abyss: readonly (readonly boolean[])[];
+  /** Merged abyss rectangles in pixels (edge bodies). */
+  readonly abyssRects: readonly Rect[];
 }
 
 export interface TilePos {
@@ -56,7 +62,7 @@ export interface TilePos {
 }
 
 const PROPS: Readonly<Record<string, PropKind>> = { c: "crate", b: "barrel" };
-const KNOWN = new Set(["#", ".", "P", "E", "D", "T", "~", "G", "=", ":", "i", ...Object.keys(PROPS)]);
+const KNOWN = new Set(["#", ".", "P", "E", "D", "T", "~", "G", "=", ":", "i", "_", ...Object.keys(PROPS)]);
 
 export function parseLayout(rows: readonly string[], tile: number): ParsedLayout {
   const cols = rows[0]?.length ?? 0;
@@ -68,6 +74,7 @@ export function parseLayout(rows: readonly string[], tile: number): ParsedLayout
   const bridge: boolean[][] = [];
   const path: boolean[][] = [];
   const ice: boolean[][] = [];
+  const abyss: boolean[][] = [];
   const gates: TilePos[] = [];
   const props: Prop[] = [];
   let playerSpawn: Vec2 | null = null;
@@ -83,11 +90,13 @@ export function parseLayout(rows: readonly string[], tile: number): ParsedLayout
     const bridgeRow: boolean[] = [];
     const pathRow: boolean[] = [];
     const iceRow: boolean[] = [];
+    const abyssRow: boolean[] = [];
     [...line].forEach((ch, c) => {
       lowRow.push(ch === "~");
       bridgeRow.push(ch === "=");
       pathRow.push(ch === ":");
       iceRow.push(ch === "i");
+      abyssRow.push(ch === "_");
       if (ch === "G") gates.push({ col: c, row: r });
       if (!KNOWN.has(ch)) throw new Error(`Unknown layout symbol "${ch}" at ${c},${r}`);
       wallRow.push(ch === "#" || ch === "T");
@@ -107,6 +116,7 @@ export function parseLayout(rows: readonly string[], tile: number): ParsedLayout
     bridge.push(bridgeRow);
     path.push(pathRow);
     ice.push(iceRow);
+    abyss.push(abyssRow);
   });
 
   if (!playerSpawn) throw new Error("Layout has no player spawn (P)");
@@ -126,6 +136,8 @@ export function parseLayout(rows: readonly string[], tile: number): ParsedLayout
     bridge,
     path,
     ice,
+    abyss,
+    abyssRects: mergeTiles(abyss, tile),
   };
 }
 
