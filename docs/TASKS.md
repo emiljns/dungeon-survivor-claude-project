@@ -134,8 +134,7 @@ collision boxes, room layouts and combat behaviour stay unchanged.
 -   [x] Bamboo Forest (baseline) (reviewed by the user).
 -   [x] River (water channels) (reviewed by the user).
 -   [x] Snowy Mountain (ice) (reviewed by the user).
--   [x] Abandoned Village (night, ambushes). *(Built and self-tested;
-    waiting for the user's review.)*
+-   [x] Abandoned Village (night, ambushes) (reviewed by the user).
 -   [ ] The Void (abyss: falling, dash-jumps) with The Hollow Warden.
 -   [ ] A mini-boss plus a wave, and a final boss, per level.
     **Acceptance:** each level reviewed by the user and committed on
