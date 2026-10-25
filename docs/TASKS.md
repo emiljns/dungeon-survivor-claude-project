@@ -146,7 +146,7 @@ collision boxes, room layouts and combat behaviour stay unchanged.
 -   [x] Difficulty check and tuning across the whole run.
 -   [x] Full prologue-to-Void run, cleanup, performance, production build.
 -   [x] Docs and known issues. **Acceptance:** stable, balanced v2.
-    *(Built and self-tested; waiting for the user's review.)*
+    (Reviewed by the user: "it feels perfect".)
 
 ## Post-v1 only
 
