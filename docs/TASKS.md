@@ -132,7 +132,8 @@ collision boxes, room layouts and combat behaviour stay unchanged.
 
 -   [x] Village prologue with an in-world tutorial (reviewed by the user).
 -   [x] Bamboo Forest (baseline) (reviewed by the user).
--   [ ] River (water channels).
+-   [x] River (water channels). *(Built and self-tested; waiting for
+    the user's review.)*
 -   [ ] Snowy Mountain (ice).
 -   [ ] Abandoned Village (night, ambushes).
 -   [ ] The Void (abyss: falling, dash-jumps) with The Hollow Warden.

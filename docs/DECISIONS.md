@@ -860,6 +860,56 @@
     killed both bosses quickly. Real play, with damage taken, will be
     slower.
 
+## Milestone 11 — River, level 2 (2026-10-25)
+
+-   **Level 2 is now one continuous map** (`src/data/riverLevel.ts`,
+    120×64 tiles), replacing the four Toxic Sewers rooms. It keeps the
+    old level 2 difficulty (health ×1.1, speed ×1.2) for now.
+-   **The twist is water.** Channels block walking and enemy paths, but
+    bullets fly over them, so fights happen across the water. Plank
+    bridges are the only crossings. A test checks this: with the
+    bridges removed, the exit cannot be reached on foot.
+-   **The layout:**
+    1.  a safe camp split by a waterfall stream, with a bridge, and the
+        merchant;
+    2.  the Ford, a meadow cut by a second stream with two crossings
+        (two waves);
+    3.  the Watermill hamlet on the main river: an ambush by the
+        bridge, with an upgrade, and an exit on the far bank;
+    4.  the Frog Pond, where the mini-boss fights around a pond (an
+        upgrade);
+    5.  the Squid's lagoon, a shore around a lake fed by a waterfall,
+        with a pool and reinforcement waves; the exit is south.
+
+    That is two upgrades, as before, so a run still has 9.
+-   **Bestiary:** orange axolotls (chaser), red kappa (tank) and
+    light-blue octopuses (ranged), so each reads apart from the others
+    and from the grass. The mini-boss is the red **Giant Frog** (36 HP,
+    7-bullet bursts). The boss is the red **Squid** (70 HP, 10-bullet
+    bursts), one step up from the Giant Bamboo. The design table's
+    choices are kept (Giant Frog, Squid); the red variants were picked
+    for contrast on green.
+-   **New scenery:**
+    -   A **waterfall** object is a column of three animated tiles. The
+        lip and the fall are drawn over the cliff face, above the cliff
+        tops, and the splash lands on the water. Tests check that every
+        waterfall pours over a cliff face into water.
+    -   A turning **mill wheel** stands beside the hamlet's house and
+        dips into the river. Its top row blocks.
+    -   Animated objects can now be larger than one tile (one sprite
+        centred on the object). The decor test checks their frames
+        against the footprint instead of the tile grid.
+-   **Shore shapes:** the shore autotile needs steps at least two tiles
+    long. One-tile bumps on an ellipse-shaped lake and pool drew broken
+    edges in review, so both are built from rectangles.
+-   **Art:** nine more pack sheets, all from the already-extracted pack
+    zip (no new download), each recorded in the manifest; `CREDITS.md`
+    already credits the whole pack.
+-   **New full-run baseline** (scripted, invulnerable player, with the
+    pathfinding driver and no manual help): victory after 17 rooms (two
+    maps plus 15 v1 rooms), score 68,313, 108 kills, 360 coins, 5.5
+    minutes of run time. The River took about 70 s of that.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose

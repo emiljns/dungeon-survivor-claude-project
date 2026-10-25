@@ -32,8 +32,14 @@ export interface DecorDef {
   readonly canopy?: number;
   /** A light source: coloured glow and a pool of light in dark levels. */
   readonly light?: { readonly color: number; readonly radius: number; readonly flame: boolean };
-  /** Looping animation key: drawn as a live sprite (1x1 objects only). */
+  /** Looping animation key: drawn as one live sprite centred on the object. */
   readonly anim?: string;
+  /**
+   * A column of looping animations, one per row from the top (a waterfall:
+   * the lip and the fall pour over the cliff face, the splash lands on the
+   * water). Every row but the last is drawn above the cliff tops.
+   */
+  readonly animColumn?: readonly string[];
   readonly breakable?: { readonly hp: number; readonly shards: "vase" | "wood" };
   /** Placeholder-art colour. */
   readonly color: number;
@@ -112,6 +118,11 @@ export const DECOR = {
   logs: { sheet: "camp", col: 0, row: 7, w: 2, h: 1, kind: "solid", solid: { col: 0, row: 0, cols: 2, rows: 1 }, color: 0xb07840 },
   flowerPlant: { sheet: "plant", col: 0, row: 0, w: 1, h: 1, kind: "walkover", anim: "na-plant", color: 0xf2f2e0 },
   flag: { sheet: "flag", col: 0, row: 0, w: 1, h: 1, kind: "walkover", anim: "na-flag", color: 0xe04040 },
+  // River: a waterfall (placed with its top on the cliff lip, its bottom on
+  // the water) and a mill wheel turning beside a house; the wheel's top row
+  // stands on the bank and blocks, its bottom dips into the water.
+  waterfall: { sheet: "waterfallMiddle", col: 0, row: 0, w: 1, h: 3, kind: "walkover", animColumn: ["na-waterfall-top", "na-waterfall-middle", "na-waterfall-bottom"], color: 0x9ad8ff },
+  watermill: { sheet: "watermill", col: 0, row: 0, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 0, cols: 2, rows: 1 }, anim: "na-watermill", color: 0x9a5a3a },
   // Village buildings: the roof is walk-behind, the front wall blocks.
   houseOrange: { sheet: "house", col: 0, row: 0, w: 4, h: 3, kind: "solid", solid: { col: 0, row: 2, cols: 4, rows: 1 }, canopy: 2, color: 0xe07a3a },
   houseBeige: { sheet: "house", col: 4, row: 0, w: 4, h: 3, kind: "solid", solid: { col: 0, row: 2, cols: 4, rows: 1 }, canopy: 2, color: 0xd8c090 },

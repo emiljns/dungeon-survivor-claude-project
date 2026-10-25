@@ -68,6 +68,16 @@ export const SHEETS = {
   forestRanged: { key: "na-forest-mushroom", file: "enemy-forest-mushroom.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/Mushroom/mushroom.png" },
   bossBamboo: { key: "na-boss-bamboo", file: "boss-giant-bamboo-idle.png", frameWidth: 62, frameHeight: 62, source: "Actor/Boss/GiantBamboo/Idle.png" },
   minibossBamboo: { key: "na-miniboss-bamboo", file: "boss-giant-bamboo-orange-idle.png", frameWidth: 62, frameHeight: 62, source: "Actor/Boss/GiantBamboo2/Idle.png" },
+  // River bestiary and scenery (Milestone 11).
+  riverChaser: { key: "na-river-axolotl", file: "enemy-river-axolotl.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/Axolot/SpriteSheet.png" },
+  riverTank: { key: "na-river-kappa", file: "enemy-river-kappa.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/KappaRed/SpriteSheet.png" },
+  riverRanged: { key: "na-river-octopus", file: "enemy-river-octopus.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/Octopus2/SpriteSheet.png" },
+  minibossFrog: { key: "na-miniboss-frog", file: "boss-giant-frog-red-idle.png", frameWidth: 40, frameHeight: 40, source: "Actor/Boss/GiantFrog2/Idle.png" },
+  bossSquid: { key: "na-boss-squid", file: "boss-squid-red-idle.png", frameWidth: 76, frameHeight: 79, source: "Actor/Boss/SquidRed/Idle.png" },
+  waterfallTop: { key: "na-waterfall-top", file: "anim-waterfall-top.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Animated/Waterfall/TopSheet16x16.png" },
+  waterfallMiddle: { key: "na-waterfall-middle", file: "anim-waterfall-middle.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Animated/Waterfall/MiddleSheet16x16.png" },
+  waterfallBottom: { key: "na-waterfall-bottom", file: "anim-waterfall-bottom.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Animated/Waterfall/BottomSheet16x16.png" },
+  watermill: { key: "na-watermill", file: "anim-watermill.png", frameWidth: 34, frameHeight: 36, source: "Backgrounds/Animated/WaterMill/Watermill_A_34x36.png" },
   // Economy and weapons (Milestone 10).
   coin: { key: "na-coin", file: "item-coin.png", frameWidth: 10, frameHeight: 10, source: "Items/Treasure/Coin2.png" },
   kunai: { key: "na-kunai", file: "proj-kunai.png", frameWidth: 14, frameHeight: 5, source: "FX/Projectile/Kunai.png" },
@@ -124,6 +134,15 @@ export const SHEET_SIZES: Readonly<Record<SheetId, readonly [number, number]>> =
   forestRanged: [64, 64],
   bossBamboo: [372, 62],
   minibossBamboo: [372, 62],
+  riverChaser: [64, 64],
+  riverTank: [64, 64],
+  riverRanged: [64, 64],
+  minibossFrog: [200, 40],
+  bossSquid: [304, 79],
+  waterfallTop: [80, 16],
+  waterfallMiddle: [80, 16],
+  waterfallBottom: [48, 16],
+  watermill: [102, 36],
   coin: [40, 10],
   kunai: [14, 5],
   bigShuriken: [46, 23],
@@ -168,17 +187,23 @@ export const walkAnimKey = (sheet: SheetId, dir: Direction): string => `${SHEETS
 const range = (n: number): number[] => Array.from({ length: n }, (_, i) => i);
 
 export const ANIMS: readonly AnimDef[] = [
-  ...(["player", "chaser", "tank", "ranged", "forestChaser", "forestTank", "forestRanged"] as const).flatMap((sheet) =>
+  ...(["player", "chaser", "tank", "ranged", "forestChaser", "forestTank", "forestRanged", "riverChaser", "riverTank", "riverRanged"] as const).flatMap((sheet) =>
     DIRECTIONS.map((dir) => ({
       key: walkAnimKey(sheet, dir),
       sheet,
       frames: walkFrames(dir),
-      frameRate: sheet === "tank" || sheet === "forestTank" ? 6 : 9,
+      frameRate: sheet === "tank" || sheet === "forestTank" || sheet === "riverTank" ? 6 : 9,
       repeat: -1,
     })),
   ),
   { key: "na-boss-bamboo-idle", sheet: "bossBamboo", frames: range(6), frameRate: 7, repeat: -1 },
   { key: "na-miniboss-bamboo-idle", sheet: "minibossBamboo", frames: range(6), frameRate: 8, repeat: -1 },
+  { key: "na-miniboss-frog-idle", sheet: "minibossFrog", frames: range(5), frameRate: 8, repeat: -1 },
+  { key: "na-boss-squid-idle", sheet: "bossSquid", frames: range(4), frameRate: 6, repeat: -1 },
+  { key: "na-waterfall-top", sheet: "waterfallTop", frames: range(5), frameRate: 10, repeat: -1 },
+  { key: "na-waterfall-middle", sheet: "waterfallMiddle", frames: range(5), frameRate: 10, repeat: -1 },
+  { key: "na-waterfall-bottom", sheet: "waterfallBottom", frames: range(3), frameRate: 8, repeat: -1 },
+  { key: "na-watermill", sheet: "watermill", frames: range(3), frameRate: 5, repeat: -1 },
   { key: "na-boss-idle", sheet: "bossIdle", frames: range(5), frameRate: 7, repeat: -1 },
   { key: "na-boss-hit", sheet: "bossHit", frames: range(3), frameRate: 14, repeat: 0 },
   { key: "na-shuriken-spin", sheet: "shuriken", frames: range(2), frameRate: 18, repeat: -1 },

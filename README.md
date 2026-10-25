@@ -78,10 +78,11 @@ original pack path, plus the per-level floor and wall choices.
     training dummies and a dash lane teach the controls (optional), the
     old shopkeeper sells weapon unlocks, and the gate a few steps east
     (press E) starts the run. Time and score start at the gate.
--   **Five levels in order:** Bamboo Forest → Toxic Sewers → Ancient
-    Temple → Forgotten Foundry → The Void. (v2 is replacing the dungeon
-    levels one at a time: the Bamboo Forest is one large map with
-    encounter areas, a mini-boss and the Giant Bamboo.) Each has its own palette,
+-   **Five levels in order:** Bamboo Forest → River → Ancient Temple →
+    Forgotten Foundry → The Void. (v2 is replacing the dungeon levels
+    one at a time: the Bamboo Forest and the River are large maps with
+    encounter areas, a mini-boss and a boss; on the River, water blocks
+    walking but not bullets, and bridges are the crossings.) Each has its own palette,
     torch colour and difficulty.
 -   **Rooms:** each level has 4–5 rooms. A safe start room, then combat
     rooms, then a final arena with an elite (Level 5: the boss, *The

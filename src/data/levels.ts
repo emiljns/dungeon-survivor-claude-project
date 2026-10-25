@@ -3,8 +3,9 @@
 // levels with different enemy sets, themes and difficulty.
 
 import type { EncounterDef } from "../logic/encounter.ts";
-import { FOREST_BESTIARY, type Bestiary } from "./bestiary.ts";
+import { FOREST_BESTIARY, RIVER_BESTIARY, type Bestiary } from "./bestiary.ts";
 import { BAMBOO_FOREST } from "./forestLevel.ts";
+import { RIVER } from "./riverLevel.ts";
 import type { MapDef } from "./maps.ts";
 import type { PlacedCritter, PlacedNpc, PlacedObject } from "./decor.ts";
 import type { Difficulty, EnemyKind } from "../logic/enemyStats.ts";
@@ -85,20 +86,9 @@ function mapLevel(number: number, name: string, theme: Theme, difficulty: Diffic
 }
 
 export const LEVELS: readonly LevelDefinition[] = [
-  // v2 level 1: one continuous hand-made map (src/data/forestLevel.ts).
+  // v2 levels: one continuous hand-made map each (src/data/*Level.ts).
   mapLevel(1, "Bamboo Forest", THEMES.forest, { healthMul: 1, speedMul: 1 }, BAMBOO_FOREST, FOREST_BESTIARY),
-  {
-    number: 2,
-    name: "Toxic Sewers",
-    theme: THEMES.sewers,
-    difficulty: { healthMul: 1.1, speedMul: 1.2 },
-    rooms: [
-      start,
-      room(CROSSROADS, [c, c, c, t]),
-      room(FURNACE, [c, c, c, c, c, c], true),
-      room(ARENA, [elite("chaser"), c, c, c, c], true),
-    ],
-  },
+  mapLevel(2, "River", THEMES.river, { healthMul: 1.1, speedMul: 1.2 }, RIVER, RIVER_BESTIARY),
   {
     number: 3,
     name: "Ancient Temple",

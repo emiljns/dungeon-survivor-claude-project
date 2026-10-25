@@ -6,6 +6,7 @@ import { WORLD_MAPS } from "../src/data/worldMaps.ts";
 import { LEVELS } from "../src/data/levels.ts";
 import { HOME_VILLAGE } from "../src/data/village.ts";
 import { BAMBOO_FOREST } from "../src/data/forestLevel.ts";
+import { RIVER } from "../src/data/riverLevel.ts";
 import { parseVillage, villageLevel } from "../src/data/maps.ts";
 import { Tuning } from "../src/game/config.ts";
 import { solidObjectGrid } from "../src/logic/objects.ts";
@@ -15,7 +16,7 @@ import { inRect, triggerRect, type TileRect } from "../src/logic/encounter.ts";
 import { parseLayout, type ParsedLayout, type TilePos } from "../src/logic/layout.ts";
 
 const T = 16;
-const MAPS: readonly MapDef[] = [TEST_MAP, ...Object.values(WORLD_MAPS), HOME_VILLAGE, BAMBOO_FOREST];
+const MAPS: readonly MapDef[] = [TEST_MAP, ...Object.values(WORLD_MAPS), HOME_VILLAGE, BAMBOO_FOREST, RIVER];
 
 const key = (p: TilePos): string => `${p.col},${p.row}`;
 const tileOf = (x: number, y: number): TilePos => ({ col: Math.floor(x / T), row: Math.floor(y / T) });
@@ -272,5 +273,42 @@ describe("Bamboo Forest", () => {
   it("is full of bamboo, and its closed gates are brambles", () => {
     expect((BAMBOO_FOREST.objects ?? []).filter((o) => o.id === "bamboo").length).toBeGreaterThan(5);
     expect(biomeFor("forest")?.gate).toBeDefined();
+  });
+});
+
+describe("River", () => {
+  const l = parseLayout(RIVER.layout.rows, T);
+  const objects = RIVER.objects ?? [];
+  it("is a large map: at least four screens of area", () => {
+    expect((l.cols * T * l.rows * T) / (GAME_WIDTH * GAME_HEIGHT)).toBeGreaterThanOrEqual(4);
+  });
+
+  it("water channels matter: with the bridges gone, the exit cannot be reached on foot", () => {
+    const start = tileOf(l.playerSpawn.x, l.playerSpawn.y);
+    const door = l.doorRects[0];
+    expect(door).toBeDefined();
+    if (!door) return;
+    expect(flood(l, start, { gatesClosed: false, doorOpen: true }).has(key(tileOf(door.x, door.y)))).toBe(true);
+    const noBridges = { ...l, low: l.low.map((row, r) => row.map((w, c) => w || (l.bridge[r]?.[c] ?? false))) };
+    expect(flood(noBridges, start, { gatesClosed: false, doorOpen: true }).has(key(tileOf(door.x, door.y)))).toBe(false);
+  });
+
+  it("every waterfall pours over a cliff face into water", () => {
+    const falls = objects.filter((o) => o.id === "waterfall");
+    expect(falls.length).toBeGreaterThan(0);
+    for (const f of falls) {
+      // Rows: lip (row), fall over the face (row + 1), splash (row + 2).
+      expect(l.wall[f.row + 1]?.[f.col], `face at ${key(f)}`).toBe(true);
+      expect(l.low[f.row + 2]?.[f.col], `water below ${key(f)}`).toBe(true);
+    }
+  });
+
+  it("the mill wheel turns beside a house, dipping into the river", () => {
+    const mill = objects.find((o) => o.id === "watermill");
+    expect(mill).toBeDefined();
+    if (!mill) return;
+    expect(l.low[mill.row + 1]?.[mill.col]).toBe(true);
+    const house = objects.find((o) => o.id.startsWith("house"));
+    expect(house && house.col + 4 === mill.col && house.row + 2 === mill.row).toBe(true);
   });
 });

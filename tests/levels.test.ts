@@ -16,7 +16,7 @@ describe("level data", () => {
     expect(LEVELS.map((l) => l.number)).toEqual([1, 2, 3, 4, 5]);
     expect(LEVELS.map((l) => l.name)).toEqual([
       "Bamboo Forest",
-      "Toxic Sewers",
+      "River",
       "Ancient Temple",
       "Forgotten Foundry",
       "The Void",
@@ -94,8 +94,8 @@ describe("level data", () => {
     const layoutUses = LEVELS.flatMap((l) => l.rooms.map((r) => r.layout.id));
     expect(new Set(layoutUses).size).toBeLessThan(layoutUses.length);
 
-    // Health scaling rises every level. Speed is a theme trait (the sewers are
-    // deliberately "fast"), so it only has to stay in a modest band.
+    // Health scaling rises every level. Speed only has to stay in a modest
+    // band; level 2 (the River, which kept the v1 sewers' pace) is the fastest.
     for (let i = 1; i < LEVELS.length; i++) {
       expect(LEVELS[i]?.difficulty.healthMul).toBeGreaterThan(LEVELS[i - 1]?.difficulty.healthMul ?? 0);
     }

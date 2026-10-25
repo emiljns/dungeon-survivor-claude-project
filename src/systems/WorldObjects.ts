@@ -67,6 +67,16 @@ export class WorldObjects {
         const body = scene.add.zone(rect.x + TILE / 2, rect.y + TILE / 2, TILE, TILE);
         this.bodies.add(body);
         this.breakables.push({ def, rect, tiles, sprite, body, hp: def.breakable?.hp ?? 1, dummy: def.kind === "dummy" });
+      } else if (def.animColumn && art === "ninja") {
+        const last = def.animColumn.length - 1;
+        def.animColumn.forEach((key, i) => {
+          this.animated.push(
+            scene.add
+              .sprite(x, (o.row + i + 0.5) * TILE, sheetKey(def.sheet))
+              .setDepth(i < last ? Depth.foreground + 1 : Depth.props)
+              .play({ key, startFrame: o.col % 3 }),
+          );
+        });
       } else if (def.anim && art === "ninja") {
         this.animated.push(scene.add.sprite(x, y, sheetKey(def.sheet)).setDepth(Depth.props).play({ key: def.anim, startFrame: (o.col + o.row) % 4 }));
       }

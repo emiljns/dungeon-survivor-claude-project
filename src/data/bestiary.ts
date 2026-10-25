@@ -65,6 +65,32 @@ export const FOREST_BESTIARY: Bestiary = {
   },
 };
 
+/**
+ * River (level 2): axolotls dart, kappa shove, octopuses spit water across
+ * the channels. The red Giant Frog holds the pond; the Squid rules the lagoon.
+ */
+export const RIVER_BESTIARY: Bestiary = {
+  looks: { chaser: "riverChaser", tank: "riverTank", ranged: "riverRanged" },
+  miniboss: {
+    name: "GIANT FROG",
+    stats: {
+      ...ENEMY_STATS.miniboss,
+      maxHealth: 36,
+      attack: { pattern: "radial", cooldownMs: 2400, windupMs: 650, bulletSpeed: 100, count: 7, spreadDeg: 0, damage: 1 },
+    },
+    look: { sheet: "minibossFrog", idleAnim: "na-miniboss-frog-idle" },
+  },
+  boss: {
+    name: "SQUID",
+    stats: {
+      ...ENEMY_STATS.boss,
+      maxHealth: 70,
+      attack: { pattern: "radial", cooldownMs: 2200, windupMs: 650, bulletSpeed: 105, count: 10, spreadDeg: 0, damage: 1 },
+    },
+    look: { sheet: "bossSquid", idleAnim: "na-boss-squid-idle" },
+  },
+};
+
 export function isBossKind(kind: EnemyKind): boolean {
   return kind === "boss" || kind === "miniboss";
 }

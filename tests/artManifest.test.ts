@@ -119,14 +119,30 @@ describe("world kit art references real tiles", () => {
 
   it("every decoration's tiles lie inside its sheet; solid and canopy areas fit the object", () => {
     for (const [id, d] of Object.entries(DECOR) as [string, DecorDef][]) {
-      expect(inSheet(d.sheet, d.col, d.row) && inSheet(d.sheet, d.col + d.w - 1, d.row + d.h - 1), id).toBe(true);
+      const animated = d.anim !== undefined || d.animColumn !== undefined;
+      // Animated objects are whole-frame sprites; the rest are cut from 16px tiles.
+      if (!animated) expect(inSheet(d.sheet, d.col, d.row) && inSheet(d.sheet, d.col + d.w - 1, d.row + d.h - 1), id).toBe(true);
       if (d.solid) {
         expect(d.solid.col + d.solid.cols <= d.w && d.solid.row + d.solid.rows <= d.h, `${id} solid`).toBe(true);
         expect(d.solid.row, `${id}: blocking starts below the canopy`).toBeGreaterThanOrEqual(d.canopy ?? 0);
       }
       if (d.kind !== "walkover") expect(d.solid, `${id} needs a solid area`).toBeDefined();
       if (d.anim) expect(ANIMS.some((a) => a.key === d.anim), `${id} anim`).toBe(true);
-      if (d.anim) expect(d.w === 1 && d.h === 1, `${id}: animated objects are 1x1`).toBe(true);
+      if (d.anim) {
+        // One sprite centred on the object: its frame roughly fills the footprint.
+        const sheet = SHEETS[ANIMS.find((a) => a.key === d.anim)?.sheet ?? d.sheet];
+        expect(sheet.frameWidth > (d.w - 1) * 16 && sheet.frameWidth <= (d.w + 1) * 16, `${id} frame width`).toBe(true);
+        expect(sheet.frameHeight > (d.h - 1) * 16 && sheet.frameHeight <= (d.h + 1) * 16, `${id} frame height`).toBe(true);
+      }
+      if (d.animColumn) {
+        // One 16px animated tile per row (a waterfall), on a 1-wide object.
+        expect(d.animColumn.length === d.h && d.w === 1, `${id} column`).toBe(true);
+        for (const key of d.animColumn) {
+          const anim = ANIMS.find((a) => a.key === key);
+          expect(anim, `${id} anim ${key}`).toBeDefined();
+          if (anim) expect([SHEETS[anim.sheet].frameWidth, SHEETS[anim.sheet].frameHeight], key).toEqual([16, 16]);
+        }
+      }
       if (d.kind === "breakable") expect(d.breakable?.hp, id).toBeGreaterThan(0);
     }
   });
