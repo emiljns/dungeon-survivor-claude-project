@@ -74,6 +74,12 @@ export const SHEETS = {
   riverRanged: { key: "na-river-octopus", file: "enemy-river-octopus.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/Octopus2/SpriteSheet.png" },
   minibossFrog: { key: "na-miniboss-frog", file: "boss-giant-frog-red-idle.png", frameWidth: 40, frameHeight: 40, source: "Actor/Boss/GiantFrog2/Idle.png" },
   bossSquid: { key: "na-boss-squid", file: "boss-squid-red-idle.png", frameWidth: 76, frameHeight: 79, source: "Actor/Boss/SquidRed/Idle.png" },
+  // Snowy Mountain bestiary (Milestone 11).
+  snowChaser: { key: "na-snow-owl", file: "enemy-snow-owl.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/Owl/Owl.png" },
+  snowTank: { key: "na-snow-bear", file: "enemy-snow-bear.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/Bear/SpriteSheet.png" },
+  snowRanged: { key: "na-snow-owl-dark", file: "enemy-snow-owl-dark.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/Owl2/Owl2.png" },
+  minibossTengu: { key: "na-miniboss-tengu", file: "boss-tengu-blue-idle.png", frameWidth: 68, frameHeight: 68, source: "Actor/Boss/TenguBlue/Idle.png" },
+  bossSamurai: { key: "na-boss-samurai", file: "boss-giant-blue-samurai-idle.png", frameWidth: 96, frameHeight: 48, source: "Actor/Boss/GiantBlueSamurai/Idle.png" },
   waterfallTop: { key: "na-waterfall-top", file: "anim-waterfall-top.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Animated/Waterfall/TopSheet16x16.png" },
   waterfallMiddle: { key: "na-waterfall-middle", file: "anim-waterfall-middle.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Animated/Waterfall/MiddleSheet16x16.png" },
   waterfallBottom: { key: "na-waterfall-bottom", file: "anim-waterfall-bottom.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Animated/Waterfall/BottomSheet16x16.png" },
@@ -139,6 +145,11 @@ export const SHEET_SIZES: Readonly<Record<SheetId, readonly [number, number]>> =
   riverRanged: [64, 64],
   minibossFrog: [200, 40],
   bossSquid: [304, 79],
+  snowChaser: [64, 64],
+  snowTank: [64, 64],
+  snowRanged: [64, 64],
+  minibossTengu: [408, 68],
+  bossSamurai: [576, 48],
   waterfallTop: [80, 16],
   waterfallMiddle: [80, 16],
   waterfallBottom: [48, 16],
@@ -187,12 +198,12 @@ export const walkAnimKey = (sheet: SheetId, dir: Direction): string => `${SHEETS
 const range = (n: number): number[] => Array.from({ length: n }, (_, i) => i);
 
 export const ANIMS: readonly AnimDef[] = [
-  ...(["player", "chaser", "tank", "ranged", "forestChaser", "forestTank", "forestRanged", "riverChaser", "riverTank", "riverRanged"] as const).flatMap((sheet) =>
+  ...(["player", "chaser", "tank", "ranged", "forestChaser", "forestTank", "forestRanged", "riverChaser", "riverTank", "riverRanged", "snowChaser", "snowTank", "snowRanged"] as const).flatMap((sheet) =>
     DIRECTIONS.map((dir) => ({
       key: walkAnimKey(sheet, dir),
       sheet,
       frames: walkFrames(dir),
-      frameRate: sheet === "tank" || sheet === "forestTank" || sheet === "riverTank" ? 6 : 9,
+      frameRate: sheet === "tank" || sheet === "forestTank" || sheet === "riverTank" || sheet === "snowTank" ? 6 : 9,
       repeat: -1,
     })),
   ),
@@ -200,6 +211,8 @@ export const ANIMS: readonly AnimDef[] = [
   { key: "na-miniboss-bamboo-idle", sheet: "minibossBamboo", frames: range(6), frameRate: 8, repeat: -1 },
   { key: "na-miniboss-frog-idle", sheet: "minibossFrog", frames: range(5), frameRate: 8, repeat: -1 },
   { key: "na-boss-squid-idle", sheet: "bossSquid", frames: range(4), frameRate: 6, repeat: -1 },
+  { key: "na-miniboss-tengu-idle", sheet: "minibossTengu", frames: range(6), frameRate: 8, repeat: -1 },
+  { key: "na-boss-samurai-idle", sheet: "bossSamurai", frames: range(6), frameRate: 7, repeat: -1 },
   { key: "na-waterfall-top", sheet: "waterfallTop", frames: range(5), frameRate: 10, repeat: -1 },
   { key: "na-waterfall-middle", sheet: "waterfallMiddle", frames: range(5), frameRate: 10, repeat: -1 },
   { key: "na-waterfall-bottom", sheet: "waterfallBottom", frames: range(3), frameRate: 8, repeat: -1 },

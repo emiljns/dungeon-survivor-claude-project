@@ -522,6 +522,7 @@ export class GameScene extends Phaser.Scene {
       aim,
       now,
       Phaser.Input.Keyboard.JustDown(k.dash),
+      this.onIce(),
     );
 
     const lean = cameraLean(this.player.position, aim);
@@ -624,6 +625,12 @@ export class GameScene extends Phaser.Scene {
         }
       }
     }
+  }
+
+  /** Is the player standing on ice? */
+  private onIce(): boolean {
+    const p = this.player.position;
+    return this.layout.ice[Math.floor(p.y / TILE)]?.[Math.floor(p.x / TILE)] === true;
   }
 
   /** A few open-water tiles (away from shores) get animated ripples. */

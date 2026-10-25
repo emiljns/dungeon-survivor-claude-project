@@ -3,13 +3,14 @@
 // levels with different enemy sets, themes and difficulty.
 
 import type { EncounterDef } from "../logic/encounter.ts";
-import { FOREST_BESTIARY, RIVER_BESTIARY, type Bestiary } from "./bestiary.ts";
+import { FOREST_BESTIARY, RIVER_BESTIARY, SNOW_BESTIARY, type Bestiary } from "./bestiary.ts";
 import { BAMBOO_FOREST } from "./forestLevel.ts";
 import { RIVER } from "./riverLevel.ts";
+import { SNOWY_MOUNTAIN } from "./snowLevel.ts";
 import type { MapDef } from "./maps.ts";
 import type { PlacedCritter, PlacedNpc, PlacedObject } from "./decor.ts";
 import type { Difficulty, EnemyKind } from "../logic/enemyStats.ts";
-import { ARENA, CROSSROADS, ENTRY_HALL, FURNACE, GALLERY, PILLAR_HALL, STOREROOM, type RoomLayout } from "./rooms.ts";
+import { ARENA, CROSSROADS, ENTRY_HALL, FURNACE, GALLERY, STOREROOM, type RoomLayout } from "./rooms.ts";
 import { THEMES, type Theme } from "./themes.ts";
 
 export interface EnemySpec {
@@ -89,19 +90,7 @@ export const LEVELS: readonly LevelDefinition[] = [
   // v2 levels: one continuous hand-made map each (src/data/*Level.ts).
   mapLevel(1, "Bamboo Forest", THEMES.forest, { healthMul: 1, speedMul: 1 }, BAMBOO_FOREST, FOREST_BESTIARY),
   mapLevel(2, "River", THEMES.river, { healthMul: 1.1, speedMul: 1.2 }, RIVER, RIVER_BESTIARY),
-  {
-    number: 3,
-    name: "Ancient Temple",
-    theme: THEMES.temple,
-    difficulty: { healthMul: 1.25, speedMul: 1.1 },
-    rooms: [
-      start,
-      room(GALLERY, [c, c, r, r]),
-      room(PILLAR_HALL, [t, r, c]),
-      room(CROSSROADS, [t, r, r, c], true),
-      room(ARENA, [elite("tank"), r, c, c], true),
-    ],
-  },
+  mapLevel(3, "Snowy Mountain", THEMES.snow, { healthMul: 1.25, speedMul: 1.1 }, SNOWY_MOUNTAIN, SNOW_BESTIARY),
   {
     number: 4,
     name: "Forgotten Foundry",

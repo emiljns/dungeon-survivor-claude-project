@@ -17,7 +17,7 @@ describe("level data", () => {
     expect(LEVELS.map((l) => l.name)).toEqual([
       "Bamboo Forest",
       "River",
-      "Ancient Temple",
+      "Snowy Mountain",
       "Forgotten Foundry",
       "The Void",
     ]);

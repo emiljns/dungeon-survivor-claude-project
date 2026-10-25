@@ -43,7 +43,7 @@ URL flags:
 | `?artroom&theme=sewers` | Test room in another level's look (`ruins`, `sewers`, `temple`, `foundry`, `void`) |
 | `?artroom&boss` | Test room with the boss added |
 | `?testmap` | v2 engine test map: scrolling camera, tall walls, water, gated encounter areas with waves and an ambush |
-| `?testmap=world&theme=forest` | v2 world-kit test maps, one per biome (`theme`: `village` peaceful with houses and lanes, `forest` dense with a hollow, `river` with a bridge ambush, `snow` with a frozen lake and no animals) |
+| `?testmap=world&theme=forest` | v2 world-kit test maps, one per biome (`theme`: `village` peaceful with houses and lanes, `forest` dense with a hollow, `river` with a bridge ambush, `snow` with a frozen lake to slide on and no animals) |
 
 ## Art
 
@@ -78,11 +78,12 @@ original pack path, plus the per-level floor and wall choices.
     training dummies and a dash lane teach the controls (optional), the
     old shopkeeper sells weapon unlocks, and the gate a few steps east
     (press E) starts the run. Time and score start at the gate.
--   **Five levels in order:** Bamboo Forest → River → Ancient Temple →
+-   **Five levels in order:** Bamboo Forest → River → Snowy Mountain →
     Forgotten Foundry → The Void. (v2 is replacing the dungeon levels
-    one at a time: the Bamboo Forest and the River are large maps with
-    encounter areas, a mini-boss and a boss; on the River, water blocks
-    walking but not bullets, and bridges are the crossings.) Each has its own palette,
+    one at a time: the first three are large maps with encounter areas,
+    a mini-boss and a boss. On the River, water blocks walking but not
+    bullets, and bridges are the crossings; on the Snowy Mountain, you
+    slide on ice.) Each has its own palette,
     torch colour and difficulty.
 -   **Rooms:** each level has 4–5 rooms. A safe start room, then combat
     rooms, then a final arena with an elite (Level 5: the boss, *The

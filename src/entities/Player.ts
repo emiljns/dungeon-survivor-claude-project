@@ -5,6 +5,7 @@ import { Depth, Tuning } from "../game/config.ts";
 import type { Rect } from "../logic/collision.ts";
 import { dashReadiness, dashVelocity, IDLE_DASH, isDashing, tryStartDash, type DashState } from "../logic/dash.ts";
 import { applyDamage, createHealth, isDead, type DamageResult, type HealthState } from "../logic/health.ts";
+import { slideVelocity } from "../logic/ice.ts";
 import type { PlayerStats } from "../logic/upgrades.ts";
 import { directionTo, movementVelocity, type DirectionalInput, type Vec2 } from "../logic/vector.ts";
 import { facingFromVector } from "../logic/facing.ts";
@@ -22,6 +23,7 @@ export class Player {
   private nextGhostAt = 0;
   private aimDir: Vec2 = { x: 1, y: 0 };
   private moveSpeed: number;
+  private lastUpdateAt = -1;
   /** Sprite-art mode: a 4-direction animated ninja instead of the square + gun. */
   private readonly animated: boolean;
   private facing: Direction = "down";
@@ -94,7 +96,9 @@ export class Player {
     return isDashing(this.dash, now);
   }
 
-  update(input: DirectionalInput, aimWorld: Vec2, now: number, dashPressed: boolean): void {
+  update(input: DirectionalInput, aimWorld: Vec2, now: number, dashPressed: boolean, onIce = false): void {
+    const dt = this.lastUpdateAt < 0 ? 0 : Math.min(50, now - this.lastUpdateAt);
+    this.lastUpdateAt = now;
     const dir = directionTo(this.position, aimWorld);
     if (dir.x !== 0 || dir.y !== 0) this.aimDir = dir;
 
@@ -116,7 +120,8 @@ export class Player {
         this.spawnGhost();
       }
     } else if (now >= this.knockbackUntil) {
-      this.body.setVelocity(move.x, move.y);
+      const v = slideVelocity(this.body.velocity, move, dt, onIce);
+      this.body.setVelocity(v.x, v.y);
     }
 
     this.shadow.setPosition(this.sprite.x, this.sprite.y + 7);

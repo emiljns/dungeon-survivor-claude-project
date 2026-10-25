@@ -9,6 +9,7 @@
 //   G  encounter gate: floor while open, solid while its encounter is active
 //   =  bridge: floor, drawn as wooden planks (over water)
 //   :  path: floor, drawn as a dirt (or trodden snow) path
+//   i  ice: floor where the player slides (keeps momentum)
 
 import type { Rect } from "./collision.ts";
 import type { Vec2 } from "./vector.ts";
@@ -45,6 +46,8 @@ export interface ParsedLayout {
   readonly bridge: readonly (readonly boolean[])[];
   /** path[row][col] — path floor (walkable; purely visual). */
   readonly path: readonly (readonly boolean[])[];
+  /** ice[row][col] — slippery floor (walkable; the player keeps momentum). */
+  readonly ice: readonly (readonly boolean[])[];
 }
 
 export interface TilePos {
@@ -53,7 +56,7 @@ export interface TilePos {
 }
 
 const PROPS: Readonly<Record<string, PropKind>> = { c: "crate", b: "barrel" };
-const KNOWN = new Set(["#", ".", "P", "E", "D", "T", "~", "G", "=", ":", ...Object.keys(PROPS)]);
+const KNOWN = new Set(["#", ".", "P", "E", "D", "T", "~", "G", "=", ":", "i", ...Object.keys(PROPS)]);
 
 export function parseLayout(rows: readonly string[], tile: number): ParsedLayout {
   const cols = rows[0]?.length ?? 0;
@@ -64,6 +67,7 @@ export function parseLayout(rows: readonly string[], tile: number): ParsedLayout
   const low: boolean[][] = [];
   const bridge: boolean[][] = [];
   const path: boolean[][] = [];
+  const ice: boolean[][] = [];
   const gates: TilePos[] = [];
   const props: Prop[] = [];
   let playerSpawn: Vec2 | null = null;
@@ -78,10 +82,12 @@ export function parseLayout(rows: readonly string[], tile: number): ParsedLayout
     const lowRow: boolean[] = [];
     const bridgeRow: boolean[] = [];
     const pathRow: boolean[] = [];
+    const iceRow: boolean[] = [];
     [...line].forEach((ch, c) => {
       lowRow.push(ch === "~");
       bridgeRow.push(ch === "=");
       pathRow.push(ch === ":");
+      iceRow.push(ch === "i");
       if (ch === "G") gates.push({ col: c, row: r });
       if (!KNOWN.has(ch)) throw new Error(`Unknown layout symbol "${ch}" at ${c},${r}`);
       wallRow.push(ch === "#" || ch === "T");
@@ -100,6 +106,7 @@ export function parseLayout(rows: readonly string[], tile: number): ParsedLayout
     low.push(lowRow);
     bridge.push(bridgeRow);
     path.push(pathRow);
+    ice.push(iceRow);
   });
 
   if (!playerSpawn) throw new Error("Layout has no player spawn (P)");
@@ -118,6 +125,7 @@ export function parseLayout(rows: readonly string[], tile: number): ParsedLayout
     gates,
     bridge,
     path,
+    ice,
   };
 }
 

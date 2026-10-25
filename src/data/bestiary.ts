@@ -91,6 +91,33 @@ export const RIVER_BESTIARY: Bestiary = {
   },
 };
 
+/**
+ * Snowy Mountain (level 3): orange owls swoop, red bears shove, dark owls
+ * throw from the ledges (warm and dark colours read on snow). The Blue Tengu
+ * guards the shrine; the Giant Blue Samurai holds the summit.
+ */
+export const SNOW_BESTIARY: Bestiary = {
+  looks: { chaser: "snowChaser", tank: "snowTank", ranged: "snowRanged" },
+  miniboss: {
+    name: "BLUE TENGU",
+    stats: {
+      ...ENEMY_STATS.miniboss,
+      maxHealth: 38,
+      attack: { pattern: "radial", cooldownMs: 2300, windupMs: 650, bulletSpeed: 100, count: 8, spreadDeg: 0, damage: 1 },
+    },
+    look: { sheet: "minibossTengu", idleAnim: "na-miniboss-tengu-idle" },
+  },
+  boss: {
+    name: "GIANT BLUE SAMURAI",
+    stats: {
+      ...ENEMY_STATS.boss,
+      maxHealth: 72,
+      attack: { pattern: "radial", cooldownMs: 2200, windupMs: 650, bulletSpeed: 105, count: 11, spreadDeg: 0, damage: 1 },
+    },
+    look: { sheet: "bossSamurai", idleAnim: "na-boss-samurai-idle" },
+  },
+};
+
 export function isBossKind(kind: EnemyKind): boolean {
   return kind === "boss" || kind === "miniboss";
 }

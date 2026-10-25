@@ -7,6 +7,7 @@ import { LEVELS } from "../src/data/levels.ts";
 import { HOME_VILLAGE } from "../src/data/village.ts";
 import { BAMBOO_FOREST } from "../src/data/forestLevel.ts";
 import { RIVER } from "../src/data/riverLevel.ts";
+import { SNOWY_MOUNTAIN } from "../src/data/snowLevel.ts";
 import { parseVillage, villageLevel } from "../src/data/maps.ts";
 import { Tuning } from "../src/game/config.ts";
 import { solidObjectGrid } from "../src/logic/objects.ts";
@@ -16,7 +17,7 @@ import { inRect, triggerRect, type TileRect } from "../src/logic/encounter.ts";
 import { parseLayout, type ParsedLayout, type TilePos } from "../src/logic/layout.ts";
 
 const T = 16;
-const MAPS: readonly MapDef[] = [TEST_MAP, ...Object.values(WORLD_MAPS), HOME_VILLAGE, BAMBOO_FOREST, RIVER];
+const MAPS: readonly MapDef[] = [TEST_MAP, ...Object.values(WORLD_MAPS), HOME_VILLAGE, BAMBOO_FOREST, RIVER, SNOWY_MOUNTAIN];
 
 const key = (p: TilePos): string => `${p.col},${p.row}`;
 const tileOf = (x: number, y: number): TilePos => ({ col: Math.floor(x / T), row: Math.floor(y / T) });
@@ -310,5 +311,43 @@ describe("River", () => {
     expect(l.low[mill.row + 1]?.[mill.col]).toBe(true);
     const house = objects.find((o) => o.id.startsWith("house"));
     expect(house && house.col + 4 === mill.col && house.row + 2 === mill.row).toBe(true);
+  });
+});
+
+describe("Snowy Mountain", () => {
+  const l = parseLayout(SNOWY_MOUNTAIN.layout.rows, T);
+  const iceIn = (a: { col: number; row: number; cols: number; rows: number }): number => {
+    let n = 0;
+    for (let r = a.row; r < a.row + a.rows; r++) for (let c = a.col; c < a.col + a.cols; c++) if (l.ice[r]?.[c]) n++;
+    return n;
+  };
+
+  it("is a large map: at least four screens of area", () => {
+    expect((l.cols * T * l.rows * T) / (GAME_WIDTH * GAME_HEIGHT)).toBeGreaterThanOrEqual(4);
+  });
+
+  it("every fight has ice to slide on, and the safe camp has a patch to practise on", () => {
+    for (const e of SNOWY_MOUNTAIN.encounters) expect(iceIn(e.area), e.id).toBeGreaterThanOrEqual(20);
+    const start = tileOf(l.playerSpawn.x, l.playerSpawn.y);
+    expect(iceIn({ col: start.col - 8, row: start.row - 8, cols: 17, rows: 17 })).toBeGreaterThan(0);
+    expect(l.ice[start.row]?.[start.col]).toBe(false); // you do not start on it
+  });
+
+  it("ice never touches a cliff or a gate, so its shore tiles stay clean and gates never sit on it", () => {
+    const gateSet = new Set(l.gates.map(key));
+    for (let r = 0; r < l.rows; r++) {
+      for (let c = 0; c < l.cols; c++) {
+        if (!l.ice[r]?.[c]) continue;
+        for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          expect(l.wall[r + dr]?.[c + dc], `ice at ${c},${r} touches a cliff`).toBe(false);
+          expect(gateSet.has(`${c + dc},${r + dr}`), `ice at ${c},${r} touches a gate`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it("has no water and no animals (too cold)", () => {
+    expect(l.low.flat().some(Boolean)).toBe(false);
+    expect(SNOWY_MOUNTAIN.critters ?? []).toHaveLength(0);
   });
 });

@@ -34,6 +34,7 @@ export interface TerrainGrids {
   readonly low: Grid;
   readonly bridge: Grid;
   readonly path: Grid;
+  readonly ice: Grid;
 }
 
 export function bakeWorld(
@@ -57,6 +58,9 @@ function drawTile(rt: Phaser.GameObjects.RenderTexture, t: TileRef, dc: number, 
   rt.drawFrame(sheetKey(t.sheet), frameAt(t.sheet, t.col + dc, t.row + dr), x, y, 1, tint);
 }
 
+/** Ice: the glossy frozen block of the water sheet, edged by the same 4x4 layout as water. */
+const ICE: TileRef = { sheet: "water", col: 13, row: 0 };
+
 /** Plain vertical wooden planks in the water sheet. */
 const PLANK: TileRef = { sheet: "water", col: 5, row: 13 };
 
@@ -77,6 +81,7 @@ function bakeTerrain(scene: Phaser.Scene, grids: TerrainGrids, biome: BiomeArt, 
   const waterRef: TileRef = { sheet: "water", col: biome.water.col, row: biome.water.row };
   const pathRef: TileRef = { sheet: "outdoorFloor", col: biome.path.col, row: biome.path.row };
   const isPath = (c: number, r: number): boolean => (path[r]?.[c] ?? false) && !isWall(c, r);
+  const isIce = (c: number, r: number): boolean => (grids.ice[r]?.[c] ?? false) && !isWall(c, r);
   const cliffRef: TileRef = { sheet: "relief", col: biome.cliff.col, row: biome.cliff.row };
   const fx = scene.make.graphics({}, false);
   const topFx = scene.make.graphics({}, false);
@@ -97,6 +102,9 @@ function bakeTerrain(scene: Phaser.Scene, grids: TerrainGrids, biome: BiomeArt, 
             if (!isBridge(c + 1, r)) fx.fillRect(x + TILE - 2, y, 2, TILE);
             if (!isBridge(c, r + 1) && isWater(c, r + 1)) fx.fillStyle(0x000000, 0.25).fillRect(x, y + TILE, TILE, 3);
           }
+        } else if (isIce(c, r)) {
+          const piece = waterPiece(isIce, c, r);
+          drawTile(base, ICE, piece.col, piece.row, x, y);
         } else if (isPath(c, r)) {
           // Paths use the same 4x4 edge layout as water, edged with the biome ground.
           const piece = waterPiece(isPath, c, r);

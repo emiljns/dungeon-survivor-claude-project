@@ -910,6 +910,62 @@
     maps plus 15 v1 rooms), score 68,313, 108 kills, 360 coins, 5.5
     minutes of run time. The River took about 70 s of that.
 
+## Milestone 11 — Snowy Mountain, level 3 (2026-10-25)
+
+-   **Level 3 is now one continuous map** (`src/data/snowLevel.ts`,
+    120×64 tiles), replacing the five Ancient Temple rooms. It keeps the
+    old level 3 difficulty (health ×1.25, speed ×1.1).
+-   **The twist is ice.** A new layout symbol, `i`, marks walkable ice.
+    On ice the player's velocity eases toward the input instead of
+    snapping to it (`src/logic/ice.ts`, time constant 420 ms). So you
+    slide on after letting go, turn wide, and a dash carries further.
+    Off ice, movement is instant as before. Enemies are unaffected, as
+    the design asks for a first version.
+    -   Measured in the browser: letting go at full speed stops within
+        2 px on snow, and slides about 40 px (2½ tiles) on ice.
+    -   Tests cover the ease, its framerate independence, sliding after
+        a dash, coming to rest, and the layout symbol.
+-   **Ice art** is the glossy frozen block of the water sheet, drawn
+    with the same 4×4 edge layout as water and paths. The snow test map
+    used that art for an impassable "frozen lake". That lake is now
+    walkable ice too, so ice looks and behaves the same everywhere.
+    The placeholder art draws ice as plain floor (fallback only).
+-   **The layout:**
+    1.  a safe base camp with an igloo, a spirit fire, the merchant
+        and a small practice patch of ice;
+    2.  a narrow pass;
+    3.  the Frozen Lake, a big ice field with rocks for cover (two
+        waves);
+    4.  the wind-swept Shrine, with stripes of polished ice between
+        lion statues; an ambush springs between the lions (an upgrade);
+    5.  the Blue Tengu's rink, an ice ring around a snow island (an
+        upgrade);
+    6.  the Giant Blue Samurai's high plateau, with ice patches, a
+        pillar ring and two guardian statues; the exit is south.
+
+    That is two upgrades, as before, so a run still has 9. No animals
+    live here.
+-   **Map rules (tests):**
+    -   every fight has ice in it, and the camp has a patch you do not
+        start on;
+    -   ice never touches a cliff or a gate (so its edge tiles stay
+        clean and no gate closes on a slide);
+    -   no water on the mountain.
+-   **Bestiary:**
+    -   Orange owls (chaser), red bears (tank) and dark owls (ranged).
+        Warm and dark colours read on snow; the blue and white monsters
+        are saved for later levels.
+    -   **Blue Tengu** mini-boss: 38 HP base, 8-bullet bursts.
+    -   **Giant Blue Samurai** boss: 72 HP base (90 on this level),
+        11-bullet bursts. It sits between the Squid and the Hollow
+        Warden (120 HP on level 5).
+    -   Both picks are from the design table.
+-   **New full-run baseline** (scripted, invulnerable player, with the
+    pathfinding driver and no manual help; the driver steers by
+    keypresses, so it slides on ice like a player): victory after 13
+    rooms (three maps plus 10 v1 rooms), score 78,888, 123 kills, 448
+    coins, 6.8 minutes of run time. The Snowy Mountain took about 83 s.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose
