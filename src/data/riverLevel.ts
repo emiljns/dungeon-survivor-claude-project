@@ -89,8 +89,8 @@ export const RIVER: MapDef = {
     {
       id: "hamlet",
       area: { col: 50, row: 23, cols: 27, rows: 18 },
-      // Ambush: it springs as you near the bridge.
-      trigger: { col: 61, row: 27, cols: 5, rows: 3 },
+      // Ambush: it springs at the bridge (the only crossing, so it cannot be skipped).
+      trigger: { col: 61, row: 28, cols: 5, rows: 6 },
       waves: [[c, c, r], [t, c, r, c]],
       reward: true,
     },

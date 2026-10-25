@@ -88,8 +88,9 @@ export const ABANDONED_VILLAGE: MapDef = {
     {
       id: "street",
       area: { col: 24, row: 24, cols: 37, rows: 17 },
-      // Ambush: they pour out of the alleys halfway down the street.
-      trigger: { col: 40, row: 30, cols: 4, rows: 5 },
+      // Ambush: they pour out of the alleys halfway down the street. The
+      // trigger spans the yards behind the houses too, so it cannot be skipped.
+      trigger: { col: 40, row: 25, cols: 4, rows: 15 },
       waves: [[c, c, r], [t, c, r, c]],
       reward: false,
     },
@@ -97,8 +98,9 @@ export const ABANDONED_VILLAGE: MapDef = {
     {
       id: "alleys",
       area: { col: 88, row: 2, cols: 29, rows: 25 },
-      // Ambush at the crossing, from every lane at once.
-      trigger: { col: 100, row: 9, cols: 5, rows: 3 },
+      // Ambush from every lane at once as you reach the central lane (the
+      // trigger is the whole lane, so the yards cannot be used to skip it).
+      trigger: { col: 99, row: 3, cols: 6, rows: 23 },
       waves: [[c, c, r], [c, t, r], [c, c, r]],
       reward: true,
     },

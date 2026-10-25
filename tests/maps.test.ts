@@ -182,6 +182,46 @@ describe.each(MAPS.map((m) => [m.layout.id, m] as const))("map %s", (_id, map) =
     }
   });
 
+  it("no fight can be skipped: every way between two of an area's gates crosses its trigger", () => {
+    for (const e of map.encounters) {
+      const trig = triggerRect(e);
+      const inTrig = (c: number, r: number): boolean => c >= trig.col && c < trig.col + trig.cols && r >= trig.row && r < trig.row + trig.rows;
+      // Gate tiles of this area, grouped into gates (runs of touching tiles).
+      const gates = l.gates.filter((g) => inRect(g, e.area));
+      const groupOf = new Map<string, number>();
+      gates.forEach((g, i) => {
+        if (groupOf.has(key(g))) return;
+        const stack = [g];
+        groupOf.set(key(g), i);
+        while (stack.length) {
+          const p = stack.pop();
+          if (!p) break;
+          for (const n of gates) if (!groupOf.has(key(n)) && Math.abs(n.col - p.col) + Math.abs(n.row - p.row) === 1) { groupOf.set(key(n), i); stack.push(n); }
+        }
+      });
+      const groups = [...new Set(groupOf.values())];
+      for (const from of groups) {
+        // Walk inside the area from this gate without touching the trigger.
+        const start = gates.filter((g) => groupOf.get(key(g)) === from);
+        const seen = new Set(start.map(key));
+        const queue = [...start];
+        while (queue.length) {
+          const p = queue.shift();
+          if (!p) break;
+          for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+            const n = { col: p.col + dc, row: p.row + dr };
+            if (seen.has(key(n)) || !inRect(n, e.area) || inTrig(n.col, n.row)) continue;
+            if (l.wall[n.row]?.[n.col] !== false || l.low[n.row]?.[n.col] || isPropTile(l, n.col, n.row)) continue;
+            seen.add(key(n));
+            queue.push(n);
+          }
+        }
+        const leaked = gates.filter((g) => groupOf.get(key(g)) !== from && seen.has(key(g)));
+        expect(leaked.map(key), `${e.id}: from gate ${key(start[0] ?? { col: -1, row: -1 })} you can walk round the trigger to`).toEqual([]);
+      }
+    }
+  });
+
   it("spawns and the start never sit inside a path (the tile would draw as a patch of ground)", () => {
     const isPath = (c: number, r: number): boolean => l.path[r]?.[c] === true || isDoor(l, c, r) || l.gates.some((g) => g.col === c && g.row === r);
     for (const p of [...l.enemySpawns, l.playerSpawn].map((s) => tileOf(s.x, s.y))) {

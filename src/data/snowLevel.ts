@@ -89,8 +89,9 @@ export const SNOWY_MOUNTAIN: MapDef = {
     {
       id: "shrine",
       area: { col: 58, row: 2, cols: 27, rows: 19 },
-      // Ambush: it springs between the lions.
-      trigger: { col: 70, row: 9, cols: 4, rows: 4 },
+      // Ambush: it springs between the lions. The trigger spans the shrine
+      // from edge to edge, so walking round the statues cannot skip it.
+      trigger: { col: 70, row: 3, cols: 4, rows: 17 },
       waves: [[c, r, r], [t, c, r, c]],
       reward: true,
     },

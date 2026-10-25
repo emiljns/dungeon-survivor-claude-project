@@ -1025,6 +1025,34 @@
     maps plus The Void's 5 v1 rooms), score 91,051, 137 kills, 495 coins,
     6.7 minutes of run time. The Abandoned Village took about 76 s.
 
+## Fix — ambushes could be walked round (2026-10-25)
+
+-   **User report:** in the Snowy Mountain, "a room sometimes doesn't
+    spawn the enemies, so I have to go back".
+-   **Cause:** an ambush only starts when the player steps on its
+    trigger rectangle. The Shrine's trigger was a 4×4 patch between the
+    lion statues, and the shrine is wide. Walking along its top or
+    bottom edge went from the west gate to the east gate without
+    touching it, with the gates still open. The level's exit then stayed
+    locked, because that fight was never cleared.
+-   **Not only the snow:** a new map test (below) found four more
+    skippable fights:
+    -   the Bamboo Forest's Thicket (round the side, or along the row by
+        its north gate);
+    -   the River hamlet (beside the bridge);
+    -   Abandoned Village Main Street (through the yards behind the
+        houses);
+    -   the Abandoned Village back alleys (through the yards).
+-   **Fix:** each trigger is now a band across its whole area (the
+    hamlet's covers the bridge, its only crossing), so every route from
+    one gate to another crosses it. The ambush still springs midway.
+-   **New test (every map, every encounter):** with the trigger tiles
+    blocked, no gate of an area can be reached from another of its
+    gates. Before the fix it failed on exactly the areas above.
+-   **Verified in the game:** walking along the Shrine's top edge now
+    springs the ambush at the middle column (3 enemies, both gates
+    closed). Before, that route skipped it.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose

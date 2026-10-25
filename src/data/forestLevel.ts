@@ -89,8 +89,9 @@ export const BAMBOO_FOREST: MapDef = {
     {
       id: "thicket",
       area: { col: 48, row: 27, cols: 25, rows: 15 },
-      // Ambush: the bamboo closes in once you reach the middle.
-      trigger: { col: 58, row: 32, cols: 4, rows: 4 },
+      // Ambush: the bamboo closes in once you reach the middle. The trigger
+      // spans the clearing, so no way round it skips the fight.
+      trigger: { col: 58, row: 27, cols: 4, rows: 15 },
       waves: [[c, c, r], [t, c, r]],
       reward: true,
     },
