@@ -1376,6 +1376,13 @@
     -   the design doc's history notes;
     -   the GitHub repository name, which is also the website path.
         Renaming it is the user's call.
+-   **Repository renamed** (asked by the user) from
+    `dungeon-survivor-claude-project` to `ninja-survivor`. The game is
+    now at https://website.cookiewarrior.io/ninja-survivor/. GitHub
+    redirects old git and web links to the new name, but the old Pages
+    path does not redirect. The local `origin` remote now points to the
+    new name. The local folder keeps its old name, since nothing depends
+    on it.
 
 ## Change policy
 

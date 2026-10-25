@@ -6,7 +6,7 @@ pick upgrades, and defeat the final boss. It is inspired by the broad
 room-based action genre; no characters, rooms, assets or names are taken
 from other games.
 
-**Play online:** https://website.cookiewarrior.io/dungeon-survivor-claude-project/
+**Play online:** https://website.cookiewarrior.io/ninja-survivor/
 (published by GitHub Pages on every push to `main`; see
 `.github/workflows/deploy.yml`).
 
