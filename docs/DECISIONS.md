@@ -1320,6 +1320,34 @@
 -   **Menu footer:** now "v2.0 · art and audio: Ninja Adventure by
     Pixel-boy & AAA (CC0)".
 
+## Publishing (2026-10-25)
+
+-   **Asked by the user:** push everything and make the game available
+    on a website.
+-   **Host: GitHub Pages**, from the existing GitHub repository.
+    -   A workflow (`.github/workflows/deploy.yml`) runs the typecheck,
+        tests and build on every push to `main`, and deploys `dist` only
+        if they pass.
+    -   Vite's `base` is `"./"`, so the build works from the project
+        site's subfolder. This was checked locally before pushing: every
+        script, sheet and sound loaded from `/<repo>/`.
+-   **Live at** https://website.cookiewarrior.io/dungeon-survivor-claude-project/
+    -   The account's Pages site uses that custom domain. It is proxied
+        by Cloudflare, which needs no change: responses carry GitHub's
+        request ID, and Cloudflare reports them as uncached.
+    -   `emiljns.github.io/dungeon-survivor-claude-project/` redirects
+        there.
+-   **What it took:**
+    -   The repository was private. Pages needs a public repo on the
+        free plan, so the user made it public and set the Pages source
+        to "GitHub Actions" (an owner-only setting).
+    -   The first run failed only at "configure Pages", because Pages
+        was still off; install, typecheck, tests and build all passed
+        on GitHub's servers.
+    -   A new push then deployed. All 105 requests from the live site
+        succeeded (72 sheets, 28 effects, the menu music), and the game
+        booted to its menu.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose
