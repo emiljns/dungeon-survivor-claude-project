@@ -156,7 +156,7 @@ collision boxes, room layouts and combat behaviour stay unchanged.
     fights, victory and defeat; streamed, crossfaded.
 -   [x] Mute key (N), remembered per browser; no audio failure can stop
     the game. **Acceptance:** the user is happy with the sound.
-    *(Built and self-tested; waiting for the user's review.)*
+    (Reviewed by the user: "perfect".)
 
 ## Post-v2 only
 
