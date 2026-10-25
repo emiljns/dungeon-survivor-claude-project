@@ -1,1 +1,6 @@
-`dungeon-survivor-concept.png` is an AI-generated visual reference only. It is not production game art; the prototype must use placeholder shapes until gameplay works.
+`ninja-survivor-overview.png` is an overview of the finished game, built
+from real screenshots (captured from the game's own renderer at its native
+640×352) and the game's own Ninja Adventure sprites. It replaced the
+starter pack's AI-generated concept image, which is kept for history in
+`docs/archive/dungeon-survivor-concept.png` (mood reference only, never
+game art).

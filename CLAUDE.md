@@ -1,4 +1,4 @@
-# Claude Code instructions --- Ninja Survivor (formerly Dungeon Survivor)
+# Claude Code instructions --- Ninja Survivor
 
 You are the sole implementation agent. The user wants to test Claude
 Code's capabilities, so work autonomously within this scope, explain

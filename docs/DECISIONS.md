@@ -1348,6 +1348,35 @@
         succeeded (72 sheets, 28 effects, the menu music), and the game
         booted to its menu.
 
+## Overview image and name (2026-10-25)
+
+-   **Asked by the user:** change the name to Ninja Survivor, and modify
+    the concept image so it looks like the game.
+-   **The image** (`assets/ninja-survivor-overview.png`, 1920×1280)
+    keeps the concept's layout but uses only real material.
+    -   **Screenshots:** grabbed from the game's renderer at its native
+        640×352 and posted to a local scratch server. They show the
+        Hollow Warden fight at 2× (its 14-bullet ring and two eyes'
+        aim lines), the village and the five levels, and the main menu,
+        upgrade choice, merchant shop and victory screen.
+    -   **Sprites:** the game's own (the ninja, one enemy per level,
+        shurikens, the coin, five bosses), plus crops showing the light
+        by day, at night and in the Void.
+    -   **Text:** describes what is built.
+    -   **Nothing excluded is pictured:** the concept's minimap, ammo
+        counter, Settings and Quit buttons, character select and dungeon
+        floors are gone.
+-   **The concept image** moved to
+    `docs/archive/dungeon-survivor-concept.png` (history, mood reference
+    only).
+-   **The name:** the README title and CLAUDE.md heading drop
+    "(formerly Dungeon Survivor)". These stay on purpose:
+    -   the v1 best-score key `dungeon-survivor:best:v1`, so old best
+        scores still migrate;
+    -   the design doc's history notes;
+    -   the GitHub repository name, which is also the website path.
+        Renaming it is the user's call.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose

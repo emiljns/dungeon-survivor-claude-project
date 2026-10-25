@@ -1,4 +1,4 @@
-# Ninja Survivor (formerly Dungeon Survivor)
+# Ninja Survivor
 
 A compact, original top-down dungeon shooter with a 16-bit-inspired
 pixel look. Fight through five themed levels of hand-authored rooms,
@@ -18,7 +18,7 @@ from the CC0 **Ninja Adventure** pack by Pixel-boy and AAA (see
 (strict), Phaser 3, Vite, Vitest. It is offline-only: there is no
 backend, accounts or online leaderboard.
 
-![AI-generated concept (mood reference only)](assets/dungeon-survivor-concept.png)
+![Ninja Survivor overview: real screenshots of the game](assets/ninja-survivor-overview.png)
 
 ## Run it
 
