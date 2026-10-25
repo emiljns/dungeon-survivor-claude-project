@@ -60,6 +60,9 @@ import { artMode, playFx, sheetKey, type ArtMode } from "../rendering/Art.ts";
 import { ensureLightTextures } from "../rendering/LightTextures.ts";
 import { bakeTileLayer, ensurePlaceholderTextures, Tex } from "../rendering/PlaceholderArt.ts";
 import { browserStorage } from "../systems/HighScoreStore.ts";
+import { GameAudio } from "../systems/Audio.ts";
+import { THROW_SFX } from "../data/audioManifest.ts";
+import type { MusicContext } from "../logic/audio.ts";
 import { ProjectileSystem, type BulletSpec } from "../systems/ProjectileSystem.ts";
 import { Hud } from "../ui/Hud.ts";
 import { ShopPanel } from "../ui/ShopPanel.ts";
@@ -99,6 +102,7 @@ interface Keys {
   readonly interact: Phaser.Input.Keyboard.Key;
   readonly pause: Phaser.Input.Keyboard.Key;
   readonly pauseAlt: Phaser.Input.Keyboard.Key;
+  readonly mute: Phaser.Input.Keyboard.Key;
 }
 
 const BASE_STATS: BaseStats = {
@@ -189,6 +193,7 @@ export class GameScene extends Phaser.Scene {
   private hud!: Hud;
   private gun!: FireCooldown;
   private keys!: Keys;
+  private audio!: GameAudio;
   private phase: Phase = "playing";
   private leaving = false;
   // Run-wide values, carried in RunState between rooms.
@@ -420,6 +425,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.player.sprite, hurdles, undefined, () => !this.player.isDashing(this.simTime));
     this.physics.add.collider(this.enemyGroup, hurdles);
     this.coinPickups = new Coins(this, this.art, () => {
+      this.audio.sfx("coin", { jitter: true });
       this.coins++;
       this.coinsEarned++;
     });
@@ -447,7 +453,10 @@ export class GameScene extends Phaser.Scene {
       interact: kb.addKey(K.E),
       pause: kb.addKey(K.ESC),
       pauseAlt: kb.addKey(K.P),
+      mute: kb.addKey(K.N),
     };
+    this.audio = GameAudio.of(this.game);
+    this.audio.setMusic(this.musicContext());
 
     const roomCount = level.rooms.length;
     const roomNumber = this.run.roomIndex + 1;
@@ -530,8 +539,11 @@ export class GameScene extends Phaser.Scene {
 
     // Convert the pointer to world space every frame: correct even when the
     // mouse is still but the camera scrolls.
+    if (Phaser.Input.Keyboard.JustDown(k.mute)) this.hud.toast(this.audio.toggleMute() ? "SOUND OFF" : "SOUND ON");
+
     const pointer = this.input.activePointer;
     const aim = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    const wasDashing = this.player.isDashing(now);
     this.player.update(
       { up: k.up.isDown, down: k.down.isDown, left: k.left.isDown, right: k.right.isDown },
       aim,
@@ -539,6 +551,7 @@ export class GameScene extends Phaser.Scene {
       Phaser.Input.Keyboard.JustDown(k.dash),
       this.onIce(),
     );
+    if (!wasDashing && this.player.isDashing(now)) this.audio.sfx("dash");
 
     this.checkAbyss(now);
     if (this.phase !== "playing") return;
@@ -553,13 +566,17 @@ export class GameScene extends Phaser.Scene {
         this.playerShots.fire(this.player.position, dir, 9, spec);
       }
       this.muzzleFlash();
+      this.audio.sfx(THROW_SFX[this.weapon], { jitter: true });
     }
 
     const ctx: EnemyContext = {
       now,
       player: this.player.position,
       hasLineOfSight: (from, to) => hasLineOfSight(from, to, this.solidRects),
-      fire: (origin, dir, attack, muzzle) => this.enemyShots.fire(origin, dir, muzzle, enemyBulletSpec(attack, this.art)),
+      fire: (origin, dir, attack, muzzle) => {
+        this.enemyShots.fire(origin, dir, muzzle, enemyBulletSpec(attack, this.art));
+        this.audio.sfx("enemyShot", { jitter: true });
+      },
       flowDir: (from, big) => {
         // Big bodies use the clearance field; where it has no route (narrow gaps) they try the normal one.
         const wide = big && this.flowBig ? flowDirection(this.flowBig, from, TILE) : null;
@@ -586,6 +603,7 @@ export class GameScene extends Phaser.Scene {
         }
         const broke = this.world?.hit(index - targets.length, damage);
         if (broke) {
+          this.audio.sfx("shatter", { jitter: true });
           this.coinPickups.drop(broke.at, breakableCoins(broke.shards, Math.random));
           this.refreshSolids();
           this.flowDirty = true;
@@ -648,6 +666,12 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** The music for this map: the village, or the level's track (or its boss fight's). */
+  private musicContext(boss: "none" | "miniboss" | "boss" = "none"): MusicContext {
+    if (this.village) return { kind: "village" };
+    return { kind: "level", level: this.level.number, boss, finalLevel: LEVELS.length };
+  }
+
   /** Falls into the abyss; otherwise remembers the last safe tile to come back to. */
   private checkAbyss(now: number): void {
     const l = this.layout;
@@ -666,6 +690,7 @@ export class GameScene extends Phaser.Scene {
     const spawn = { col: Math.floor(l.playerSpawn.x / TILE), row: Math.floor(l.playerSpawn.y / TILE) };
     const back = respawnTile(this.lastSafe ?? spawn, safe, (c, r) => l.abyss[r]?.[c] === true) ?? spawn;
     this.fallFx(p);
+    this.audio.sfx("fall");
     const result = this.player.fall({ x: (back.col + 0.5) * TILE, y: (back.row + 0.5) * TILE }, now);
     this.lastSafe = back;
     this.updateHud();
@@ -754,6 +779,8 @@ export class GameScene extends Phaser.Scene {
         enc.state = start.state;
         this.setGates();
         this.hud.banner(enc.def.trigger ? "AMBUSH!" : "ENEMIES", "The way out is sealed", PALETTE.danger);
+        this.audio.sfx("alert");
+        this.audio.sfx("gate");
         this.spawnWave(enc, start.spawnWave);
         continue;
       }
@@ -765,7 +792,10 @@ export class GameScene extends Phaser.Scene {
       if (step.cleared) {
         this.setGates();
         // The last area's clear is announced by the room clear instead.
-        if (!canExit(this.room)) this.hud.banner("AREA CLEAR", "The gates open", "#7dff9b");
+        if (!canExit(this.room)) {
+          this.hud.banner("AREA CLEAR", "The gates open", "#7dff9b");
+          this.audio.sfx("areaClear");
+        }
         this.coinPickups.attract();
         if (enc.def.reward) this.offerUpgrade();
         if (this.phase !== "playing") return;
@@ -872,6 +902,7 @@ export class GameScene extends Phaser.Scene {
   // ---- shops -------------------------------------------------------------
 
   private talkTo(npc: Npc): void {
+    this.audio.sfx("talk");
     if (npc.kind === "sign") this.readSign(npc.text);
     else this.openShop(npc.kind);
   }
@@ -909,7 +940,12 @@ export class GameScene extends Phaser.Scene {
               const save = loadSave(browserStorage());
               return { coins: save.coins, items: villageStock(save.unlocks) };
             },
-            buy: (id) => this.buyUnlock(id),
+            buy: (id) => {
+              const before = loadSave(browserStorage()).coins;
+              const message = this.buyUnlock(id);
+              this.audio.sfx(loadSave(browserStorage()).coins < before ? "buy" : "cancel");
+              return message;
+            },
             onClose: () => this.closeShop(),
           }
         : {
@@ -921,7 +957,12 @@ export class GameScene extends Phaser.Scene {
               coins: this.coins,
               items: merchantStock(loadSave(browserStorage()).unlocks, this.weapon, this.upgrades, this.player.health, this.run.levelIndex),
             }),
-            buy: (id) => this.buyFromMerchant(id),
+            buy: (id) => {
+              const before = this.coins;
+              const message = this.buyFromMerchant(id);
+              this.audio.sfx(this.coins < before ? (id === "heal" ? "heal" : "buy") : "cancel");
+              return message;
+            },
             onClose: () => this.closeShop(),
           },
       this.art,
@@ -974,6 +1015,7 @@ export class GameScene extends Phaser.Scene {
   private pauseGame(): void {
     // Pausing the scene freezes update, physics, timers and tweens together.
     // The overlay sleeps between pauses (see PauseScene for why it is not stopped).
+    this.audio.sfx("pause");
     const data = { upgrades: this.upgrades };
     if (this.scene.isSleeping("pause")) this.scene.wake("pause", data);
     else this.scene.launch("pause", data);
@@ -1050,6 +1092,8 @@ export class GameScene extends Phaser.Scene {
         if (isBossKind(spec.kind)) {
           this.boss = enemy;
           this.hud.showBoss(bossNameFor(bestiary, spec.kind));
+          this.audio.sfx("bossAppear");
+          this.audio.setMusic(this.musicContext(spec.kind === "boss" ? "boss" : "miniboss"));
           this.cameras.main.shake(250, spec.kind === "boss" ? 0.004 : 0.0025);
         }
       }
@@ -1058,7 +1102,14 @@ export class GameScene extends Phaser.Scene {
 
   private onEnemyShot(enemy: Enemy, damage: number, now: number): void {
     const result = enemy.takeHit(damage, now);
-    if (!result.died) return;
+    if (!result.died) {
+      this.audio.sfx("hit", { jitter: true });
+      return;
+    }
+    if (isBossKind(enemy.stats.kind)) {
+      this.audio.sfx("bossDie");
+      this.audio.setMusic(this.musicContext());
+    } else this.audio.sfx("enemyDie", { jitter: true });
     this.enemies = this.enemies.filter((e) => e !== enemy);
     this.enemiesDefeated++;
     this.coinPickups.drop(enemy.position, enemyCoins(enemy.stats.kind, enemy.stats.elite));
@@ -1076,6 +1127,7 @@ export class GameScene extends Phaser.Scene {
       this.victory();
       return;
     }
+    this.audio.sfx("exitOpen");
     if (this.isFinalRoom) this.hud.banner("LEVEL CLEAR", "The way down is open", "#7dff9b", true);
     else this.hud.banner("ROOM CLEAR", "The door is open", "#7dff9b");
     if (this.levelRoom.reward) this.offerUpgrade();
@@ -1116,11 +1168,13 @@ export class GameScene extends Phaser.Scene {
       if (this.phase !== "reward") return;
       this.physics.pause();
       this.panel = new UpgradePanel(this, choices, this.upgrades, (id) => this.chooseUpgrade(id));
+      this.audio.sfx("upgrade");
     });
   }
 
   private chooseUpgrade(id: UpgradeId): void {
     this.panel = null;
+    this.audio.sfx("accept");
     playFx(this, "na-magic-spark", "magicSpark", this.player.position.x, this.player.position.y - 4, Depth.effects);
     this.upgrades = applyUpgrade(this.upgrades, id);
     this.refreshStats();
@@ -1225,7 +1279,10 @@ export class GameScene extends Phaser.Scene {
   private damagePlayer(amount: number, from: Vec2): void {
     if (this.phase !== "playing") return;
     const result = this.player.takeHit(amount, from, this.simTime);
-    if (result.applied) this.updateHud();
+    if (result.applied) {
+      this.audio.sfx("hurt");
+      this.updateHud();
+    }
     if (result.died) this.gameOver();
   }
 
@@ -1239,6 +1296,8 @@ export class GameScene extends Phaser.Scene {
 
   private gameOver(): void {
     this.phase = "gameOver";
+    this.audio.playMusic(null);
+    this.audio.sfx("defeat");
     this.player.die();
     this.endRun();
     this.finishRun("defeat", this.run.roomsCleared, 700);
@@ -1246,6 +1305,8 @@ export class GameScene extends Phaser.Scene {
 
   private victory(): void {
     this.phase = "victory";
+    this.audio.playMusic(null);
+    this.audio.sfx("victory");
     this.player.halt();
     this.endRun();
     this.addScore(SCORE.victory, null);

@@ -2,6 +2,7 @@ import * as Phaser from "phaser";
 import { newRun } from "../logic/progression.ts";
 import { createArtAnims, missingArt, queueArt, requestedArtMode, setArtMode, type ArtMode } from "../rendering/Art.ts";
 import { FONT_FAMILY, GAME_HEIGHT, GAME_WIDTH, PALETTE, Tuning } from "./config.ts";
+import { queueAudio } from "../systems/Audio.ts";
 
 /**
  * Loads sprite art when it is requested, then hands over to the menu (or the
@@ -14,6 +15,8 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
+    // Effects load in every art mode; a missing file only means that sound stays silent.
+    queueAudio(this);
     if (requestedArtMode(window.location.search) !== "ninja") return;
     this.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "Loading…", { fontFamily: FONT_FAMILY, fontSize: "12px", color: PALETTE.textDim })

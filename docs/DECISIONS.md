@@ -1234,6 +1234,92 @@
     layout, the map symbols and current known issues (the "no
     pathfinding" and "no foreground occlusion" items were obsolete).
 
+## Scope change and Milestone 13 — audio (2026-10-25)
+
+-   **Approval:** after Milestone 12 the user asked to "add sound effects
+    and music". Audio was listed under "post-v1 only, do not implement
+    without approval", so this request is the approval. It became
+    Milestone 13. A volume slider stays out (a Settings menu is still
+    excluded); a mute key is not a settings menu.
+-   **Source:** the Ninja Adventure pack's own audio, already on disk in
+    the pack zip (no new download). The pack's README states that the
+    CC0 licence covers all of its assets, audio included. Only the 40
+    files used are copied, each recorded with its pack path in
+    `src/data/audioManifest.ts`.
+-   **Choosing without ears:** no one listened to the files during the
+    build. Music was picked by title:
+    -   menu: Adventure Begin; village: Village;
+    -   Bamboo Forest: Clearing; River: Aquatic; Snowy Mountain:
+        Ascension; Abandoned Village: Lost Village; The Void: Final Area;
+    -   mini-bosses: Tension; bosses: Fight; the Hollow Warden: Dark
+        Castle;
+    -   victory: End Theme; defeat: Sad Theme.
+
+    Effects were picked by name, then by measured length (all are
+    0.1–1.3 s) and loudness (RMS). Volumes were balanced from that
+    loudness, and frequent sounds (throws, coins, hits, enemy shots) are
+    quieter and rate-limited (40–90 ms). Each choice is one line to swap.
+-   **Playback:**
+    -   **Effects:** 28 short WAVs (2.3 MB) are preloaded at boot in
+        every art mode and played by Phaser's Web Audio manager.
+        Repeated effects get a slight random pitch.
+    -   **Music:** 12 Ogg tracks (12 MB in all) stream through a single
+        HTML audio element, never preloaded, with a 450 ms crossfade.
+        One music player lives in the game registry, so scene restarts
+        share it.
+    -   A track the browser refuses before the first click or key press
+        starts on that gesture.
+    -   Music pauses while the tab is hidden, since the game freezes
+        then too.
+    -   Missing files, a blocked audio context or blocked storage only
+        mean silence; nothing can stop the game.
+-   **Where sounds play:**
+    -   **Combat:** throws (one per weapon), enemy shots, hits, deaths,
+        getting hurt, the dash, falling into the abyss.
+    -   **Pickups and objects:** coins, breakables.
+    -   **Fights:** an ambush or fight starting (alert plus gate), an
+        area cleared, the exit opening.
+    -   **Bosses:** a boss appearing switches to fight music; its death
+        returns to the level's track.
+    -   **Menus:** upgrades offered and chosen, talking to an NPC,
+        buying (a heal chime for the tea, a "no" sound when a purchase
+        fails), pausing, menu and results choices.
+    -   **End of a run:** the victory or defeat jingle over silence,
+        then the results music.
+-   **Mute key: N, not M.** M already means "quit to menu" on the pause
+    screen and "menu" on the results screen; muting there with M would
+    end the run. N works in the menu, in game and on the pause screen,
+    is shown in the menu's control list, and is saved under
+    `ninja-survivor:audio:v1` (a per-browser convenience, separate from
+    the save).
+-   **Tests:**
+    -   every manifest file exists with a valid WAV or Ogg header;
+    -   effects are at most 2 s, and their total under 3 MB; each track
+        is under 3 MB;
+    -   no unlisted file ships, and each pack source is used once;
+    -   every level has its own track and every weapon its throw;
+    -   busy effects are rate-limited and quieter;
+    -   the music choice, repeat limits, mute persistence and pitch
+        jitter are covered.
+-   **Checked in the browser** (sound itself cannot be heard here, so
+    the checks are measurements):
+    -   all 28 effects load; the Web Audio context runs;
+    -   the menu track streams at volume 0.45, advances in real time and
+        loops (82 s); starting a run switches to the village track,
+        level 1 to the forest's;
+    -   firing for 1 s plays 7 throw sounds, matching the fire rate; the
+        dash plays its sound;
+    -   an ambush plays the alert and gate sounds; then enemy shots,
+        hits, deaths and coins;
+    -   the boss's entrance switches to fight music, and its death goes
+        back to the forest track;
+    -   a defeat plays its jingle over silence, then the defeat track on
+        the results screen;
+    -   N silences the music and all effects and saves "muted"; N again
+        restores the music.
+-   **Menu footer:** now "v2.0 · art and audio: Ninja Adventure by
+    Pixel-boy & AAA (CC0)".
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose

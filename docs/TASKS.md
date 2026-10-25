@@ -148,8 +148,18 @@ collision boxes, room layouts and combat behaviour stay unchanged.
 -   [x] Docs and known issues. **Acceptance:** stable, balanced v2.
     (Reviewed by the user: "it feels perfect".)
 
-## Post-v1 only
+## Milestone 13 --- Audio (approved by the user, 2026-10-25)
+
+-   [x] Sound effects for combat, movement, pickups, encounters, bosses,
+    upgrades, shops, pause and the end of a run.
+-   [x] Music: menu, village, one track per level, boss and final-boss
+    fights, victory and defeat; streamed, crossfaded.
+-   [x] Mute key (N), remembered per browser; no audio failure can stop
+    the game. **Acceptance:** the user is happy with the sound.
+    *(Built and self-tested; waiting for the user's review.)*
+
+## Post-v2 only
 
 Real sprite replacement, new weapons, extra enemy patterns, online
-leaderboards, gamepad/mobile support, additional bosses/audio. Do not
+leaderboards, gamepad/mobile support, additional bosses. Do not
 implement without approval.

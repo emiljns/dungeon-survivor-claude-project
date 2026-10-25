@@ -18,3 +18,11 @@ original path of each one inside the pack.
 
 The game's original placeholder art, lighting textures and UI are
 generated in code (`src/rendering/`).
+
+## Audio
+
+The sound effects, jingles and music also come from the **Ninja
+Adventure - Asset Pack** (same authors, same CC0 licence; the pack's
+README states that it covers all of its assets). The files used are
+copied unmodified into `public/assets/ninja/audio/` under shorter names;
+`src/data/audioManifest.ts` records the original path of each one.

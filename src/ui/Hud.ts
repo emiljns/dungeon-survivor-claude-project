@@ -36,6 +36,7 @@ export class Hud {
   private bossBar: Phaser.GameObjects.Graphics | null = null;
   private bossLabel: Phaser.GameObjects.Text | null = null;
   private bannerObjs: Phaser.GameObjects.Text[] = [];
+  private toastText: Phaser.GameObjects.Text | null = null;
 
   constructor(private readonly scene: Phaser.Scene, roomLabel: string) {
     const label = { fontFamily: FONT_FAMILY, fontSize: "10px", color: PALETTE.text, fontStyle: "bold" };
@@ -118,6 +119,19 @@ export class Hud {
       .setScrollFactor(0)
       .setDepth(Depth.hud);
     this.bossBar = this.scene.add.graphics().setScrollFactor(0).setDepth(Depth.hud);
+  }
+
+  /** A short notice under the top bar (e.g. "SOUND OFF"); a new one replaces the last. */
+  toast(text: string): void {
+    this.toastText?.destroy();
+    const t = this.scene.add
+      .text(GAME_WIDTH / 2, 40, text, { fontFamily: FONT_FAMILY, fontSize: "10px", color: PALETTE.textDim, fontStyle: "bold" })
+      .setOrigin(0.5)
+      .setStroke("#05070d", 3)
+      .setScrollFactor(0)
+      .setDepth(Depth.hud);
+    this.toastText = t;
+    this.scene.tweens.add({ targets: t, alpha: 0, delay: 900, duration: 300, onComplete: () => t.destroy() });
   }
 
   /** Fades the boss bar while something important is underneath it. */

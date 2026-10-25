@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import { sanitizeUpgrades, UPGRADES } from "../logic/upgrades.ts";
 import { FONT_FAMILY, GAME_HEIGHT, GAME_WIDTH, PALETTE } from "./config.ts";
+import { GameAudio } from "../systems/Audio.ts";
 
 /**
  * Overlay shown over a paused GameScene. While the game scene is paused,
@@ -43,6 +44,7 @@ export class PauseScene extends Phaser.Scene {
     kb?.on("keydown-ESC", () => this.resumeGame());
     kb?.on("keydown-P", () => this.resumeGame());
     kb?.on("keydown-M", () => this.quitToMenu());
+    kb?.on("keydown-N", () => GameAudio.of(this.game).toggleMute());
 
     // `this.events` survives restarts, so the wake handler is removed on shutdown.
     this.events.on(Phaser.Scenes.Events.WAKE, this.onWake, this);

@@ -3,6 +3,7 @@ import { newRun } from "../logic/progression.ts";
 import { formatTime } from "../logic/score.ts";
 import type { BestRecord } from "../systems/HighScoreStore.ts";
 import { FONT_FAMILY, GAME_HEIGHT, GAME_WIDTH, PALETTE, Tuning } from "./config.ts";
+import { GameAudio } from "../systems/Audio.ts";
 
 export interface RunResult {
   readonly outcome: "victory" | "defeat";
@@ -56,6 +57,7 @@ export class ResultsScene extends Phaser.Scene {
     if (!isRunResult(data)) throw new Error("ResultsScene started without a RunResult");
     const r = data;
     const win = r.outcome === "victory";
+    GameAudio.of(this.game).setMusic({ kind: "results", outcome: r.outcome });
     const cx = GAME_WIDTH / 2;
     // Title sits inside the 286px panel (panel top = GAME_HEIGHT/2 - 143 = 33).
     const top = 56;
@@ -114,6 +116,7 @@ export class ResultsScene extends Phaser.Scene {
   private retry(): void {
     if (this.done) return;
     this.done = true;
+    GameAudio.of(this.game).sfx("accept");
     // Back to the Home Village (near its gate) for the next run. Explicit
     // fresh data: Phaser would otherwise reuse the last run's data.
     this.scene.start("game", { ...newRun(Tuning.player.maxHealth), village: true });
@@ -122,6 +125,7 @@ export class ResultsScene extends Phaser.Scene {
   private menu(): void {
     if (this.done) return;
     this.done = true;
+    GameAudio.of(this.game).sfx("accept");
     this.scene.stop("game");
     this.scene.start("menu");
   }

@@ -3,6 +3,7 @@ import { newRun } from "../logic/progression.ts";
 import { browserStorage } from "../systems/HighScoreStore.ts";
 import { loadSave } from "../systems/SaveStore.ts";
 import { FONT_FAMILY, GAME_HEIGHT, GAME_WIDTH, PALETTE, Tuning } from "./config.ts";
+import { GameAudio } from "../systems/Audio.ts";
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -10,6 +11,9 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    const audio = GameAudio.of(this.game);
+    audio.setMusic({ kind: "menu" });
+    this.input.keyboard?.on("keydown-N", () => audio.toggleMute());
     const cx = GAME_WIDTH / 2;
     const small = { fontFamily: FONT_FAMILY, fontSize: "11px", color: PALETTE.textDim };
     this.add
@@ -21,7 +25,7 @@ export class MenuScene extends Phaser.Scene {
       .text(
         cx,
         196,
-        ["WASD       Move", "Mouse      Aim", "Hold LMB   Shoot", "Space      Dash", "E          Talk / exit door", "Esc / P    Pause"].join("\n"),
+        ["WASD       Move", "Mouse      Aim", "Hold LMB   Shoot", "Space      Dash", "E          Talk / exit door", "Esc / P    Pause", "N          Sound on/off"].join("\n"),
         { ...small, lineSpacing: 3 },
       )
       .setOrigin(0.5);
@@ -47,12 +51,13 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     this.tweens.add({ targets: prompt, alpha: 0.35, duration: 600, yoyo: true, repeat: -1 });
-    this.add.text(cx, GAME_HEIGHT - 20, "v1.1 · art: Ninja Adventure by Pixel-boy & AAA (CC0)", { ...small, fontSize: "9px" }).setOrigin(0.5);
+    this.add.text(cx, GAME_HEIGHT - 20, "v2.0 · art and audio: Ninja Adventure by Pixel-boy & AAA (CC0)", { ...small, fontSize: "9px" }).setOrigin(0.5);
 
     let started = false;
     const start = (): void => {
       if (started) return;
       started = true;
+      audio.sfx("accept");
       // Every run begins in the Home Village. Explicit data: Phaser would
       // otherwise reuse the last run's room/health.
       this.scene.start("game", { ...newRun(Tuning.player.maxHealth), village: true });

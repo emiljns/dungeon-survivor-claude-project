@@ -6,10 +6,11 @@ pick upgrades, and defeat the final boss. It is inspired by the broad
 room-based action genre; no characters, rooms, assets or names are taken
 from other games.
 
-**Status: v1.1, with v2 (Ninja Survivor) in progress** (see
-`docs/GAME_DESIGN.md` and `docs/TASKS.md`). It is playable from the menu to victory or game over,
-with pixel-art sprites from the CC0 **Ninja Adventure** pack by
-Pixel-boy and AAA (see `CREDITS.md`), and no audio yet. TypeScript
+**Status: v2.0 (Ninja Survivor)** (see `docs/GAME_DESIGN.md` and
+`docs/TASKS.md`). It is playable from the village prologue through five
+levels to victory or game over, with pixel art, sound effects and music
+from the CC0 **Ninja Adventure** pack by Pixel-boy and AAA (see
+`CREDITS.md`). TypeScript
 (strict), Phaser 3, Vite, Vitest. It is offline-only: there is no
 backend, accounts or online leaderboard.
 
@@ -45,13 +46,22 @@ URL flags:
 | `?testmap` | v2 engine test map: scrolling camera, tall walls, water, gated encounter areas with waves and an ambush |
 | `?testmap=world&theme=forest` | v2 world-kit test maps, one per biome (`theme`: `village` peaceful with houses and lanes, `forest` dense with a hollow, `river` with a bridge ambush, `snow` with a frozen lake to slide on and no animals) |
 
-## Art
+## Art and audio
 
-Sprites, tiles and effects come from the **Ninja Adventure** asset pack
-by Pixel-boy and AAA (CC0, credited in `CREDITS.md`). Only the 18 sheets
-in use (93 KB) are included, in `public/assets/ninja/`.
-`src/data/artManifest.ts` lists each sheet's frames, animations and
-original pack path, plus the per-level floor and wall choices.
+Sprites, tiles, effects, sounds and music come from the **Ninja
+Adventure** asset pack by Pixel-boy and AAA (CC0, credited in
+`CREDITS.md`). Only the files in use are included, in
+`public/assets/ninja/`:
+-   72 sheets (452 KB), listed in `src/data/artManifest.ts` with their
+    frames, animations and original pack paths;
+-   28 sound effects (2.3 MB, preloaded) and 12 music tracks (12 MB,
+    streamed one at a time), listed in `src/data/audioManifest.ts` with
+    their sources and volumes.
+
+Each level has its own track, boss fights switch to fight music (the
+Hollow Warden has its own), and the results screen plays a victory or
+defeat theme. Press **N** to turn sound off or on; the choice is
+remembered in this browser.
 
 -   **Hitboxes are separate from the art** (`src/data/hitboxes.ts`,
     locked by tests), so changing sprites never changes gameplay.
@@ -68,6 +78,7 @@ original pack path, plus the per-level floor and wall choices.
 | Space | Dash (brief invulnerability; meter under HP) |
 | E | Talk to the merchant / shopkeeper, or use an open door |
 | Esc / P | Pause / resume (M on the pause screen quits to the menu) |
+| N | Sound on / off (menu, game and pause screen) |
 | 1 / 2 / 3 or click | Pick an upgrade |
 | 1–6 or click, Esc / E | Buy in a shop, leave the shop |
 | R / click, M | Retry or menu on the results screen |
@@ -181,8 +192,13 @@ Decoration, NPCs and animals are placed as data next to each map.
     were not measured (the bot never buys).
 -   **Enemies ignore ice** (by design, first version), and melee enemies
     cannot cross the abyss or water: they go round, or wait.
--   **Audio:** no sound or music yet (the Ninja Adventure pack includes
-    some, for later).
+-   **Audio:** tracks and effects were chosen by title and by measured
+    length and loudness, not by ear, so some picks may want swapping
+    (one line each in `src/data/audioManifest.ts`). There is no volume
+    slider (a Settings menu is out of scope), only N to mute. Browsers
+    start sound only after the first click or key press, so the menu
+    music may begin then. The pack's ambient loops (river, wind) were
+    left out: as WAVs they are 3–4 MB each.
 -   **Placeholder art** (`?art=placeholder`) draws ice as plain floor
     and the abyss like water; it is only a fallback.
 -   **Lighting and frame cost:** measured as CPU time per frame in the
