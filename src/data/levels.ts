@@ -79,7 +79,7 @@ function mapLevel(number: number, name: string, theme: Theme, difficulty: Diffic
 export const LEVELS: readonly LevelDefinition[] = [
   // v2 levels: one continuous hand-made map each (src/data/*Level.ts).
   mapLevel(1, "Bamboo Forest", THEMES.forest, { healthMul: 1, speedMul: 1 }, BAMBOO_FOREST, FOREST_BESTIARY),
-  mapLevel(2, "River", THEMES.river, { healthMul: 1.1, speedMul: 1.2 }, RIVER, RIVER_BESTIARY),
+  mapLevel(2, "River", THEMES.river, { healthMul: 1.1, speedMul: 1.05 }, RIVER, RIVER_BESTIARY),
   mapLevel(3, "Snowy Mountain", THEMES.snow, { healthMul: 1.25, speedMul: 1.1 }, SNOWY_MOUNTAIN, SNOW_BESTIARY),
   mapLevel(4, "Abandoned Village", THEMES.abandoned, { healthMul: 1.4, speedMul: 1.15 }, ABANDONED_VILLAGE, VILLAGE_BESTIARY),
   mapLevel(5, "The Void", THEMES.void, { healthMul: 1.6, speedMul: 1.2 }, THE_VOID, VOID_BESTIARY),

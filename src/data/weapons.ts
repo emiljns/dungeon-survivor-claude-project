@@ -35,15 +35,15 @@ export const WEAPONS: Readonly<Record<WeaponId, WeaponDef>> = {
   },
   kunai: {
     id: "kunai", name: "Kunai", description: "Fast and narrow; pierces one enemy.",
-    damageMul: 0.8, intervalMul: 0.7, speedMul: 1.35, radius: 1.5, pierce: 1, homing: 0, unlockPrice: 60, runPrice: 25,
+    damageMul: 0.8, intervalMul: 0.7, speedMul: 1.35, radius: 1.5, pierce: 1, homing: 0, unlockPrice: 100, runPrice: 25,
   },
   bigShuriken: {
     id: "bigShuriken", name: "Big Shuriken", description: "Slow, large and heavy; pierces three enemies.",
-    damageMul: 2.4, intervalMul: 1.9, speedMul: 0.75, radius: 5, pierce: 3, homing: 0, unlockPrice: 150, runPrice: 50,
+    damageMul: 2.4, intervalMul: 1.9, speedMul: 0.75, radius: 5, pierce: 3, homing: 0, unlockPrice: 240, runPrice: 50,
   },
   magicShuriken: {
     id: "magicShuriken", name: "Magic Shuriken", description: "Curves gently toward the nearest enemy.",
-    damageMul: 0.9, intervalMul: 1.05, speedMul: 0.9, radius: 2.5, pierce: 0, homing: 2.6, unlockPrice: 100, runPrice: 35,
+    damageMul: 0.9, intervalMul: 1.05, speedMul: 0.9, radius: 2.5, pierce: 0, homing: 2.6, unlockPrice: 160, runPrice: 35,
   },
 };
 

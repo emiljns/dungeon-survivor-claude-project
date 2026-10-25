@@ -50,7 +50,7 @@ export const FOREST_BESTIARY: Bestiary = {
   looks: { chaser: "forestChaser", tank: "forestTank", ranged: "forestRanged" },
   miniboss: {
     name: "YOUNG GIANT BAMBOO",
-    stats: ENEMY_STATS.miniboss,
+    stats: { ...ENEMY_STATS.miniboss, maxHealth: 48 },
     look: { sheet: "minibossBamboo", idleAnim: "na-miniboss-bamboo-idle" },
   },
   boss: {
@@ -58,7 +58,7 @@ export const FOREST_BESTIARY: Bestiary = {
     // A first boss: less health and fewer bullets than the Hollow Warden.
     stats: {
       ...ENEMY_STATS.boss,
-      maxHealth: 60,
+      maxHealth: 120,
       attack: { pattern: "radial", cooldownMs: 2400, windupMs: 700, bulletSpeed: 100, count: 8, spreadDeg: 0, damage: 1 },
     },
     look: { sheet: "bossBamboo", idleAnim: "na-boss-bamboo-idle" },
@@ -75,7 +75,7 @@ export const RIVER_BESTIARY: Bestiary = {
     name: "GIANT FROG",
     stats: {
       ...ENEMY_STATS.miniboss,
-      maxHealth: 36,
+      maxHealth: 54,
       attack: { pattern: "radial", cooldownMs: 2400, windupMs: 650, bulletSpeed: 100, count: 7, spreadDeg: 0, damage: 1 },
     },
     look: { sheet: "minibossFrog", idleAnim: "na-miniboss-frog-idle" },
@@ -84,7 +84,7 @@ export const RIVER_BESTIARY: Bestiary = {
     name: "SQUID",
     stats: {
       ...ENEMY_STATS.boss,
-      maxHealth: 70,
+      maxHealth: 140,
       attack: { pattern: "radial", cooldownMs: 2200, windupMs: 650, bulletSpeed: 105, count: 10, spreadDeg: 0, damage: 1 },
     },
     look: { sheet: "bossSquid", idleAnim: "na-boss-squid-idle" },
@@ -102,7 +102,7 @@ export const SNOW_BESTIARY: Bestiary = {
     name: "BLUE TENGU",
     stats: {
       ...ENEMY_STATS.miniboss,
-      maxHealth: 38,
+      maxHealth: 57,
       attack: { pattern: "radial", cooldownMs: 2300, windupMs: 650, bulletSpeed: 100, count: 8, spreadDeg: 0, damage: 1 },
     },
     look: { sheet: "minibossTengu", idleAnim: "na-miniboss-tengu-idle" },
@@ -111,7 +111,7 @@ export const SNOW_BESTIARY: Bestiary = {
     name: "GIANT BLUE SAMURAI",
     stats: {
       ...ENEMY_STATS.boss,
-      maxHealth: 72,
+      maxHealth: 144,
       attack: { pattern: "radial", cooldownMs: 2200, windupMs: 650, bulletSpeed: 105, count: 11, spreadDeg: 0, damage: 1 },
     },
     look: { sheet: "bossSamurai", idleAnim: "na-boss-samurai-idle" },
@@ -130,7 +130,7 @@ export const VILLAGE_BESTIARY: Bestiary = {
     name: "GIANT RACOON",
     stats: {
       ...ENEMY_STATS.miniboss,
-      maxHealth: 40,
+      maxHealth: 60,
       attack: { pattern: "radial", cooldownMs: 2200, windupMs: 650, bulletSpeed: 100, count: 9, spreadDeg: 0, damage: 1 },
     },
     look: { sheet: "minibossRacoon", idleAnim: "na-miniboss-racoon-idle" },
@@ -139,7 +139,7 @@ export const VILLAGE_BESTIARY: Bestiary = {
     name: "GIANT RED SAMURAI",
     stats: {
       ...ENEMY_STATS.boss,
-      maxHealth: 74,
+      maxHealth: 148,
       attack: { pattern: "radial", cooldownMs: 2100, windupMs: 650, bulletSpeed: 108, count: 12, spreadDeg: 0, damage: 1 },
     },
     look: { sheet: "bossRedSamurai", idleAnim: "na-boss-red-samurai-idle" },
@@ -157,17 +157,17 @@ export const VOID_BESTIARY: Bestiary = {
     name: "DEMON CYCLOPS",
     stats: {
       ...ENEMY_STATS.miniboss,
-      maxHealth: 42,
+      maxHealth: 90,
       attack: { pattern: "radial", cooldownMs: 2200, windupMs: 650, bulletSpeed: 105, count: 10, spreadDeg: 0, damage: 1 },
     },
     look: { sheet: "minibossCyclops", idleAnim: "na-miniboss-cyclops-idle" },
   },
   boss: {
     name: HOLLOW_WARDEN.name,
-    // The last boss outclasses every other (128 HP and 14-bullet bursts on level 5).
+    // The last boss outclasses every other (352 HP and 14-bullet bursts on level 5).
     stats: {
       ...ENEMY_STATS.boss,
-      maxHealth: 80,
+      maxHealth: 220,
       attack: { pattern: "radial", cooldownMs: 2000, windupMs: 650, bulletSpeed: 110, count: 14, spreadDeg: 0, damage: 1 },
     },
     look: HOLLOW_WARDEN.look,

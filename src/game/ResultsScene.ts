@@ -79,7 +79,7 @@ export class ResultsScene extends Phaser.Scene {
       ["HIGHEST LEVEL", `${r.levelReached} / 5`],
       ["TIME", formatTime(r.runTimeMs)],
       ["ENEMIES DEFEATED", String(r.enemiesDefeated)],
-      ["ROOMS CLEARED", String(r.roomsCleared)],
+      ["LEVELS CLEARED", String(r.roomsCleared)],
       ["BEST SCORE", `${r.best.bestScore}${r.saved ? "" : "  (not saved)"}`],
       ["COINS EARNED / KEPT", `${r.coinsEarned} / ${r.coinsKept}${win ? "" : "  (half)"}`],
       ["SAVED COINS", `${r.bank}${r.saved ? "" : "  (not saved)"}`],

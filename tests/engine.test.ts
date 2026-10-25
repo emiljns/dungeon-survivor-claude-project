@@ -200,7 +200,7 @@ describe("encounters", () => {
   });
 });
 
-import { behindWallTop, cameraLean, inView } from "../src/logic/view.ts";
+import { behindWallTop, BOSS_BAR_BAND, cameraLean, inView, underHudBand } from "../src/logic/view.ts";
 
 describe("camera and visibility", () => {
   it("leans toward the aim, capped in length", () => {
@@ -225,5 +225,22 @@ describe("camera and visibility", () => {
     expect(behindWallTop(l.wall, { x: 2.5 * T, y: 3.5 * T }, 5, T)).toBe(true); // outer wall row 4 below
     expect(behindWallTop(l.wall, { x: 1.5 * T, y: 2.5 * T }, 5, T)).toBe(false);
     expect(behindWallTop(l.wall, { x: 1.9 * T, y: 1.5 * T }, 5, T)).toBe(true); // right edge overlaps
+  });
+});
+
+describe("boss bar never hides the fight", () => {
+  const screen = { width: 640, height: 352 };
+  const view = { x: 1000, y: 500, width: 640, height: 352 };
+  it("finds an actor under the bar's band, at the bottom middle of the screen", () => {
+    expect(underHudBand([{ x: 1000 + 320, y: 500 + 335 }], view, screen, BOSS_BAR_BAND)).toBe(true);
+  });
+  it("ignores actors elsewhere on screen, including the bottom corners", () => {
+    const elsewhere = [{ x: 1000 + 320, y: 500 + 176 }, { x: 1000 + 30, y: 500 + 340 }, { x: 1000 + 610, y: 500 + 340 }];
+    expect(underHudBand(elsewhere, view, screen, BOSS_BAR_BAND)).toBe(false);
+  });
+  it("the band sits inside the screen, along its bottom edge", () => {
+    expect(BOSS_BAR_BAND.x).toBeGreaterThan(0);
+    expect(BOSS_BAR_BAND.x + BOSS_BAR_BAND.width).toBeLessThan(screen.width);
+    expect(BOSS_BAR_BAND.y + BOSS_BAR_BAND.height).toBeLessThanOrEqual(screen.height);
   });
 });

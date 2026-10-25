@@ -1131,6 +1131,109 @@
     In the Void the driver made 10 jumps and fell twice (its own
     line-ups overshooting an edge; it recovered each time).
 
+## Milestone 12 — balance and release (2026-10-25)
+
+-   **How balance was measured.** Earlier scripted runs were invincible,
+    which says nothing about difficulty. This milestone's runs count
+    hits instead: each hit is counted with the real 900 ms
+    invulnerability window, but never applied.
+    -   The bot never dodges, never buys and always takes the first
+        upgrade. Its damage taken is an upper bound on how much each
+        level throws at the player.
+    -   Its boss kill times, against perfect point-blank aim, are a
+        lower bound on fight length.
+    -   Runs use a development-mode build served without hot reload
+        (editing source reloads the dev server and kills a running
+        script).
+-   **Before tuning** (levels 1–4; the level 5 data came from a run
+    started without upgrades, so it was not comparable):
+
+    | Level | Damage (hits) | Mini-boss | Boss |
+    |---|---|---|---|
+    | 1 | 20 (15) | 6.7 s | 5.2 s |
+    | 2 | 18 (15) | 5.0 s | 7.8 s |
+    | 3 | 13 (10) | 5.9 s | 6.6 s |
+    | 4 | 23 (18) | 17.8 s | 14.3 s |
+
+-   **Findings:**
+    -   Boss fights were far too short: 5–8 s against perfect aim, so
+        roughly 10–15 s for a real player.
+    -   Enemy speed rose and fell: ×1.2 on level 2 was a leftover from
+        the v1 sewers.
+    -   Weapon unlocks cost 310 coins in all, set for v1 runs (about 277
+        coins). A v2 victory earns about 500, so one win unlocked
+        everything.
+-   **Tuning:**
+    -   **Boss health:** final bosses have about twice their HP, and
+        mini-bosses about 1.5×. Base HP, mini-boss then boss:
+        -   Forest: 48 and 120.
+        -   River: 54 and 140.
+        -   Snow: 57 and 144.
+        -   Village: 60 and 148.
+        -   Void: 90 and 220. The Void got an extra step after the first
+            tuned run: by then the bot carried 8 upgrades and killed the
+            Cyclops in 3.6 s and the Warden in 9.6 s.
+        -   On level 5 the Warden has 352 HP. A new test checks that
+            every boss and mini-boss is tougher than the previous
+            level's.
+    -   **Enemy speed:** ×1.0 / 1.05 / 1.1 / 1.15 / 1.2. The test now
+        requires speed never to drop.
+    -   **Snowy Mountain:** one more enemy in the Frozen Lake's second
+        wave and in the rink's second wave, to fill its dip.
+    -   **Unlock prices:** Kunai 100, Magic Shuriken 160, Big Shuriken
+        240 (500 in all): about one victory, or several defeats (which
+        keep half). Merchant prices are unchanged; the bot never buys,
+        so there is no data to justify changing them.
+-   **Boss kill times after tuning** (bot, before the Void step):
+
+    | Level | Mini-boss | Boss |
+    |---|---|---|
+    | 1 | 8.4 s | 8.4 s |
+    | 2 | 10.7 s | 12.5 s |
+    | 3 | 7.0 s | 12.6 s |
+    | 4 | 17.1 s | 14.1 s |
+    | 5 | 3.6 s | 9.6 s |
+
+    Damage taken per level proved noisy between runs (level 1: 20, then
+    33; level 4: 23, then 11, depending on upgrade luck and positions).
+    So it was not used for fine tuning; boss kill time was the
+    consistent signal.
+-   **Final regression run** (all tuning in, from the forest to victory,
+    same bot):
+    -   victory, score 96,426, 154 kills, 586 coins, 8.5 minutes of run
+        time;
+    -   in the Void, 10 dash-jumps and 3 falls (the bot's own line-ups);
+    -   boss kill times:
+
+        | Level | Mini-boss | Boss |
+        |---|---|---|
+        | 1 | 5.8 s | 19.6 s |
+        | 2 | 6.8 s | 12.6 s |
+        | 3 | 8.3 s | 17.5 s |
+        | 4 | 17.3 s | 15.7 s |
+        | 5 | 10.9 s | 15.2 s |
+
+    Every boss fight now lasts 12–20 s even against perfect aim.
+-   **HUD:** the boss bar now fades to 30% while the player, the boss or
+    any enemy is under it. Before, the boss could spawn hidden beneath
+    it (test plan: "nothing important sits under the HUD"). The band
+    check is a pure, tested helper.
+-   **Results screen:** "ROOMS CLEARED" became "LEVELS CLEARED". Every
+    level is one map now, so the number counts levels.
+-   **Cleanup verified:** scene and game event listeners stay at 53/19
+    from the village through all five levels across restarts. (A
+    results screen on top adds one, as expected.) A real start from the
+    menu shuts the menu scene down.
+-   **Performance** (CPU time per game step, update plus render, during
+    each level's boss fight, 6 s each, in the browser pane on the
+    development machine): an average of 0.40–0.51 ms, 95th percentile at
+    most 0.8 ms, worst frame 3.7 ms, against a 16.7 ms frame. The pane
+    was hidden during the measurement and GPU cost was not measured.
+-   **Docs:** the README describes the game as it now is: the five maps
+    and their twists, fights and exits, data-driven tuning, the project
+    layout, the map symbols and current known issues (the "no
+    pathfinding" and "no foreground occlusion" items were obsolete).
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose

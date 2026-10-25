@@ -143,9 +143,10 @@ collision boxes, room layouts and combat behaviour stay unchanged.
 
 ## Milestone 12 --- Balance and release
 
--   [ ] Difficulty check and tuning across the whole run.
--   [ ] Full prologue-to-Void run, cleanup, performance, production build.
--   [ ] Docs and known issues. **Acceptance:** stable, balanced v2.
+-   [x] Difficulty check and tuning across the whole run.
+-   [x] Full prologue-to-Void run, cleanup, performance, production build.
+-   [x] Docs and known issues. **Acceptance:** stable, balanced v2.
+    *(Built and self-tested; waiting for the user's review.)*
 
 ## Post-v1 only
 

@@ -95,16 +95,27 @@ describe("level data", () => {
     const mapLayouts = MAP_LEVELS.map((l) => l.rooms[0]?.layout.id);
     expect(new Set(mapLayouts).size).toBe(mapLayouts.length);
 
-    // Health scaling rises every level. Speed only has to stay in a modest
-    // band; level 2 (the River, which kept the v1 sewers' pace) is the fastest.
+    // Health scaling rises every level; speed never drops and stays in a
+    // modest band (Milestone 12 removed the v1 sewers' speed spike on level 2).
     for (let i = 1; i < LEVELS.length; i++) {
       expect(LEVELS[i]?.difficulty.healthMul).toBeGreaterThan(LEVELS[i - 1]?.difficulty.healthMul ?? 0);
+      expect(LEVELS[i]?.difficulty.speedMul).toBeGreaterThanOrEqual(LEVELS[i - 1]?.difficulty.speedMul ?? 0);
     }
     for (const level of LEVELS) {
       expect(level.difficulty.speedMul).toBeGreaterThanOrEqual(1);
       expect(level.difficulty.speedMul).toBeLessThanOrEqual(1.25);
     }
-    expect(LEVELS[1]?.difficulty.speedMul).toBe(Math.max(...LEVELS.slice(0, 4).map((l) => l.difficulty.speedMul)));
+  });
+
+  it("boss fights grow through the run: each boss and mini-boss is tougher than the last", () => {
+    const toughness = (l: LevelDefinition, kind: "boss" | "miniboss"): number => statsFor(l.bestiary, kind).maxHealth * l.difficulty.healthMul;
+    for (let i = 1; i < MAP_LEVELS.length; i++) {
+      const prev = MAP_LEVELS[i - 1];
+      const cur = MAP_LEVELS[i];
+      if (!prev || !cur) continue;
+      expect(toughness(cur, "boss"), cur.name).toBeGreaterThan(toughness(prev, "boss"));
+      expect(toughness(cur, "miniboss"), cur.name).toBeGreaterThan(toughness(prev, "miniboss"));
+    }
   });
 
   it("rewards: every level offers an upgrade, start rooms and the victory room never do; 9 per run", () => {

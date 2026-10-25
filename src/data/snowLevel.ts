@@ -85,7 +85,7 @@ export const SNOWY_MOUNTAIN: MapDef = {
     ],
   },
   encounters: [
-    { id: "lake", area: { col: 26, row: 20, cols: 27, rows: 19 }, waves: [[c, c, r, t], [c, c, r]], reward: false },
+    { id: "lake", area: { col: 26, row: 20, cols: 27, rows: 19 }, waves: [[c, c, r, t], [c, c, r, r]], reward: false },
     {
       id: "shrine",
       area: { col: 58, row: 2, cols: 27, rows: 19 },
@@ -95,7 +95,7 @@ export const SNOWY_MOUNTAIN: MapDef = {
       waves: [[c, r, r], [t, c, r, c]],
       reward: true,
     },
-    { id: "rink", area: { col: 88, row: 2, cols: 25, rows: 21 }, waves: [[miniboss, c, c], [c, r, t]], reward: true },
+    { id: "rink", area: { col: 88, row: 2, cols: 25, rows: 21 }, waves: [[miniboss, c, c], [c, r, t, c]], reward: true },
     { id: "plateau", area: { col: 84, row: 31, cols: 33, rows: 32 }, waves: [[boss, r, r], [c, c, t], [c, r, r, c]], reward: false },
   ],
   objects: [

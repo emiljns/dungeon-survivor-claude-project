@@ -19,7 +19,7 @@ import {
 } from "../logic/encounter.ts";
 import { computeFlowField, flowDirection, withClearance, type FlowField } from "../logic/flowField.ts";
 import { parseLayout, type ParsedLayout, type Prop, type TilePos } from "../logic/layout.ts";
-import { cameraLean, inView, underTopLayer } from "../logic/view.ts";
+import { BOSS_BAR_BAND, cameraLean, inView, underHudBand, underTopLayer } from "../logic/view.ts";
 import {
   advanceRun,
   isFinalLevel,
@@ -69,7 +69,7 @@ import { buyUnlock, loadSave, recordRun, writeSave } from "../systems/SaveStore.
 import { Coins } from "../systems/Coins.ts";
 import { Npcs } from "../systems/Npcs.ts";
 import { UpgradePanel } from "../ui/UpgradePanel.ts";
-import { Depth, FONT_FAMILY, PALETTE, TILE, Tuning } from "./config.ts";
+import { Depth, FONT_FAMILY, GAME_HEIGHT, GAME_WIDTH, PALETTE, TILE, Tuning } from "./config.ts";
 import type { RunResult } from "./ResultsScene.ts";
 
 /** "shop" covers every modal talk: shops and signs. */
@@ -627,6 +627,7 @@ export class GameScene extends Phaser.Scene {
     this.particles?.update(now, dt, { x: this.cameras.main.scrollX, y: this.cameras.main.scrollY });
     this.updateSilhouettes();
     this.updateHud();
+    this.fadeBossBar();
     this.updateLighting();
   }
 
@@ -995,6 +996,13 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.hud.banner(`ROOM ${this.run.roomIndex + 1}`, this.levelRoom.layout.name);
     }
+  }
+
+  /** The boss bar fades while the player, the boss or any enemy is under it. */
+  private fadeBossBar(): void {
+    if (!this.boss) return;
+    const points = [this.player.position, ...this.enemies.filter((e) => e.alive).map((e) => e.position)];
+    this.hud.fadeBoss(underHudBand(points, this.cameras.main.worldView, { width: GAME_WIDTH, height: GAME_HEIGHT }, BOSS_BAR_BAND));
   }
 
   private updateHud(): void {

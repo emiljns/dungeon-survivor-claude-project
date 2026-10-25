@@ -120,6 +120,13 @@ export class Hud {
     this.bossBar = this.scene.add.graphics().setScrollFactor(0).setDepth(Depth.hud);
   }
 
+  /** Fades the boss bar while something important is underneath it. */
+  fadeBoss(faded: boolean): void {
+    const alpha = faded ? 0.3 : 1;
+    this.bossBar?.setAlpha(alpha);
+    this.bossLabel?.setAlpha(alpha);
+  }
+
   private drawBoss(fraction: number | null): void {
     if (!this.bossBar) return;
     const visible = fraction !== null && fraction > 0;
