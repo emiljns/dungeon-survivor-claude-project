@@ -135,8 +135,8 @@ collision boxes, room layouts and combat behaviour stay unchanged.
 -   [x] River (water channels) (reviewed by the user).
 -   [x] Snowy Mountain (ice) (reviewed by the user).
 -   [x] Abandoned Village (night, ambushes) (reviewed by the user).
--   [x] The Void (abyss: falling, dash-jumps) with The Hollow Warden.
-    *(Built and self-tested; waiting for the user's review.)*
+-   [x] The Void (abyss: falling, dash-jumps) with The Hollow Warden
+    (reviewed by the user).
 -   [x] A mini-boss plus a wave, and a final boss, per level.
     **Acceptance:** each level reviewed by the user and committed on
     its own.
