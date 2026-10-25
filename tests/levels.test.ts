@@ -18,7 +18,7 @@ describe("level data", () => {
       "Bamboo Forest",
       "River",
       "Snowy Mountain",
-      "Forgotten Foundry",
+      "Abandoned Village",
       "The Void",
     ]);
     expect(new Set(LEVELS.map((l) => l.theme.id)).size).toBe(5);
@@ -87,12 +87,13 @@ describe("level data", () => {
     expect(boss.attack?.count ?? 0).toBeGreaterThan(mini.attack?.count ?? 0);
   });
 
-  it("uses all three regular enemy types, reuses layouts, and enemy toughness never decreases", () => {
+  it("uses all three regular enemy types, every map is unique, and enemy toughness never decreases", () => {
     const kinds = new Set(LEVELS.flatMap((l) => l.rooms.flatMap((r) => r.enemies.map((e) => e.kind))));
     for (const k of ["chaser", "tank", "ranged"] as const) expect(kinds.has(k)).toBe(true);
 
-    const layoutUses = LEVELS.flatMap((l) => l.rooms.map((r) => r.layout.id));
-    expect(new Set(layoutUses).size).toBeLessThan(layoutUses.length);
+    // v2 maps are hand-made and never repeat (the v1 rooms still reuse a few layouts).
+    const mapLayouts = MAP_LEVELS.map((l) => l.rooms[0]?.layout.id);
+    expect(new Set(mapLayouts).size).toBe(mapLayouts.length);
 
     // Health scaling rises every level. Speed only has to stay in a modest
     // band; level 2 (the River, which kept the v1 sewers' pace) is the fastest.

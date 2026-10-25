@@ -80,6 +80,13 @@ export const SHEETS = {
   snowRanged: { key: "na-snow-owl-dark", file: "enemy-snow-owl-dark.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/Owl2/Owl2.png" },
   minibossTengu: { key: "na-miniboss-tengu", file: "boss-tengu-blue-idle.png", frameWidth: 68, frameHeight: 68, source: "Actor/Boss/TenguBlue/Idle.png" },
   bossSamurai: { key: "na-boss-samurai", file: "boss-giant-blue-samurai-idle.png", frameWidth: 96, frameHeight: 48, source: "Actor/Boss/GiantBlueSamurai/Idle.png" },
+  // Abandoned Village tiles and bestiary (Milestone 11).
+  abandoned: { key: "na-abandoned", file: "tiles-village-abandoned.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Tilesets/TilesetVillageAbandoned.png" },
+  villageChaser: { key: "na-village-spirit", file: "enemy-village-spirit.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/Spirit/SpriteSheet.png" },
+  villageTank: { key: "na-village-racoon", file: "enemy-village-racoon.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/Racoon/SpriteSheet.png" },
+  villageRanged: { key: "na-village-lantern", file: "enemy-village-lantern.png", frameWidth: 16, frameHeight: 16, source: "Actor/Monster/LanternGreen/SpriteSheet.png" },
+  minibossRacoon: { key: "na-miniboss-racoon", file: "boss-giant-racoon-idle.png", frameWidth: 60, frameHeight: 60, source: "Actor/Boss/GiantRacoon/Idle.png" },
+  bossRedSamurai: { key: "na-boss-red-samurai", file: "boss-giant-red-samurai-idle.png", frameWidth: 96, frameHeight: 48, source: "Actor/Boss/GiantRedSamurai/Idle.png" },
   waterfallTop: { key: "na-waterfall-top", file: "anim-waterfall-top.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Animated/Waterfall/TopSheet16x16.png" },
   waterfallMiddle: { key: "na-waterfall-middle", file: "anim-waterfall-middle.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Animated/Waterfall/MiddleSheet16x16.png" },
   waterfallBottom: { key: "na-waterfall-bottom", file: "anim-waterfall-bottom.png", frameWidth: 16, frameHeight: 16, source: "Backgrounds/Animated/Waterfall/BottomSheet16x16.png" },
@@ -150,6 +157,12 @@ export const SHEET_SIZES: Readonly<Record<SheetId, readonly [number, number]>> =
   snowRanged: [64, 64],
   minibossTengu: [408, 68],
   bossSamurai: [576, 48],
+  abandoned: [320, 192],
+  villageChaser: [64, 64],
+  villageTank: [64, 64],
+  villageRanged: [64, 64],
+  minibossRacoon: [360, 60],
+  bossRedSamurai: [576, 48],
   waterfallTop: [80, 16],
   waterfallMiddle: [80, 16],
   waterfallBottom: [48, 16],
@@ -198,12 +211,12 @@ export const walkAnimKey = (sheet: SheetId, dir: Direction): string => `${SHEETS
 const range = (n: number): number[] => Array.from({ length: n }, (_, i) => i);
 
 export const ANIMS: readonly AnimDef[] = [
-  ...(["player", "chaser", "tank", "ranged", "forestChaser", "forestTank", "forestRanged", "riverChaser", "riverTank", "riverRanged", "snowChaser", "snowTank", "snowRanged"] as const).flatMap((sheet) =>
+  ...(["player", "chaser", "tank", "ranged", "forestChaser", "forestTank", "forestRanged", "riverChaser", "riverTank", "riverRanged", "snowChaser", "snowTank", "snowRanged", "villageChaser", "villageTank", "villageRanged"] as const).flatMap((sheet) =>
     DIRECTIONS.map((dir) => ({
       key: walkAnimKey(sheet, dir),
       sheet,
       frames: walkFrames(dir),
-      frameRate: sheet === "tank" || sheet === "forestTank" || sheet === "riverTank" || sheet === "snowTank" ? 6 : 9,
+      frameRate: sheet === "tank" || sheet === "forestTank" || sheet === "riverTank" || sheet === "snowTank" || sheet === "villageTank" ? 6 : 9,
       repeat: -1,
     })),
   ),
@@ -213,6 +226,8 @@ export const ANIMS: readonly AnimDef[] = [
   { key: "na-boss-squid-idle", sheet: "bossSquid", frames: range(4), frameRate: 6, repeat: -1 },
   { key: "na-miniboss-tengu-idle", sheet: "minibossTengu", frames: range(6), frameRate: 8, repeat: -1 },
   { key: "na-boss-samurai-idle", sheet: "bossSamurai", frames: range(6), frameRate: 7, repeat: -1 },
+  { key: "na-miniboss-racoon-idle", sheet: "minibossRacoon", frames: range(6), frameRate: 8, repeat: -1 },
+  { key: "na-boss-red-samurai-idle", sheet: "bossRedSamurai", frames: range(6), frameRate: 7, repeat: -1 },
   { key: "na-waterfall-top", sheet: "waterfallTop", frames: range(5), frameRate: 10, repeat: -1 },
   { key: "na-waterfall-middle", sheet: "waterfallMiddle", frames: range(5), frameRate: 10, repeat: -1 },
   { key: "na-waterfall-bottom", sheet: "waterfallBottom", frames: range(3), frameRate: 8, repeat: -1 },

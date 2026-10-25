@@ -79,11 +79,12 @@ original pack path, plus the per-level floor and wall choices.
     old shopkeeper sells weapon unlocks, and the gate a few steps east
     (press E) starts the run. Time and score start at the gate.
 -   **Five levels in order:** Bamboo Forest → River → Snowy Mountain →
-    Forgotten Foundry → The Void. (v2 is replacing the dungeon levels
-    one at a time: the first three are large maps with encounter areas,
+    Abandoned Village → The Void. (v2 is replacing the dungeon levels
+    one at a time: the first four are large maps with encounter areas,
     a mini-boss and a boss. On the River, water blocks walking but not
     bullets, and bridges are the crossings; on the Snowy Mountain, you
-    slide on ice.) Each has its own palette,
+    slide on ice; the Abandoned Village is a night of lanterns and
+    street ambushes.) Each has its own palette,
     torch colour and difficulty.
 -   **Rooms:** each level has 4–5 rooms. A safe start room, then combat
     rooms, then a final arena with an elite (Level 5: the boss, *The

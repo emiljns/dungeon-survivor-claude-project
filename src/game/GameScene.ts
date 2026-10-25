@@ -1286,6 +1286,7 @@ function objectLights(objects: readonly ResolvedObject[]): TorchLight[] {
     if (!def.light) return [];
     const x = (o.col + def.w / 2) * TILE;
     const y = (o.row + def.h / 2) * TILE;
-    return [{ flame: { x, y: y - 3 }, pool: { x, y }, seed: (o.col * 92821 + o.row * 68917) % 1000, color: def.light.color, radius: def.light.radius, showFlame: def.light.flame }];
+    const flameY = def.light.flameY === undefined ? y - 3 : o.row * TILE + def.light.flameY;
+    return [{ flame: { x, y: flameY }, pool: { x, y }, seed: (o.col * 92821 + o.row * 68917) % 1000, color: def.light.color, radius: def.light.radius, showFlame: def.light.flame }];
   });
 }

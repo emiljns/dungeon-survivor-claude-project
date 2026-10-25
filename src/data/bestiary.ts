@@ -118,6 +118,34 @@ export const SNOW_BESTIARY: Bestiary = {
   },
 };
 
+/**
+ * Abandoned Village (level 4): white spirits drift out of the dark, red
+ * raccoons shove, green ghost-lanterns spit fire from the alleys (pale and
+ * bright colours read at night). The Giant Racoon haunts the graveyard; the
+ * Giant Red Samurai waits in the square.
+ */
+export const VILLAGE_BESTIARY: Bestiary = {
+  looks: { chaser: "villageChaser", tank: "villageTank", ranged: "villageRanged" },
+  miniboss: {
+    name: "GIANT RACOON",
+    stats: {
+      ...ENEMY_STATS.miniboss,
+      maxHealth: 40,
+      attack: { pattern: "radial", cooldownMs: 2200, windupMs: 650, bulletSpeed: 100, count: 9, spreadDeg: 0, damage: 1 },
+    },
+    look: { sheet: "minibossRacoon", idleAnim: "na-miniboss-racoon-idle" },
+  },
+  boss: {
+    name: "GIANT RED SAMURAI",
+    stats: {
+      ...ENEMY_STATS.boss,
+      maxHealth: 74,
+      attack: { pattern: "radial", cooldownMs: 2100, windupMs: 650, bulletSpeed: 108, count: 12, spreadDeg: 0, damage: 1 },
+    },
+    look: { sheet: "bossRedSamurai", idleAnim: "na-boss-red-samurai-idle" },
+  },
+};
+
 export function isBossKind(kind: EnemyKind): boolean {
   return kind === "boss" || kind === "miniboss";
 }

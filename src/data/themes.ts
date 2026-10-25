@@ -96,6 +96,15 @@ export const THEMES = {
     title: "#ffd28a",
     light: { darkness: 0.16, darkColor: 0x3a1c08, torch: 0xffa040, playerRadius: 150, vignette: 0.5 },
   },
+  // Night in the abandoned village: deep blue dark, warm lanterns.
+  abandoned: {
+    id: "abandoned",
+    background: 0x0c1018,
+    floor: { base: 0x4a5a3a, line: 0x425234, speck: 0x5a6a46 },
+    wall: { base: 0x2a3424, block: 0x303a28, face: 0x4a3a2a, faceEdge: 0x8a7a5a, edge: 0x5a6a46 },
+    title: "#c8b8ff",
+    light: { darkness: 0.66, darkColor: 0x070a1c, torch: 0xffb050, playerRadius: 140, vignette: 0.85 },
+  },
   snow: {
     id: "snow",
     background: 0x1c2438,

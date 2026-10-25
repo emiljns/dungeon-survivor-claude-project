@@ -3,14 +3,15 @@
 // levels with different enemy sets, themes and difficulty.
 
 import type { EncounterDef } from "../logic/encounter.ts";
-import { FOREST_BESTIARY, RIVER_BESTIARY, SNOW_BESTIARY, type Bestiary } from "./bestiary.ts";
+import { FOREST_BESTIARY, RIVER_BESTIARY, SNOW_BESTIARY, VILLAGE_BESTIARY, type Bestiary } from "./bestiary.ts";
+import { ABANDONED_VILLAGE } from "./abandonedLevel.ts";
 import { BAMBOO_FOREST } from "./forestLevel.ts";
 import { RIVER } from "./riverLevel.ts";
 import { SNOWY_MOUNTAIN } from "./snowLevel.ts";
 import type { MapDef } from "./maps.ts";
 import type { PlacedCritter, PlacedNpc, PlacedObject } from "./decor.ts";
 import type { Difficulty, EnemyKind } from "../logic/enemyStats.ts";
-import { ARENA, CROSSROADS, ENTRY_HALL, FURNACE, GALLERY, STOREROOM, type RoomLayout } from "./rooms.ts";
+import { ARENA, CROSSROADS, ENTRY_HALL, FURNACE, GALLERY, type RoomLayout } from "./rooms.ts";
 import { THEMES, type Theme } from "./themes.ts";
 
 export interface EnemySpec {
@@ -50,7 +51,6 @@ export interface LevelDefinition {
 const c: EnemySpec = { kind: "chaser", elite: false };
 const t: EnemySpec = { kind: "tank", elite: false };
 const r: EnemySpec = { kind: "ranged", elite: false };
-const elite = (kind: EnemyKind): EnemySpec => ({ kind, elite: true });
 const boss: EnemySpec = { kind: "boss", elite: false };
 /** Each level's arrival room; the travelling merchant waits beside the start. */
 const start: LevelRoom = { layout: ENTRY_HALL, enemies: [], reward: false, npcs: [{ kind: "merchant", col: 24, row: 11 }] };
@@ -91,19 +91,7 @@ export const LEVELS: readonly LevelDefinition[] = [
   mapLevel(1, "Bamboo Forest", THEMES.forest, { healthMul: 1, speedMul: 1 }, BAMBOO_FOREST, FOREST_BESTIARY),
   mapLevel(2, "River", THEMES.river, { healthMul: 1.1, speedMul: 1.2 }, RIVER, RIVER_BESTIARY),
   mapLevel(3, "Snowy Mountain", THEMES.snow, { healthMul: 1.25, speedMul: 1.1 }, SNOWY_MOUNTAIN, SNOW_BESTIARY),
-  {
-    number: 4,
-    name: "Forgotten Foundry",
-    theme: THEMES.foundry,
-    difficulty: { healthMul: 1.4, speedMul: 1.15 },
-    rooms: [
-      start,
-      room(FURNACE, [r, r, r, c, c]),
-      room(STOREROOM, [r, r, t, c]),
-      room(GALLERY, [r, r, r, t, c], true),
-      room(ARENA, [elite("ranged"), r, t, c], true),
-    ],
-  },
+  mapLevel(4, "Abandoned Village", THEMES.abandoned, { healthMul: 1.4, speedMul: 1.15 }, ABANDONED_VILLAGE, VILLAGE_BESTIARY),
   {
     number: 5,
     name: "The Void",

@@ -8,6 +8,8 @@ import { HOME_VILLAGE } from "../src/data/village.ts";
 import { BAMBOO_FOREST } from "../src/data/forestLevel.ts";
 import { RIVER } from "../src/data/riverLevel.ts";
 import { SNOWY_MOUNTAIN } from "../src/data/snowLevel.ts";
+import { ABANDONED_VILLAGE } from "../src/data/abandonedLevel.ts";
+import { THEMES } from "../src/data/themes.ts";
 import { parseVillage, villageLevel } from "../src/data/maps.ts";
 import { Tuning } from "../src/game/config.ts";
 import { solidObjectGrid } from "../src/logic/objects.ts";
@@ -17,7 +19,7 @@ import { inRect, triggerRect, type TileRect } from "../src/logic/encounter.ts";
 import { parseLayout, type ParsedLayout, type TilePos } from "../src/logic/layout.ts";
 
 const T = 16;
-const MAPS: readonly MapDef[] = [TEST_MAP, ...Object.values(WORLD_MAPS), HOME_VILLAGE, BAMBOO_FOREST, RIVER, SNOWY_MOUNTAIN];
+const MAPS: readonly MapDef[] = [TEST_MAP, ...Object.values(WORLD_MAPS), HOME_VILLAGE, BAMBOO_FOREST, RIVER, SNOWY_MOUNTAIN, ABANDONED_VILLAGE];
 
 const key = (p: TilePos): string => `${p.col},${p.row}`;
 const tileOf = (x: number, y: number): TilePos => ({ col: Math.floor(x / T), row: Math.floor(y / T) });
@@ -177,6 +179,14 @@ describe.each(MAPS.map((m) => [m.layout.id, m] as const))("map %s", (_id, map) =
         const [c, r] = k.split(",").map(Number);
         expect(inRect({ col: c ?? -1, row: r ?? -1 }, e.area), `${e.id} leaks at ${k}`).toBe(true);
       }
+    }
+  });
+
+  it("spawns and the start never sit inside a path (the tile would draw as a patch of ground)", () => {
+    const isPath = (c: number, r: number): boolean => l.path[r]?.[c] === true || isDoor(l, c, r) || l.gates.some((g) => g.col === c && g.row === r);
+    for (const p of [...l.enemySpawns, l.playerSpawn].map((s) => tileOf(s.x, s.y))) {
+      const inside = (isPath(p.col - 1, p.row) && isPath(p.col + 1, p.row)) || (isPath(p.col, p.row - 1) && isPath(p.col, p.row + 1));
+      expect(inside, `spawn at ${key(p)}`).toBe(false);
     }
   });
 
@@ -349,5 +359,50 @@ describe("Snowy Mountain", () => {
   it("has no water and no animals (too cold)", () => {
     expect(l.low.flat().some(Boolean)).toBe(false);
     expect(SNOWY_MOUNTAIN.critters ?? []).toHaveLength(0);
+  });
+});
+
+describe("Abandoned Village", () => {
+  const l = parseLayout(ABANDONED_VILLAGE.layout.rows, T);
+  const objects = ABANDONED_VILLAGE.objects ?? [];
+  const inArea = (p: { col: number; row: number }, a: { col: number; row: number; cols: number; rows: number }): boolean =>
+    p.col >= a.col && p.col < a.col + a.cols && p.row >= a.row && p.row < a.row + a.rows;
+
+  it("is a large map: at least four screens of area", () => {
+    expect((l.cols * T * l.rows * T) / (GAME_WIDTH * GAME_HEIGHT)).toBeGreaterThanOrEqual(4);
+  });
+
+  it("is night: the darkest outdoor level so far, with fireflies", () => {
+    expect(THEMES.abandoned.light.darkness).toBeGreaterThanOrEqual(0.45);
+    for (const id of ["forest", "river", "snow"] as const) expect(THEMES.abandoned.light.darkness).toBeGreaterThan(THEMES[id].light.darkness);
+    expect(biomeFor("abandoned")?.particles).toBe("fireflies");
+  });
+
+  it("lanterns light the start and every fight", () => {
+    const lanterns = objects.filter((o) => o.id === "lanternPost");
+    const start = tileOf(l.playerSpawn.x, l.playerSpawn.y);
+    expect(lanterns.some((p) => Math.abs(p.col - start.col) + Math.abs(p.row - start.row) <= 10)).toBe(true);
+    for (const e of ABANDONED_VILLAGE.encounters) expect(lanterns.filter((p) => inArea(p, e.area)).length, e.id).toBeGreaterThanOrEqual(2);
+  });
+
+  it("ambush streets: the street and the alleys spring from a trigger, with spawns on both sides of it", () => {
+    const ambushes = ABANDONED_VILLAGE.encounters.filter((e) => e.trigger);
+    expect(ambushes.map((e) => e.id)).toEqual(["street", "alleys"]);
+    for (const e of ambushes) {
+      const t = e.trigger;
+      if (!t) continue;
+      const spawns = l.enemySpawns.map((s) => tileOf(s.x, s.y)).filter((s) => inArea(s, e.area));
+      const cx = t.col + t.cols / 2, cy = t.row + t.rows / 2;
+      // Enemies come from at least two opposite sides (west/east or north/south).
+      const sides = new Set(spawns.map((s) => (Math.abs(s.col - cx) > Math.abs(s.row - cy) ? (s.col < cx ? "w" : "e") : s.row < cy ? "n" : "s")));
+      expect((sides.has("w") && sides.has("e")) || (sides.has("n") && sides.has("s")), e.id).toBe(true);
+    }
+  });
+
+  it("is a village: ruined houses line the streets, and the dead lie in the graveyard", () => {
+    const houses = objects.filter((o) => ["ruinHouse", "ruinHut", "barn", "thatchHouse"].includes(o.id));
+    expect(houses.length).toBeGreaterThanOrEqual(15);
+    const graveyard = ABANDONED_VILLAGE.encounters.find((e) => e.id === "graveyard");
+    expect(graveyard && objects.filter((o) => o.id.startsWith("grave") && inArea(o, graveyard.area)).length).toBeGreaterThanOrEqual(4);
   });
 });

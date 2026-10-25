@@ -61,6 +61,7 @@ const GREEN_PATH = { col: 11, row: 7 } as const;
 const SNOW_PATH = { col: 0, row: 14 } as const;
 // Closed gates: thorny brambles (a spiky bush tinted dry brown) or a snow drift.
 const BRAMBLE = { sheet: "nature", col: 9, row: 10, tint: 0xa07858 } as const;
+const GHOST_THORNS = { sheet: "nature", col: 9, row: 10, tint: 0x9a88d0 } as const;
 const SNOW_DRIFT = { sheet: "nature", col: 10, row: 12, tint: 0xe8f0ff } as const;
 
 export const BIOMES: Readonly<Record<string, BiomeArt>> = {
@@ -112,6 +113,23 @@ export const BIOMES: Readonly<Record<string, BiomeArt>> = {
     },
     critters: ["frog", "fish"],
     gate: BRAMBLE,
+  },
+  // Night in the abandoned village: overgrown grass, dead and mossy trees,
+  // fireflies, one stray cat. Closed gates are ghostly violet thorns.
+  abandoned: {
+    ground: greenGrass, detailChance: 0.35, plateauTint: 0x6a7460, cliff: BROWN_CLIFF, water: GRASS_SHORE, path: YELLOW_PATH,
+    particles: "fireflies", wallTrees: ["deadTree", "mossTree", "bigMossTree", "deadTree", "pine"], wallTreeDensity: 0.55, wallTreeTint: 0x98a0a8,
+    slots: {
+      $tree: ["mossTree", "deadTree"],
+      $bigTree: ["bigOak"],
+      $grove: ["deadGrove"],
+      $rock: ["mossBoulder", "rockGrey"],
+      $bush: ["tuft", "bush"],
+      $flower: ["tuft", "clover"],
+      $pebble: ["pebbles", "stones"],
+    },
+    critters: ["cat"],
+    gate: GHOST_THORNS,
   },
   // Dusk on the mountain: snow, snowy pines, igloos, no animals.
   snow: {

@@ -31,7 +31,13 @@ export interface DecorDef {
   /** Top rows drawn above actors (walk-behind). */
   readonly canopy?: number;
   /** A light source: coloured glow and a pool of light in dark levels. */
-  readonly light?: { readonly color: number; readonly radius: number; readonly flame: boolean };
+  readonly light?: {
+    readonly color: number;
+    readonly radius: number;
+    readonly flame: boolean;
+    /** Flame height in px below the object's top edge (default: just above its centre). */
+    readonly flameY?: number;
+  };
   /** Looping animation key: drawn as one live sprite centred on the object. */
   readonly anim?: string;
   /**
@@ -142,6 +148,26 @@ export const DECOR = {
   snowLump: plant(5, 12, 0xf2f6ff),
   snowTuft: plant(9, 13, 0xdfe6f2),
   snowball: plant(10, 13, 0xf2f6ff),
+  // Abandoned Village: overgrown ruins, graves, a broken cart, mossy trees
+  // (TilesetVillageAbandoned), and stone lantern posts that still burn.
+  ruinHouse: { sheet: "abandoned", col: 0, row: 0, w: 4, h: 3, kind: "solid", solid: { col: 0, row: 2, cols: 4, rows: 1 }, canopy: 2, color: 0xc8a878 },
+  ruinHut: { sheet: "abandoned", col: 4, row: 0, w: 2, h: 3, kind: "solid", solid: { col: 0, row: 2, cols: 2, rows: 1 }, canopy: 2, color: 0xe07a3a },
+  grave: { sheet: "abandoned", col: 6, row: 0, w: 2, h: 3, kind: "solid", solid: { col: 0, row: 2, cols: 2, rows: 1 }, canopy: 2, color: 0x8a7a6a },
+  graves: { sheet: "abandoned", col: 8, row: 0, w: 3, h: 3, kind: "solid", solid: { col: 0, row: 2, cols: 3, rows: 1 }, canopy: 2, color: 0x8a7a6a },
+  mossStatue: { sheet: "abandoned", col: 0, row: 3, w: 2, h: 3, kind: "solid", solid: { col: 0, row: 1, cols: 2, rows: 2 }, canopy: 1, color: 0x8aa860 },
+  brokenPillar: { sheet: "abandoned", col: 2, row: 3, w: 1, h: 3, kind: "solid", solid: { col: 0, row: 2, cols: 1, rows: 1 }, canopy: 2, color: 0xc8a878 },
+  mossBoulder: { sheet: "abandoned", col: 7, row: 5, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 0, cols: 2, rows: 2 }, color: 0x9ab060 },
+  frogStatue: { sheet: "abandoned", col: 9, row: 5, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 1, cols: 2, rows: 1 }, canopy: 1, color: 0x9ab060 },
+  brokenCart: { sheet: "abandoned", col: 9, row: 7, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 1, cols: 2, rows: 1 }, canopy: 1, color: 0xa86a3a },
+  mossStump: { sheet: "abandoned", col: 7, row: 7, w: 1, h: 1, kind: "solid", solid: { col: 0, row: 0, cols: 1, rows: 1 }, color: 0xa86a3a },
+  bigMossTree: { sheet: "abandoned", col: 0, row: 6, w: 4, h: 3, kind: "solid", solid: { col: 1, row: 2, cols: 2, rows: 1 }, canopy: 2, color: 0x7aa040 },
+  mossTree: { sheet: "abandoned", col: 4, row: 6, w: 2, h: 2, kind: "solid", solid: { col: 0, row: 1, cols: 2, rows: 1 }, canopy: 1, color: 0x7aa040 },
+  barn: { sheet: "abandoned", col: 12, row: 6, w: 4, h: 5, kind: "solid", solid: { col: 0, row: 3, cols: 4, rows: 2 }, canopy: 3, color: 0x8a5a3a },
+  thatchHouse: { sheet: "abandoned", col: 16, row: 5, w: 4, h: 5, kind: "solid", solid: { col: 0, row: 3, cols: 4, rows: 2 }, canopy: 3, color: 0x8aa040 },
+  lanternPost: {
+    sheet: "house", col: 7, row: 21, w: 1, h: 2, kind: "solid", solid: { col: 0, row: 1, cols: 1, rows: 1 }, canopy: 1,
+    light: { color: 0xffb050, radius: 88, flame: true, flameY: 4 }, color: 0x7f8a78,
+  },
   // Village tutorial.
   trainingDummy: { sheet: "elements", col: 6, row: 3, w: 1, h: 2, kind: "dummy", solid: { col: 0, row: 1, cols: 1, rows: 1 }, canopy: 1, color: 0xc0603a },
   fence: { sheet: "elements", col: 11, row: 2, w: 3, h: 2, kind: "hurdle", solid: { col: 0, row: 1, cols: 3, rows: 1 }, color: 0xb07040 },

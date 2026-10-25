@@ -966,6 +966,65 @@
     rooms (three maps plus 10 v1 rooms), score 78,888, 123 kills, 448
     coins, 6.8 minutes of run time. The Snowy Mountain took about 83 s.
 
+## Milestone 11 — Abandoned Village, level 4 (2026-10-25)
+
+-   **Level 4 is now one continuous map** (`src/data/abandonedLevel.ts`,
+    120×64 tiles), replacing the five Forgotten Foundry rooms. It keeps
+    the old level 4 difficulty (health ×1.4, speed ×1.15).
+-   **Night:** a new `abandoned` theme and biome.
+    -   Darkness is 0.66, the darkest outdoor level and still under the
+        0.7 readability cap. The first try, 0.55, read as dusk in
+        review, because the pack art scales darkness by 0.75.
+    -   The darkness is tinted deep blue.
+    -   Fireflies drift (an existing particle type).
+    -   A stray cat lives here.
+    -   Closed gates are thorns tinted ghostly violet.
+-   **Lanterns:** the pack has no lantern prop (its lanterns are
+    monsters, used here as enemies). So a lantern post is the house
+    sheet's grey stone column with a warm light and a flame at its top.
+    Decor lights gained an optional `flameY` to put the flame there.
+    Tests check that lanterns light the start and every fight.
+-   **The twist is ambush streets.** Two of the four fights spring from
+    a trigger:
+    -   halfway down Main Street, enemies pour out of the alleys between
+        the houses;
+    -   in the back alleys, they come from every lane at the crossing.
+
+    Tests check that each ambush has spawns on opposite sides of its
+    trigger.
+-   **The layout:**
+    1.  the outskirts, with a broken cart, a cold campfire, a lantern,
+        the merchant and the cat;
+    2.  Main Street (an ambush);
+    3.  the graveyard, with the Giant Racoon (an upgrade);
+    4.  the back alleys (an ambush, an upgrade);
+    5.  the square, with the Giant Red Samurai, round a frog statue
+        with lanterns at its corners; the exit is south.
+
+    That is two upgrades, so a run still has 9.
+-   **New art:** the pack's TilesetVillageAbandoned. Its ruined houses,
+    barn, thatched house, graves, mossy statue, broken pillar, frog
+    statue, broken cart and mossy trees were each checked as clean crops
+    before being added to the decor catalogue.
+-   **Bestiary:**
+    -   White spirits (chaser), red raccoons (tank) and green
+        ghost-lanterns (ranged). Pale and bright colours read at night.
+    -   **Giant Racoon** mini-boss: 40 HP base (56 here), 9-bullet
+        bursts.
+    -   **Giant Red Samurai** boss: 74 HP base (104 here), 12-bullet
+        bursts.
+    -   Both are from the design table.
+-   **Bug found in review:** a spawn tile placed on a lane drew as a
+    patch of grass, because one layout character cannot be both `E` and
+    `:`. The spawns moved into the yards, and a new check on every map
+    rejects a spawn or start tile with path on two opposite sides.
+-   **Tests retired:** a v1 check that levels reuse room layouts. v2
+    requires every map to be unique, so it now checks that instead.
+-   **New full-run baseline** (scripted, invulnerable player, with the
+    pathfinding driver and no manual help): victory after 9 rooms (four
+    maps plus The Void's 5 v1 rooms), score 91,051, 137 kills, 495 coins,
+    6.7 minutes of run time. The Abandoned Village took about 76 s.
+
 ## Change policy
 
 Before changing an approved requirement, explain the problem, propose
