@@ -6,6 +6,10 @@ pick upgrades, and defeat the final boss. It is inspired by the broad
 room-based action genre; no characters, rooms, assets or names are taken
 from other games.
 
+**Play online:** https://website.cookiewarrior.io/dungeon-survivor-claude-project/
+(published by GitHub Pages on every push to `main`; see
+`.github/workflows/deploy.yml`).
+
 **Status: v2.0 (Ninja Survivor)** (see `docs/GAME_DESIGN.md` and
 `docs/TASKS.md`). It is playable from the village prologue through five
 levels to victory or game over, with pixel art, sound effects and music
